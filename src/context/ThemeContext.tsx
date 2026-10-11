@@ -9,8 +9,9 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isDark, setIsDark] = useState<boolean>(() => {
-    return localStorage.getItem('shrihari_theme') === 'dark' || 
-      window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const saved = localStorage.getItem('shrihari_theme');
+    if (saved) return saved === 'dark';
+    return false; // Default to Light theme
   });
 
   useEffect(() => {

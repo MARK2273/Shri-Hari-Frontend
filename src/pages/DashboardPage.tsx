@@ -9,16 +9,12 @@ import {
   ArrowUpRight,
   TrendingUp,
   CheckCircle2,
-  Clock,
-  Compass,
-  Sparkles
+  Clock
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Link } from 'react-router-dom';
-import { useTour } from '../context/TourContext';
 
 export const DashboardPage: React.FC = () => {
-  const { openTour } = useTour();
   const [materials, setMaterials] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [productionRuns, setProductionRuns] = useState<any[]>([]);
@@ -92,60 +88,6 @@ export const DashboardPage: React.FC = () => {
           >
             + New Production Run
           </Link>
-        </div>
-      </div>
-
-      {/* Interactive Manufacturing Workflow & System Correlation Ribbon */}
-      <div className="relative overflow-hidden p-6 rounded-3xl bg-gradient-to-br from-slate-900 via-factory-900 to-brand-950 border border-slate-800 text-white shadow-xl">
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-brand-500/20 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="max-w-xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-brand-500/20 text-brand-300 border border-brand-500/30 mb-3">
-              <Compass className="w-3.5 h-3.5 text-brand-400" />
-              Interactive Manufacturing Architecture Guide
-            </div>
-            <h2 className="text-lg md:text-xl font-black tracking-tight text-white">
-              How Shri Hari Packaging ERP Works & Correlates
-            </h2>
-            <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
-              Every operation is order-driven, batch-tracked, and measured strictly in <strong>Kilograms (kg)</strong>. 
-              Click any stage below to inspect how data flows from raw plastic lots to finished roll dispatch.
-            </p>
-          </div>
-
-          <button
-            onClick={() => openTour(0)}
-            className="self-start lg:self-center flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-brand-500 to-emerald-500 text-white font-bold text-xs hover:from-brand-600 hover:to-emerald-600 transition-all shadow-lg shadow-brand-500/25 shrink-0"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Launch Interactive Tour (7 Steps)</span>
-          </button>
-        </div>
-
-        {/* 7-Step Horizontal Clickable Visual Flow */}
-        <div className="relative z-10 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 mt-6 pt-5 border-t border-slate-800/80">
-          {[
-            { step: 1, name: '1. Raw Plastic', desc: 'Lots, FIFO, kg weight', color: 'hover:border-emerald-500/50' },
-            { step: 2, name: '2. Recipes (BOM)', desc: 'Formulations & checks', color: 'hover:border-indigo-500/50' },
-            { step: 3, name: '3. Customer Orders', desc: 'Demand & partials', color: 'hover:border-sky-500/50' },
-            { step: 4, name: '4. Production Run', desc: 'Mass-balance & waste', color: 'hover:border-amber-500/50' },
-            { step: 5, name: '5. Finished Goods', desc: 'FG- warehouse lots', color: 'hover:border-purple-500/50' },
-            { step: 6, name: '6. Dispatch & Del.', desc: 'Deduction & delivery', color: 'hover:border-rose-500/50' },
-            { step: 7, name: '7. Traceability', desc: 'Audit & genealogy', color: 'hover:border-emerald-500/50' },
-          ].map((item) => (
-            <button
-              key={item.step}
-              onClick={() => openTour(item.step)}
-              className={`p-3 rounded-2xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/60 text-left transition-all ${item.color} group`}
-            >
-              <span className="text-[10px] font-extrabold uppercase text-brand-400 group-hover:text-brand-300 block truncate">
-                {item.name}
-              </span>
-              <span className="text-[11px] text-slate-400 group-hover:text-slate-200 mt-0.5 block truncate">
-                {item.desc}
-              </span>
-            </button>
-          ))}
         </div>
       </div>
 
