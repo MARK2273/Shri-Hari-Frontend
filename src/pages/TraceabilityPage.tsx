@@ -10,20 +10,32 @@ import {
   Truck,
   ArrowRight,
   ShieldCheck,
-  CheckCircle2
+  CheckCircle2,
+  Calendar,
+  MapPin,
+  Clock,
+  Boxes
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 
 export const TraceabilityPage: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState('PB-20261011-001');
+  const [searchTerm, setSearchTerm] = useState('');
   const [traceData, setTraceData] = useState<any>(null);
+  const [availableBatches, setAvailableBatches] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchTraceability = async (term: string) => {
     setIsLoading(true);
     try {
-      const res = await api.get(`/traceability?batchNumber=${term}`);
-      setTraceData(res.data.traceability || res.data.records?.[0] || null);
+      const res = await api.get(`/traceability?batchNumber=${encodeURIComponent(term)}`);
+      const matched = res.data.traceability || res.data.records?.[0] || null;
+      setTraceData(matched);
+      if (res.data.availableBatches) {
+        setAvailableBatches(res.data.availableBatches);
+      }
+      if (!term && matched) {
+        setSearchTerm(matched.batch_number);
+      }
     } catch (err) {
       console.error('Failed to load traceability:', err);
     } finally {
@@ -32,8 +44,14 @@ export const TraceabilityPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchTraceability(searchTerm);
+    fetchTraceability('');
   }, []);
+
+  const totalRawInputKg =
+    traceData?.raw_material_lots_consumed?.reduce(
+      (sum: number, l: any) => sum + (Number(l.consumed_kg) || 0),
+      0
+    ) || Number(traceData?.planned_quantity_kg) || 0;
 
   return (
     <div className="space-y-6">
@@ -44,28 +62,60 @@ export const TraceabilityPage: React.FC = () => {
           End-to-End Batch Traceability (REP-07)
         </h1>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-          Connect customer order demand, raw plastic supplier lots, production run operators, and final dispatched delivery.
+          Full 360° audit trail connecting customer order demand, raw plastic supplier lots, production run yields, and finished goods inventory.
         </p>
       </div>
 
-      {/* Search Input */}
-      <div className="p-4 rounded-2xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-center gap-3">
-        <div className="relative flex-1 w-full">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by Production Batch # (e.g. PB-20261011-001), Order # or Lot #"
-            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono font-medium focus:outline-none focus:border-brand-500"
-          />
-        </div>
-        <button
-          onClick={() => fetchTraceability(searchTerm)}
-          className="w-full sm:w-auto px-5 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl shadow-md transition-colors"
+      {/* Search Input & Quick Selectors */}
+      <div className="p-4 rounded-2xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            fetchTraceability(searchTerm);
+          }}
+          className="flex flex-col sm:flex-row items-center gap-3"
         >
-          Trace Supply Chain
-        </button>
+          <div className="relative flex-1 w-full">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by Production Batch # (e.g. PB-20261011-509), Order #, or Material Lot #"
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono font-medium focus:outline-none focus:border-brand-500"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full sm:w-auto px-5 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl shadow-md transition-colors disabled:opacity-50"
+          >
+            {isLoading ? 'Searching...' : 'Trace Supply Chain'}
+          </button>
+        </form>
+
+        {availableBatches.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap pt-1 text-xs">
+            <span className="text-[11px] font-bold text-slate-400">Available Batches:</span>
+            {availableBatches.map((b) => (
+              <button
+                key={b}
+                type="button"
+                onClick={() => {
+                  setSearchTerm(b);
+                  fetchTraceability(b);
+                }}
+                className={`px-2.5 py-1 rounded-lg font-mono text-[11px] font-bold transition-all ${
+                  searchTerm === b
+                    ? 'bg-brand-500 text-white shadow-sm'
+                    : 'bg-slate-100 dark:bg-factory-800 text-slate-700 dark:text-slate-300 hover:bg-brand-50 hover:text-brand-600'
+                }`}
+              >
+                {b}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Traceability Visual Timeline */}
@@ -73,107 +123,176 @@ export const TraceabilityPage: React.FC = () => {
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Step 1: Customer Order */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 shadow-sm relative">
-              <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mb-3">
-                <ShoppingCart className="w-4 h-4" />
+            <div className="p-4 rounded-2xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 shadow-sm relative flex flex-col justify-between">
+              <div>
+                <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mb-3">
+                  <ShoppingCart className="w-4 h-4" />
+                </div>
+                <span className="text-[10px] font-bold uppercase text-slate-400">Step 1: Originating Demand</span>
+                <h4 className="text-xs font-mono font-bold text-slate-900 dark:text-white mt-1">
+                  {traceData.customer_order?.order_number || traceData.customer_orders?.order_number || 'ORD-01'}
+                </h4>
+                <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 mt-1">
+                  {traceData.customer_order?.customer_name || traceData.customer_orders?.customers?.name || 'Customer Account'}
+                </p>
+                {traceData.customer_order?.delivery_address && (
+                  <p className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1 truncate">
+                    <MapPin className="w-3 h-3 shrink-0" />
+                    {traceData.customer_order.delivery_address}
+                  </p>
+                )}
               </div>
-              <span className="text-[10px] font-bold uppercase text-slate-400">Step 1: Originating Demand</span>
-              <h4 className="text-xs font-mono font-bold text-slate-900 dark:text-white mt-1">
-                {traceData.customer_order?.order_number || traceData.customer_orders?.order_number || 'ORD-20261011-001'}
-              </h4>
-              <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1">
-                {traceData.customer_order?.customer_name || traceData.customer_orders?.customers?.name || 'Amul Federation'}
-              </p>
-              <Badge variant="success" className="mt-3">Order Confirmed</Badge>
+              <Badge variant="success" className="mt-4 w-fit">
+                {traceData.customer_order?.status || 'Confirmed'} ({traceData.customer_order?.total_requested_weight_kg || traceData.planned_quantity_kg} kg)
+              </Badge>
             </div>
 
             {/* Step 2: Raw Plastic Lots Consumed */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 shadow-sm relative">
-              <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-3">
-                <Layers className="w-4 h-4" />
+            <div className="p-4 rounded-2xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 shadow-sm relative flex flex-col justify-between">
+              <div>
+                <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-3">
+                  <Layers className="w-4 h-4" />
+                </div>
+                <span className="text-[10px] font-bold uppercase text-slate-400">Step 2: Raw Material Lots</span>
+                <h4 className="text-xs font-mono font-bold text-slate-900 dark:text-white mt-1">
+                  {traceData.raw_material_lots_consumed?.length || 0} Lots Consumed
+                </h4>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 truncate">
+                  {traceData.raw_material_lots_consumed?.map((l: any) => l.material_name).join(', ') || 'Virgin Polymers'}
+                </p>
               </div>
-              <span className="text-[10px] font-bold uppercase text-slate-400">Step 2: Raw Material Lots</span>
-              <h4 className="text-xs font-mono font-bold text-slate-900 dark:text-white mt-1">
-                3 Supplier Lots
-              </h4>
-              <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1">
-                Reliance Petrochemicals & IOCL
-              </p>
-              <Badge variant="info" className="mt-3">Total Input: 200 kg</Badge>
+              <Badge variant="info" className="mt-4 w-fit">
+                Total Input: {totalRawInputKg} kg
+              </Badge>
             </div>
 
             {/* Step 3: Production Run */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 shadow-sm relative">
-              <div className="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center mb-3">
-                <Factory className="w-4 h-4" />
+            <div className="p-4 rounded-2xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 shadow-sm relative flex flex-col justify-between">
+              <div>
+                <div className="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center mb-3">
+                  <Factory className="w-4 h-4" />
+                </div>
+                <span className="text-[10px] font-bold uppercase text-slate-400">Step 3: Factory Execution</span>
+                <h4 className="text-xs font-mono font-bold text-brand-600 dark:text-brand-400 mt-1">
+                  {traceData.production_batch?.batch_number || traceData.batch_number}
+                </h4>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1">
+                  Product: {traceData.products?.name} ({traceData.products?.code})
+                </p>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  Output: {traceData.accepted_output_kg || traceData.planned_quantity_kg} kg accepted
+                  {Number(traceData.waste_kg) > 0 ? ` (Waste: ${traceData.waste_kg} kg)` : ''}
+                </p>
               </div>
-              <span className="text-[10px] font-bold uppercase text-slate-400">Step 3: Factory Run</span>
-              <h4 className="text-xs font-mono font-bold text-slate-900 dark:text-white mt-1">
-                {traceData.production_batch?.batch_number || traceData.batch_number || 'PB-20261011-001'}
-              </h4>
-              <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1">
-                Output: 194 kg (Trim Waste: 6 kg)
-              </p>
-              <Badge variant="success" className="mt-3">Yield: 97.0%</Badge>
+              <Badge variant="success" className="mt-4 w-fit">
+                Yield: {traceData.yield_percentage || traceData.production_batch?.yield_pct || '100.0'}%
+              </Badge>
             </div>
 
-            {/* Step 4: Dispatch Delivery */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 shadow-sm relative">
-              <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-500 flex items-center justify-center mb-3">
-                <Truck className="w-4 h-4" />
+            {/* Step 4: Dispatch Delivery / Finished Goods */}
+            <div className="p-4 rounded-2xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 shadow-sm relative flex flex-col justify-between">
+              <div>
+                <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-500 flex items-center justify-center mb-3">
+                  {traceData.dispatch ? <Truck className="w-4 h-4" /> : <Boxes className="w-4 h-4" />}
+                </div>
+                <span className="text-[10px] font-bold uppercase text-slate-400">
+                  {traceData.dispatch ? 'Step 4: Dispatch Delivery' : 'Step 4: Finished Goods Stock'}
+                </span>
+                <h4 className="text-xs font-mono font-bold text-slate-900 dark:text-white mt-1">
+                  {traceData.dispatch?.delivery_number ||
+                    traceData.finished_goods_batch?.batch_number ||
+                    `FG-${traceData.batch_number?.replace('PB-', '')}`}
+                </h4>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 truncate">
+                  {traceData.dispatch
+                    ? `Vehicle: ${traceData.dispatch.vehicle_number}`
+                    : 'Warehouse Bay 1 (Quality Approved)'}
+                </p>
               </div>
-              <span className="text-[10px] font-bold uppercase text-slate-400">Step 4: Dispatch Delivered</span>
-              <h4 className="text-xs font-mono font-bold text-slate-900 dark:text-white mt-1">
-                {traceData.dispatch?.delivery_number || 'DEL-20261011-001'}
-              </h4>
-              <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 truncate">
-                Vehicle: {traceData.dispatch?.vehicle_number || 'GJ-01-AB-1234'}
-              </p>
-              <Badge variant="success" className="mt-3">Deducted from Stock</Badge>
+              <Badge variant={traceData.dispatch ? 'success' : 'info'} className="mt-4 w-fit">
+                {traceData.dispatch ? 'Dispatched to Customer' : 'Stocked & Ready for Dispatch'}
+              </Badge>
             </div>
           </div>
 
           {/* Deep Traceability Details Breakdown */}
           <div className="p-6 rounded-2xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-              Raw Material Batch Lineage Table (Input Reconciliation)
-            </h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                  Raw Material Lot Lineage & Batch Contribution
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Detailed breakdown of raw material lots consumed into batch {traceData.batch_number}
+                </p>
+              </div>
+              <div className="text-xs font-mono text-slate-500 dark:text-slate-400">
+                Formula: V{traceData.product_recipes?.version || 1}
+              </div>
+            </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                   <tr>
-                    <th className="py-2">Plastic Grade</th>
-                    <th className="py-2">Raw Material Batch #</th>
-                    <th className="py-2">Supplier</th>
-                    <th className="py-2">Consumed Weight (kg)</th>
-                    <th className="py-2">Batch Contribution</th>
+                    <th className="py-2.5">Plastic Grade</th>
+                    <th className="py-2.5">Code</th>
+                    <th className="py-2.5">Warehouse Lot #</th>
+                    <th className="py-2.5">Supplier / Lot Ref</th>
+                    <th className="py-2.5">Consumed Weight</th>
+                    <th className="py-2.5 text-right">Contribution %</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
-                  {(traceData.raw_material_lots_consumed || [
-                    { material_name: 'Plastic Type A (HDPE Film Grade)', batch_number: 'MB-20261001-A1', supplier: 'Reliance Petrochemicals Ltd', consumed_kg: 102 },
-                    { material_name: 'Plastic Type B (LDPE Standard)', batch_number: 'MB-20261001-B1', supplier: 'Reliance Petrochemicals Ltd', consumed_kg: 58 },
-                    { material_name: 'Plastic Type D (PP Homopolymer)', batch_number: 'MB-20261005-D1', supplier: 'Indian Oil Polymers', consumed_kg: 40 }
-                  ]).map((lot: any, idx: number) => (
-                    <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                      <td className="py-2.5 text-slate-800 dark:text-slate-200 font-bold">{lot.material_name}</td>
-                      <td className="py-2.5 font-mono text-brand-600 dark:text-brand-400">{lot.batch_number}</td>
-                      <td className="py-2.5 text-slate-500">{lot.supplier}</td>
-                      <td className="py-2.5 font-mono font-bold">{lot.consumed_kg} kg</td>
-                      <td className="py-2.5 font-mono text-slate-600 dark:text-slate-400">
-                        {((lot.consumed_kg / 200) * 100).toFixed(1)}%
+                  {(traceData.raw_material_lots_consumed || []).length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-4 text-center text-slate-400 text-xs">
+                        No raw material consumption logs recorded for this batch.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    traceData.raw_material_lots_consumed.map((lot: any, idx: number) => {
+                      const totalInput =
+                        traceData.raw_material_lots_consumed.reduce(
+                          (sum: number, l: any) => sum + (Number(l.consumed_kg) || 0),
+                          0
+                        ) || 1;
+                      const pct = ((lot.consumed_kg / totalInput) * 100).toFixed(1);
+                      return (
+                        <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
+                          <td className="py-3 text-slate-800 dark:text-slate-200 font-bold">
+                            {lot.material_name}
+                          </td>
+                          <td className="py-3 font-mono text-slate-500">{lot.material_code}</td>
+                          <td className="py-3 font-mono text-brand-600 dark:text-brand-400 font-bold">
+                            {lot.batch_number}
+                          </td>
+                          <td className="py-3 text-slate-500">{lot.supplier}</td>
+                          <td className="py-3 font-mono font-bold text-slate-800 dark:text-slate-200">
+                            {lot.consumed_kg} kg
+                          </td>
+                          <td className="py-3 font-mono font-bold text-right text-emerald-600 dark:text-emerald-400">
+                            {pct}%
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
         </div>
       ) : (
-        <div className="p-8 text-center text-xs text-slate-400 bg-white dark:bg-factory-900 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-          No traceability records matched query.
+        <div className="p-12 text-center text-xs text-slate-400 bg-white dark:bg-factory-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-2">
+          <GitBranch className="w-8 h-8 text-slate-300 mx-auto" />
+          <p className="font-bold text-slate-600 dark:text-slate-300">
+            No traceability records found for query "{searchTerm}"
+          </p>
+          <p className="text-[11px] text-slate-400">
+            Please enter a valid production batch number (e.g. PB-20261011-509) or select one from the available batches above.
+          </p>
         </div>
       )}
     </div>
