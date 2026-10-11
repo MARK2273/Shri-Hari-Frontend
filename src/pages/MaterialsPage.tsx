@@ -255,7 +255,7 @@ export const MaterialsPage: React.FC = () => {
       </div>
 
       {/* Tabs Switcher: Batches vs Plastic Types Catalog */}
-      <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6">
+      <div className="flex border-b border-slate-200 dark:border-slate-800 gap-3 sm:gap-6 overflow-x-auto whitespace-nowrap">
         <button
           onClick={() => setActiveTab('batches')}
           className={`pb-3 text-xs font-bold transition-all relative flex items-center gap-2 ${
@@ -381,17 +381,17 @@ export const MaterialsPage: React.FC = () => {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full text-left text-xs min-w-[700px]">
                   <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                     <tr>
-                      <th className="py-2.5">Batch Number</th>
-                      <th className="py-2.5">Material</th>
-                      <th className="py-2.5">Supplier / Lot #</th>
-                      <th className="py-2.5">Receipt Date</th>
-                      <th className="py-2.5">Received (kg)</th>
-                      <th className="py-2.5">Remaining (kg)</th>
-                      <th className="py-2.5">Status</th>
-                      <th className="py-2.5 text-right">Actions</th>
+                      <th className="py-2.5 whitespace-nowrap">Batch Number</th>
+                      <th className="py-2.5 whitespace-nowrap">Material</th>
+                      <th className="py-2.5 whitespace-nowrap">Supplier / Lot #</th>
+                      <th className="py-2.5 whitespace-nowrap">Receipt Date</th>
+                      <th className="py-2.5 whitespace-nowrap">Received (kg)</th>
+                      <th className="py-2.5 whitespace-nowrap">Remaining (kg)</th>
+                      <th className="py-2.5 whitespace-nowrap">Status</th>
+                      <th className="py-2.5 text-right whitespace-nowrap">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
@@ -467,16 +467,16 @@ export const MaterialsPage: React.FC = () => {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full text-left text-xs min-w-[700px]">
                 <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                   <tr>
-                    <th className="py-2.5">Code</th>
-                    <th className="py-2.5">Polymer Name</th>
-                    <th className="py-2.5">Description & Properties</th>
-                    <th className="py-2.5">Min Stock Alert</th>
-                    <th className="py-2.5">Current Stock</th>
-                    <th className="py-2.5">Status</th>
-                    <th className="py-2.5 text-right">Actions</th>
+                    <th className="py-2.5 whitespace-nowrap">Code</th>
+                    <th className="py-2.5 whitespace-nowrap">Polymer Name</th>
+                    <th className="py-2.5 whitespace-nowrap">Description & Properties</th>
+                    <th className="py-2.5 whitespace-nowrap">Min Stock Alert</th>
+                    <th className="py-2.5 whitespace-nowrap">Current Stock</th>
+                    <th className="py-2.5 whitespace-nowrap">Status</th>
+                    <th className="py-2.5 text-right whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
@@ -539,7 +539,7 @@ export const MaterialsPage: React.FC = () => {
         maxWidth="md"
       >
         <form onSubmit={handleSaveMaterial} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Polymer Name *
@@ -708,7 +708,7 @@ export const MaterialsPage: React.FC = () => {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Received Weight (kg) *
@@ -742,7 +742,7 @@ export const MaterialsPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Cost Per KG (₹)

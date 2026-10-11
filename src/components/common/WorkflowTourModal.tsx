@@ -301,10 +301,10 @@ export const WorkflowTourModal: React.FC<WorkflowTourModalProps> = ({ isOpen, on
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-2xl bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-900/70 backdrop-blur-md animate-fade-in">
+      <div className="relative w-full max-w-2xl bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-800 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh]">
         {/* Modal Top Header with Step Indicator */}
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="w-7 h-7 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center">
               <Compass className="w-4 h-4" />
@@ -331,7 +331,7 @@ export const WorkflowTourModal: React.FC<WorkflowTourModalProps> = ({ isOpen, on
         </div>
 
         {/* Tour Body */}
-        <div className="p-6 md:p-8 overflow-y-auto space-y-6 flex-1">
+        <div className="p-4 sm:p-6 md:p-8 overflow-y-auto space-y-6 flex-1">
           <div className="flex items-start gap-4">
             <div
               className={`w-12 h-12 rounded-2xl bg-gradient-to-tr ${current.color} text-white flex items-center justify-center shadow-lg shrink-0`}
@@ -355,7 +355,7 @@ export const WorkflowTourModal: React.FC<WorkflowTourModalProps> = ({ isOpen, on
         </div>
 
         {/* Modal Bottom Actions */}
-        <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-factory-950/40">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-factory-950/40">
           <button
             onClick={handlePrev}
             disabled={currentStep === 0}

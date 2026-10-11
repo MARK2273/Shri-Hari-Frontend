@@ -1,29 +1,48 @@
 import React from 'react';
-import { Sun, Moon, Bell, Compass } from 'lucide-react';
+import { Sun, Moon, Bell, Compass, Menu } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useTour } from '../../context/TourContext';
 
-export const Navbar: React.FC = () => {
+interface NavbarProps {
+  onToggleMobileMenu?: () => void;
+}
+
+export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu }) => {
   const { isDark, toggleTheme } = useTheme();
   const { user } = useAuth();
   const { openTour } = useTour();
 
   return (
-    <header className="h-16 bg-white dark:bg-factory-900 border-b border-slate-200 dark:border-slate-800 px-8 flex items-center justify-between sticky top-0 z-20 backdrop-blur-md bg-white/90 dark:bg-factory-900/90 transition-colors">
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+    <header className="h-16 bg-white dark:bg-factory-900 border-b border-slate-200 dark:border-slate-800 px-3.5 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-20 backdrop-blur-md bg-white/90 dark:bg-factory-900/90 transition-colors">
+      <div className="flex items-center gap-2.5 sm:gap-3">
+        {/* Mobile Hamburger Menu Button */}
+        <button
+          type="button"
+          onClick={onToggleMobileMenu}
+          aria-label="Open Navigation Menu"
+          className="lg:hidden p-2 -ml-1.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-factory-800 transition-colors"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
+        {/* Brand mark visible on small screens when sidebar is hidden */}
+        <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white font-extrabold text-xs lg:hidden shadow-sm shrink-0">
+          SH
+        </div>
+
+        <span className="hidden sm:inline text-xs font-semibold text-slate-500 dark:text-slate-400">
           Standard Unit: Kilograms (kg)
         </span>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-3">
         <button
           onClick={() => openTour(0)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-brand-600 dark:text-brand-400 bg-brand-500/10 hover:bg-brand-500/20 border border-brand-500/30 transition-all hover:scale-105 shadow-sm"
+          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold text-brand-600 dark:text-brand-400 bg-brand-500/10 hover:bg-brand-500/20 border border-brand-500/30 transition-all hover:scale-105 shadow-sm"
           title="Interactive Tour: Learn how things are co-related in this ERP"
         >
-          <Compass className="w-4 h-4 text-brand-500" />
+          <Compass className="w-4 h-4 text-brand-500 shrink-0" />
           <span className="hidden sm:inline">Interactive Tour</span>
         </button>
 
@@ -43,15 +62,15 @@ export const Navbar: React.FC = () => {
           <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-brand-500"></span>
         </button>
 
-        <div className="h-6 w-px bg-slate-200 dark:border-slate-800 mx-1"></div>
+        <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-0.5 sm:mx-1"></div>
 
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-600 to-emerald-500 text-white font-bold text-xs flex items-center justify-center">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-600 to-emerald-500 text-white font-bold text-xs flex items-center justify-center shrink-0">
             {user?.full_name?.charAt(0) || 'U'}
           </div>
           <div className="hidden md:block text-left">
-            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">{user?.full_name}</p>
-            <p className="text-[10px] text-slate-400">{user?.email}</p>
+            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[120px]">{user?.full_name}</p>
+            <p className="text-[10px] text-slate-400 truncate max-w-[120px]">{user?.email}</p>
           </div>
         </div>
       </div>

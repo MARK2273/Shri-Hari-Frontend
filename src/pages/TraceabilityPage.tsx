@@ -233,15 +233,15 @@ export const TraceabilityPage: React.FC = () => {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full text-left text-xs min-w-[650px]">
                 <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                   <tr>
-                    <th className="py-2.5">Plastic Grade</th>
-                    <th className="py-2.5">Code</th>
-                    <th className="py-2.5">Warehouse Lot #</th>
-                    <th className="py-2.5">Supplier / Lot Ref</th>
-                    <th className="py-2.5">Consumed Weight</th>
-                    <th className="py-2.5 text-right">Contribution %</th>
+                    <th className="py-2.5 whitespace-nowrap">Plastic Grade</th>
+                    <th className="py-2.5 whitespace-nowrap">Code</th>
+                    <th className="py-2.5 whitespace-nowrap">Warehouse Lot #</th>
+                    <th className="py-2.5 whitespace-nowrap">Supplier / Lot Ref</th>
+                    <th className="py-2.5 whitespace-nowrap">Consumed Weight</th>
+                    <th className="py-2.5 text-right whitespace-nowrap">Contribution %</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">

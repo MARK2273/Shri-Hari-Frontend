@@ -57,7 +57,7 @@ export const LoginPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white/10 dark:bg-factory-900/60 backdrop-blur-xl border border-white/15 dark:border-slate-800 rounded-3xl p-8 shadow-2xl">
+        <div className="bg-white/10 dark:bg-factory-900/60 backdrop-blur-xl border border-white/15 dark:border-slate-800 rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-2xl">
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">

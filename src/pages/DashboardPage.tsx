@@ -76,17 +76,17 @@ export const DashboardPage: React.FC = () => {
             Real-time material lots, order-driven production batches & dispatch ledger
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
           <Link
             to="/materials"
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
           >
             <Plus className="w-3.5 h-3.5 text-brand-500" />
             Receive Stock
           </Link>
           <Link
             to="/production"
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl transition-colors shadow-md shadow-brand-500/20"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl transition-colors shadow-md shadow-brand-500/20"
           >
             <Plus className="w-3.5 h-3.5" />
             New Production Run
@@ -219,23 +219,31 @@ export const DashboardPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
-                {productionRuns.slice(0, 5).map((run) => (
-                  <tr key={run.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                    <td className="py-3 font-mono font-bold text-brand-600 dark:text-brand-400">
-                      {run.batch_number}
-                    </td>
-                    <td className="py-3 text-slate-700 dark:text-slate-300 truncate max-w-[140px]">
-                      {run.products?.name || run.product_name}
-                    </td>
-                    <td className="py-3 font-mono">{run.accepted_output_kg}</td>
-                    <td className="py-3 font-mono text-rose-500">{run.waste_kg}</td>
-                    <td className="py-3">
-                      <Badge variant={run.status === 'completed' ? 'success' : 'info'}>
-                        {run.status}
-                      </Badge>
+                {productionRuns.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-6 text-center text-slate-400 text-xs">
+                      No production batches recorded yet.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  productionRuns.slice(0, 5).map((run) => (
+                    <tr key={run.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
+                      <td className="py-3 font-mono font-bold text-brand-600 dark:text-brand-400">
+                        {run.batch_number}
+                      </td>
+                      <td className="py-3 text-slate-700 dark:text-slate-300 truncate max-w-[140px]">
+                        {run.products?.name || run.product_name}
+                      </td>
+                      <td className="py-3 font-mono">{run.accepted_output_kg ?? 0}</td>
+                      <td className="py-3 font-mono text-rose-500">{run.waste_kg ?? 0}</td>
+                      <td className="py-3">
+                        <Badge variant={run.status === 'completed' ? 'success' : 'info'}>
+                          {run.status}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -264,7 +272,14 @@ export const DashboardPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
-                {orders.slice(0, 5).map((order) => (
+                {orders.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="py-6 text-center text-slate-400 text-xs">
+                      No active orders placed yet.
+                    </td>
+                  </tr>
+                ) : (
+                  orders.slice(0, 5).map((order) => (
                   <tr key={order.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
                     <td className="py-3 font-mono font-bold text-slate-800 dark:text-slate-200">
                       {order.order_number}
@@ -287,7 +302,8 @@ export const DashboardPage: React.FC = () => {
                       </Badge>
                     </td>
                   </tr>
-                ))}
+                ))
+              )}
               </tbody>
             </table>
           </div>

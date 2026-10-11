@@ -120,48 +120,56 @@ export const DispatchPage: React.FC = () => {
         </h3>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-xs min-w-[700px]">
             <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
               <tr>
-                <th className="py-2.5">Document #</th>
-                <th className="py-2.5">Customer Order #</th>
-                <th className="py-2.5">Customer</th>
-                <th className="py-2.5">Destination</th>
-                <th className="py-2.5">Vehicle #</th>
-                <th className="py-2.5">Dispatched Qty</th>
-                <th className="py-2.5">Date & Time</th>
-                <th className="py-2.5">Status</th>
+                <th className="py-2.5 whitespace-nowrap">Document #</th>
+                <th className="py-2.5 whitespace-nowrap">Customer Order #</th>
+                <th className="py-2.5 whitespace-nowrap">Customer</th>
+                <th className="py-2.5 whitespace-nowrap">Destination</th>
+                <th className="py-2.5 whitespace-nowrap">Vehicle #</th>
+                <th className="py-2.5 whitespace-nowrap">Dispatched Qty</th>
+                <th className="py-2.5 whitespace-nowrap">Date & Time</th>
+                <th className="py-2.5 whitespace-nowrap">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
-              {deliveries.map((del) => (
-                <tr key={del.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                  <td className="py-3 font-mono font-bold text-brand-600 dark:text-brand-400">
-                    {del.delivery_number}
-                  </td>
-                  <td className="py-3 font-mono text-slate-700 dark:text-slate-300">
-                    {del.customer_orders?.order_number || del.order_number}
-                  </td>
-                  <td className="py-3 text-slate-800 dark:text-slate-200">
-                    {del.customers?.name || del.customer_name}
-                  </td>
-                  <td className="py-3 text-slate-500 max-w-[180px] truncate" title={del.destination_address}>
-                    {del.destination_address}
-                  </td>
-                  <td className="py-3 font-mono text-slate-600 dark:text-slate-400">
-                    {del.vehicle_number || 'N/A'}
-                  </td>
-                  <td className="py-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                    {del.delivery_items?.[0]?.quantity_kg || del.items?.[0]?.quantity_kg || 194} kg
-                  </td>
-                  <td className="py-3 text-slate-500">
-                    {new Date(del.dispatch_date).toLocaleDateString()}
-                  </td>
-                  <td className="py-3">
-                    <Badge variant="success">Confirmed & Deducted</Badge>
+              {deliveries.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-slate-400 text-xs">
+                    No dispatch delivery notes recorded yet.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                deliveries.map((del) => (
+                  <tr key={del.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
+                    <td className="py-3 font-mono font-bold text-brand-600 dark:text-brand-400">
+                      {del.delivery_number}
+                    </td>
+                    <td className="py-3 font-mono text-slate-700 dark:text-slate-300">
+                      {del.customer_orders?.order_number || del.order_number}
+                    </td>
+                    <td className="py-3 text-slate-800 dark:text-slate-200">
+                      {del.customers?.name || del.customer_name}
+                    </td>
+                    <td className="py-3 text-slate-500 max-w-[180px] truncate" title={del.destination_address}>
+                      {del.destination_address}
+                    </td>
+                    <td className="py-3 font-mono text-slate-600 dark:text-slate-400">
+                      {del.vehicle_number || 'N/A'}
+                    </td>
+                    <td className="py-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                      {del.delivery_items?.[0]?.quantity_kg || del.items?.[0]?.quantity_kg || 0} kg
+                    </td>
+                    <td className="py-3 text-slate-500">
+                      {new Date(del.dispatch_date).toLocaleDateString()}
+                    </td>
+                    <td className="py-3">
+                      <Badge variant="success">Confirmed & Deducted</Badge>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -250,7 +258,7 @@ export const DispatchPage: React.FC = () => {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Dispatched Quantity (kg)

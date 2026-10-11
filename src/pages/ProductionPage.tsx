@@ -222,24 +222,31 @@ export const ProductionPage: React.FC = () => {
       </div>
 
       {/* Production Batches Table */}
-      <div className="bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
+      <div className="bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-xs min-w-[760px]">
             <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
               <tr>
-                <th className="py-2.5">Batch #</th>
-                <th className="py-2.5">Linked Order</th>
-                <th className="py-2.5">Finished Product</th>
-                <th className="py-2.5">Planned (kg)</th>
-                <th className="py-2.5">Actual Input (kg)</th>
-                <th className="py-2.5">Accepted (kg)</th>
-                <th className="py-2.5">Waste (kg)</th>
-                <th className="py-2.5">Status</th>
-                <th className="py-2.5 text-right">Action</th>
+                <th className="py-2.5 whitespace-nowrap">Batch #</th>
+                <th className="py-2.5 whitespace-nowrap">Linked Order</th>
+                <th className="py-2.5 whitespace-nowrap">Finished Product</th>
+                <th className="py-2.5 whitespace-nowrap">Planned (kg)</th>
+                <th className="py-2.5 whitespace-nowrap">Actual Input (kg)</th>
+                <th className="py-2.5 whitespace-nowrap">Accepted (kg)</th>
+                <th className="py-2.5 whitespace-nowrap">Waste (kg)</th>
+                <th className="py-2.5 whitespace-nowrap">Status</th>
+                <th className="py-2.5 text-right whitespace-nowrap">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
-              {batches.map((batch) => (
+              {batches.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="py-8 text-center text-slate-400 text-xs">
+                    No production batches recorded yet. Launch a batch from customer order demand.
+                  </td>
+                </tr>
+              ) : (
+                batches.map((batch) => (
                 <tr key={batch.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
                   <td className="py-3 font-mono font-bold text-brand-600 dark:text-brand-400">
                     {batch.batch_number}
@@ -277,7 +284,8 @@ export const ProductionPage: React.FC = () => {
                     )}
                   </td>
                 </tr>
-              ))}
+              ))
+            )}
             </tbody>
           </table>
         </div>

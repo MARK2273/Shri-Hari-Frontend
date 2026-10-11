@@ -250,7 +250,7 @@ export const OrdersPage: React.FC = () => {
       </div>
 
       {/* Tabs Switcher: Orders vs Customer Directory */}
-      <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6">
+      <div className="flex border-b border-slate-200 dark:border-slate-800 gap-3 sm:gap-6 overflow-x-auto whitespace-nowrap">
         <button
           onClick={() => setActiveTab('orders')}
           className={`pb-3 text-xs font-bold transition-all relative flex items-center gap-2 ${
@@ -435,16 +435,16 @@ export const OrdersPage: React.FC = () => {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full text-left text-xs min-w-[700px]">
                 <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                   <tr>
-                    <th className="py-2.5">Code</th>
-                    <th className="py-2.5">Company Name</th>
-                    <th className="py-2.5">Contact Person</th>
-                    <th className="py-2.5">Phone & Email</th>
-                    <th className="py-2.5">Delivery Address</th>
-                    <th className="py-2.5">Status</th>
-                    <th className="py-2.5 text-right">Actions</th>
+                    <th className="py-2.5 whitespace-nowrap">Code</th>
+                    <th className="py-2.5 whitespace-nowrap">Company Name</th>
+                    <th className="py-2.5 whitespace-nowrap">Contact Person</th>
+                    <th className="py-2.5 whitespace-nowrap">Phone & Email</th>
+                    <th className="py-2.5 whitespace-nowrap">Delivery Address</th>
+                    <th className="py-2.5 whitespace-nowrap">Status</th>
+                    <th className="py-2.5 text-right whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
@@ -534,7 +534,7 @@ export const OrdersPage: React.FC = () => {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Contact Person Name
@@ -748,7 +748,7 @@ export const OrdersPage: React.FC = () => {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Ordered Product *

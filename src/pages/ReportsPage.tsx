@@ -45,7 +45,7 @@ export const ReportsPage: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto whitespace-nowrap">
         <button
           onClick={() => setActiveTab('variance')}
           className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors ${
@@ -82,17 +82,17 @@ export const ReportsPage: React.FC = () => {
       {activeTab === 'variance' && (
         <div className="bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-xs min-w-[700px]">
               <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                 <tr>
-                  <th className="py-2.5">Batch #</th>
-                  <th className="py-2.5">Product</th>
-                  <th className="py-2.5">Planned Input</th>
-                  <th className="py-2.5">Actual Input</th>
-                  <th className="py-2.5">Accepted Output</th>
-                  <th className="py-2.5">Waste (kg)</th>
-                  <th className="py-2.5">Yield %</th>
-                  <th className="py-2.5">Input Variance</th>
+                  <th className="py-2.5 whitespace-nowrap">Batch #</th>
+                  <th className="py-2.5 whitespace-nowrap">Product</th>
+                  <th className="py-2.5 whitespace-nowrap">Planned Input</th>
+                  <th className="py-2.5 whitespace-nowrap">Actual Input</th>
+                  <th className="py-2.5 whitespace-nowrap">Accepted Output</th>
+                  <th className="py-2.5 whitespace-nowrap">Waste (kg)</th>
+                  <th className="py-2.5 whitespace-nowrap">Yield %</th>
+                  <th className="py-2.5 whitespace-nowrap">Input Variance</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
@@ -161,15 +161,15 @@ export const ReportsPage: React.FC = () => {
               Batch-by-Batch Waste & Scrap Breakdown
             </h3>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full text-left text-xs min-w-[650px]">
                 <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                   <tr>
-                    <th className="py-2.5">Batch #</th>
-                    <th className="py-2.5">Product</th>
-                    <th className="py-2.5">Accepted (kg)</th>
-                    <th className="py-2.5">Trim Waste (kg)</th>
-                    <th className="py-2.5">Rejected (kg)</th>
-                    <th className="py-2.5">Recorded At</th>
+                    <th className="py-2.5 whitespace-nowrap">Batch #</th>
+                    <th className="py-2.5 whitespace-nowrap">Product</th>
+                    <th className="py-2.5 whitespace-nowrap">Accepted (kg)</th>
+                    <th className="py-2.5 whitespace-nowrap">Trim Waste (kg)</th>
+                    <th className="py-2.5 whitespace-nowrap">Rejected (kg)</th>
+                    <th className="py-2.5 whitespace-nowrap">Recorded At</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
@@ -217,13 +217,13 @@ export const ReportsPage: React.FC = () => {
           </h3>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-xs min-w-[550px]">
               <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                 <tr>
-                  <th className="py-2.5">Action Event</th>
-                  <th className="py-2.5">Entity</th>
-                  <th className="py-2.5">User</th>
-                  <th className="py-2.5">Timestamp</th>
+                  <th className="py-2.5 whitespace-nowrap">Action Event</th>
+                  <th className="py-2.5 whitespace-nowrap">Entity</th>
+                  <th className="py-2.5 whitespace-nowrap">User</th>
+                  <th className="py-2.5 whitespace-nowrap">Timestamp</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium font-mono">
