@@ -11,12 +11,16 @@ import {
   GitBranch,
   BarChart3,
   LogOut,
-  Building2
+  Building2,
+  Compass,
+  Sparkles
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useTour } from '../../context/TourContext';
 
 export const Sidebar: React.FC = () => {
   const { user, logout } = useAuth();
+  const { openTour } = useTour();
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -81,6 +85,17 @@ export const Sidebar: React.FC = () => {
           );
         })}
       </nav>
+
+      {/* Guided Tour Launcher in Sidebar */}
+      <div className="px-3 pb-3">
+        <button
+          onClick={() => openTour(0)}
+          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-brand-600 dark:text-brand-400 bg-brand-500/10 hover:bg-brand-500/20 border border-brand-500/20 transition-all hover:scale-[1.02]"
+        >
+          <Compass className="w-4 h-4 text-brand-500" />
+          <span className="truncate">Factory Workflow Tour</span>
+        </button>
+      </div>
 
       {/* User Card & Logout */}
       <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-factory-950/30">

@@ -3,9 +3,12 @@ import { Outlet, Navigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Navbar } from './Navbar';
 import { useAuth } from '../../context/AuthContext';
+import { useTour } from '../../context/TourContext';
+import { WorkflowTourModal } from '../common/WorkflowTourModal';
 
 export const Layout: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
+  const { isTourOpen, closeTour, initialStep } = useTour();
 
   if (isLoading) {
     return (
@@ -28,6 +31,8 @@ export const Layout: React.FC = () => {
           <Outlet />
         </main>
       </div>
+      <WorkflowTourModal isOpen={isTourOpen} onClose={closeTour} initialStep={initialStep} />
     </div>
   );
 };
+

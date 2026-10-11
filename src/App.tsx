@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { TourProvider } from './context/TourContext';
 import { Layout } from './components/layout/Layout';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -18,7 +19,8 @@ export function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <BrowserRouter>
+        <TourProvider>
+          <BrowserRouter>
           <Routes>
             {/* Public route */}
             <Route path="/login" element={<LoginPage />} />
@@ -41,6 +43,7 @@ export function App() {
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </BrowserRouter>
+        </TourProvider>
       </AuthProvider>
     </ThemeProvider>
   );

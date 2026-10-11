@@ -1,11 +1,13 @@
 import React from 'react';
-import { Sun, Moon, Bell, ShieldCheck } from 'lucide-react';
+import { Sun, Moon, Bell, ShieldCheck, Compass } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { useTour } from '../../context/TourContext';
 
 export const Navbar: React.FC = () => {
   const { isDark, toggleTheme } = useTheme();
   const { user } = useAuth();
+  const { openTour } = useTour();
 
   return (
     <header className="h-16 bg-white dark:bg-factory-900 border-b border-slate-200 dark:border-slate-800 px-8 flex items-center justify-between sticky top-0 z-20 backdrop-blur-md bg-white/90 dark:bg-factory-900/90 transition-colors">
@@ -18,6 +20,15 @@ export const Navbar: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-3">
+        <button
+          onClick={() => openTour(0)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-brand-600 dark:text-brand-400 bg-brand-500/10 hover:bg-brand-500/20 border border-brand-500/30 transition-all hover:scale-105 shadow-sm"
+          title="Interactive Tour: Learn how things are co-related in this ERP"
+        >
+          <Compass className="w-4 h-4 text-brand-500" />
+          <span className="hidden sm:inline">Interactive Tour</span>
+        </button>
+
         <button
           onClick={toggleTheme}
           aria-label="Toggle Dark/Light Mode"
