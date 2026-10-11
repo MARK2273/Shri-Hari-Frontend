@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
-import { BarChart3, TrendingUp, AlertTriangle, ShieldCheck, History } from 'lucide-react';
+import { BarChart3, TrendingUp, AlertTriangle, ShieldCheck, History, Trash2, CheckCircle2 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 
 export const ReportsPage: React.FC = () => {
@@ -96,28 +96,36 @@ export const ReportsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
-                {varianceReport.map((row, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                    <td className="py-3 font-mono font-bold text-brand-600 dark:text-brand-400">
-                      {row.batch_number}
-                    </td>
-                    <td className="py-3 text-slate-800 dark:text-slate-200">{row.product_name}</td>
-                    <td className="py-3 font-mono">{row.planned_input_kg} kg</td>
-                    <td className="py-3 font-mono">{row.actual_input_kg} kg</td>
-                    <td className="py-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                      {row.accepted_output_kg} kg
-                    </td>
-                    <td className="py-3 font-mono text-rose-500">{row.waste_kg} kg</td>
-                    <td className="py-3 font-mono font-bold text-slate-900 dark:text-white">
-                      {row.yield_percentage}%
-                    </td>
-                    <td className="py-3 font-mono">
-                      <span className={row.input_variance_kg === 0 ? 'text-emerald-500' : 'text-amber-500'}>
-                        {row.input_variance_kg > 0 ? `+${row.input_variance_kg}` : row.input_variance_kg} kg
-                      </span>
+                {varianceReport.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-6 text-center text-slate-400 text-xs">
+                      No production batch variance records logged yet.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  varianceReport.map((row, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
+                      <td className="py-3 font-mono font-bold text-brand-600 dark:text-brand-400">
+                        {row.batch_number}
+                      </td>
+                      <td className="py-3 text-slate-800 dark:text-slate-200">{row.product_name}</td>
+                      <td className="py-3 font-mono">{row.planned_input_kg ?? 0} kg</td>
+                      <td className="py-3 font-mono">{row.actual_input_kg ?? 0} kg</td>
+                      <td className="py-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                        {row.accepted_output_kg ?? 0} kg
+                      </td>
+                      <td className="py-3 font-mono text-rose-500">{row.waste_kg ?? 0} kg</td>
+                      <td className="py-3 font-mono font-bold text-slate-900 dark:text-white">
+                        {row.yield_percentage ?? 100}%
+                      </td>
+                      <td className="py-3 font-mono">
+                        <span className={row.input_variance_kg === 0 ? 'text-emerald-500' : 'text-amber-500'}>
+                          {row.input_variance_kg > 0 ? `+${row.input_variance_kg}` : (row.input_variance_kg ?? 0)} kg
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -131,20 +139,70 @@ export const ReportsPage: React.FC = () => {
             <div className="p-4 rounded-2xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
               <span className="text-[10px] uppercase font-bold text-slate-400">Total Accepted Production</span>
               <p className="text-xl font-black font-mono text-emerald-600 dark:text-emerald-400 mt-1">
-                {wasteData.summary?.total_accepted_kg || 194} kg
+                {wasteData.summary?.total_accepted_kg ?? 0} kg
               </p>
             </div>
             <div className="p-4 rounded-2xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
               <span className="text-[10px] uppercase font-bold text-slate-400">Total Waste / Trim Scrap</span>
               <p className="text-xl font-black font-mono text-rose-500 mt-1">
-                {wasteData.summary?.total_waste_kg || 6} kg
+                {wasteData.summary?.total_waste_kg ?? 0} kg
               </p>
             </div>
             <div className="p-4 rounded-2xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
               <span className="text-[10px] uppercase font-bold text-slate-400">Total Rejected / Quarantined</span>
               <p className="text-xl font-black font-mono text-amber-500 mt-1">
-                {wasteData.summary?.total_rejected_kg || 0} kg
+                {wasteData.summary?.total_rejected_kg ?? 0} kg
               </p>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-3">
+            <h3 className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wider text-slate-400">
+              Batch-by-Batch Waste & Scrap Breakdown
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
+                  <tr>
+                    <th className="py-2.5">Batch #</th>
+                    <th className="py-2.5">Product</th>
+                    <th className="py-2.5">Accepted (kg)</th>
+                    <th className="py-2.5">Trim Waste (kg)</th>
+                    <th className="py-2.5">Rejected (kg)</th>
+                    <th className="py-2.5">Recorded At</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
+                  {(wasteData.records || []).length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-4 text-center text-slate-400 text-xs">
+                        No production waste or scrap entries recorded.
+                      </td>
+                    </tr>
+                  ) : (
+                    (wasteData.records || []).map((rec: any, idx: number) => (
+                      <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
+                        <td className="py-3 font-mono font-bold text-brand-600 dark:text-brand-400">
+                          {rec.batch_number}
+                        </td>
+                        <td className="py-3 text-slate-800 dark:text-slate-200">{rec.product_name}</td>
+                        <td className="py-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                          {rec.accepted_kg ?? 0} kg
+                        </td>
+                        <td className="py-3 font-mono text-rose-500 font-bold">
+                          {rec.waste_kg ?? 0} kg
+                        </td>
+                        <td className="py-3 font-mono text-amber-500">
+                          {rec.rejected_kg ?? 0} kg
+                        </td>
+                        <td className="py-3 text-slate-400">
+                          {rec.recorded_at ? new Date(rec.recorded_at).toLocaleString() : 'N/A'}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -169,16 +227,26 @@ export const ReportsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium font-mono">
-                {auditLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                    <td className="py-3 font-bold text-brand-600 dark:text-brand-400">{log.action}</td>
-                    <td className="py-3 text-slate-600 dark:text-slate-300">{log.entity_name}</td>
-                    <td className="py-3 text-slate-800 dark:text-slate-200 font-sans">
-                      {log.users?.email || log.user_email || 'admin@shrihari.com'}
+                {auditLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="py-6 text-center text-slate-400 text-xs font-sans">
+                      No audit events logged yet.
                     </td>
-                    <td className="py-3 text-slate-500">{new Date(log.created_at).toLocaleString()}</td>
                   </tr>
-                ))}
+                ) : (
+                  auditLogs.map((log) => (
+                    <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
+                      <td className="py-3 font-bold text-brand-600 dark:text-brand-400">{log.action}</td>
+                      <td className="py-3 text-slate-600 dark:text-slate-300 font-sans">{log.entity_name}</td>
+                      <td className="py-3 text-slate-800 dark:text-slate-200 font-sans">
+                        {log.users?.email || log.user_email || 'admin@shrihari.com'}
+                      </td>
+                      <td className="py-3 text-slate-500 font-sans">
+                        {log.created_at ? new Date(log.created_at).toLocaleString() : 'N/A'}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
