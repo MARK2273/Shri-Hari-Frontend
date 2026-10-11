@@ -7,8 +7,8 @@ import { Factory, Lock, Mail, AlertCircle, ArrowRight, ShieldCheck } from 'lucid
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [email, setEmail] = useState('admin@shrihari.com');
-  const [password, setPassword] = useState('Admin@123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -36,11 +36,6 @@ export const LoginPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const fillQuick = (userEmail: string) => {
-    setEmail(userEmail);
-    setPassword('Admin@123');
   };
 
   return (
@@ -80,7 +75,7 @@ export const LoginPage: React.FC = () => {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@shrihari.com"
+                  placeholder="name@company.com"
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-950/60 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
                 />
               </div>
@@ -116,20 +111,6 @@ export const LoginPage: React.FC = () => {
               )}
             </button>
           </form>
-
-          {/* Single Admin Access */}
-          <div className="mt-6 pt-5 border-t border-white/10 text-center">
-            <p className="text-[11px] text-slate-400 mb-2 font-medium">Admin Access Credentials:</p>
-            <div className="flex justify-center">
-              <button
-                type="button"
-                onClick={() => fillQuick('admin@shrihari.com')}
-                className="px-3 py-1.5 text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-emerald-400 transition-colors"
-              >
-                Auto-fill Admin (admin@shrihari.com)
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
