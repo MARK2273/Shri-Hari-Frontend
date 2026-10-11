@@ -9,7 +9,6 @@ import {
   RefreshCw,
   Edit2,
   Trash2,
-  Sparkles,
   SlidersHorizontal,
   Box,
   Scale
@@ -163,20 +162,6 @@ export const MaterialsPage: React.FC = () => {
     }
   };
 
-  // 1-Click Seed Standard Packaging Polymers
-  const handleSeedDefaults = async () => {
-    try {
-      setIsSubmitting(true);
-      const res = await api.post('/materials/seed-defaults', {});
-      alert(res.data?.message || 'Standard packaging polymers configured!');
-      await fetchData();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to seed materials');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   // Receive Batch
   const handleReceiveBatch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -242,24 +227,12 @@ export const MaterialsPage: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {materials.length === 0 && (
-            <button
-              onClick={handleSeedDefaults}
-              disabled={isSubmitting}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-brand-700 dark:text-brand-300 bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800/60 rounded-xl hover:bg-brand-100 transition-colors shadow-sm"
-              title="1-Click Populate standard packaging polymer grades (HDPE, LDPE, PP, LLDPE, White Masterbatch)"
-            >
-              <Sparkles className="w-4 h-4 text-brand-500" />
-              <span>Seed Standard Polymers</span>
-            </button>
-          )}
-
           <button
             onClick={handleOpenCreateMaterial}
             className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-factory-800 transition-colors shadow-sm"
           >
             <Plus className="w-4 h-4 text-brand-500" />
-            + Configure Plastic Type
+            Configure Plastic Type
           </button>
 
           <button
@@ -357,21 +330,13 @@ export const MaterialsPage: React.FC = () => {
               <p className="text-xs text-slate-500 max-w-md mx-auto">
                 Before receiving raw plastic batches, configure the plastic material types used by your factory (e.g. HDPE, LDPE, PP, Masterbatch).
               </p>
-              <div className="flex items-center justify-center gap-3 pt-2">
-                <button
-                  onClick={handleSeedDefaults}
-                  disabled={isSubmitting}
-                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800 rounded-xl hover:bg-brand-100 transition-colors"
-                >
-                  <Sparkles className="w-4 h-4 text-brand-500" />
-                  Seed Standard Packaging Polymers
-                </button>
+              <div className="flex items-center justify-center pt-2">
                 <button
                   onClick={handleOpenCreateMaterial}
                   className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl transition-colors shadow-md shadow-brand-500/20"
                 >
                   <Plus className="w-4 h-4" />
-                  Create Custom Plastic Type
+                  Configure Plastic Type
                 </button>
               </div>
             </div>
@@ -412,7 +377,7 @@ export const MaterialsPage: React.FC = () => {
 
             {filteredBatches.length === 0 ? (
               <div className="py-12 text-center text-slate-400 text-xs">
-                No raw material batches received yet. Click "+ Receive Material Batch" to log supplier delivery.
+                No raw material batches received yet. Click "Receive Material Batch" to log supplier delivery.
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -498,7 +463,7 @@ export const MaterialsPage: React.FC = () => {
 
           {materials.length === 0 ? (
             <div className="py-12 text-center text-slate-400 text-xs">
-              No plastic materials configured yet. Click "+ Add Plastic Material Type" or use "Seed Standard Polymers".
+              No plastic materials configured yet. Click "Add Plastic Material Type" to configure polymers.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -710,7 +675,7 @@ export const MaterialsPage: React.FC = () => {
                   }}
                   className="px-3 py-1.5 rounded-lg bg-amber-500 text-white font-bold text-xs shrink-0 hover:bg-amber-600 transition-colors"
                 >
-                  + Add Plastic Type
+                  Add Plastic Type
                 </button>
               </div>
             ) : (
@@ -720,6 +685,7 @@ export const MaterialsPage: React.FC = () => {
                 onChange={(e) => setReceiveForm({ ...receiveForm, materialId: e.target.value })}
                 className="w-full text-xs px-3 py-2.5 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
               >
+                <option value="" disabled>-- Select Plastic Material Type --</option>
                 {materials.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.code} — {m.name}

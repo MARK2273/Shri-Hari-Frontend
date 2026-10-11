@@ -10,7 +10,6 @@ import {
   Users,
   Edit2,
   Trash2,
-  Sparkles,
   Phone,
   Mail,
   MapPin,
@@ -173,20 +172,6 @@ export const OrdersPage: React.FC = () => {
     }
   };
 
-  // 1-Click Seed Sample Customers
-  const handleSeedCustomers = async () => {
-    setIsSubmitting(true);
-    try {
-      const res = await api.post('/orders/customers/seed-defaults', {});
-      alert(res.data?.message || 'Sample packaging clients configured!');
-      await fetchData();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to seed sample clients');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   // Create Order
   const handleCreateOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -240,18 +225,6 @@ export const OrdersPage: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {customers.length === 0 && (
-            <button
-              onClick={handleSeedCustomers}
-              disabled={isSubmitting}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-brand-700 dark:text-brand-300 bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800/60 rounded-xl hover:bg-brand-100 transition-colors shadow-sm"
-              title="1-Click Populate sample corporate packaging clients (Amul, Parle, Nestle, Haldiram)"
-            >
-              <Sparkles className="w-4 h-4 text-brand-500" />
-              <span>Seed Sample Clients</span>
-            </button>
-          )}
-
           <button
             onClick={handleOpenCreateCustomer}
             className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-factory-800 transition-colors shadow-sm"
@@ -313,17 +286,7 @@ export const OrdersPage: React.FC = () => {
               <p className="text-xs text-slate-500 max-w-md mx-auto">
                 Customer orders drive the factory's production schedule. All production jobs and batch outputs are linked to orders.
               </p>
-              <div className="flex items-center justify-center gap-3 pt-2">
-                {customers.length === 0 && (
-                  <button
-                    onClick={handleSeedCustomers}
-                    disabled={isSubmitting}
-                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800 rounded-xl hover:bg-brand-100 transition-colors"
-                  >
-                    <Sparkles className="w-4 h-4 text-brand-500" />
-                    Seed Sample Clients
-                  </button>
-                )}
+              <div className="flex items-center justify-center pt-2">
                 <button
                   onClick={() => {
                     if (customers.length === 0) {
@@ -468,7 +431,7 @@ export const OrdersPage: React.FC = () => {
 
           {customers.length === 0 ? (
             <div className="py-12 text-center text-slate-400 text-xs">
-              No customers registered yet. Click "+ Add Customer" or use "Seed Sample Clients" to populate accounts.
+              No customers registered yet. Click "Add Customer" to register client accounts.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -752,7 +715,7 @@ export const OrdersPage: React.FC = () => {
                   }}
                   className="px-3 py-1.5 rounded-lg bg-amber-500 text-white font-bold text-xs shrink-0 hover:bg-amber-600 transition-colors"
                 >
-                  + Add Customer
+                  Add Customer
                 </button>
               </div>
             ) : (
@@ -762,6 +725,7 @@ export const OrdersPage: React.FC = () => {
                 onChange={(e) => setOrderForm({ ...orderForm, customerId: e.target.value })}
                 className="w-full text-xs px-3 py-2.5 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
               >
+                <option value="" disabled>-- Select Customer --</option>
                 {customers.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name} ({c.code})
@@ -798,8 +762,9 @@ export const OrdersPage: React.FC = () => {
                   required
                   value={orderForm.productId}
                   onChange={(e) => setOrderForm({ ...orderForm, productId: e.target.value })}
-                  className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl"
+                  className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
                 >
+                  <option value="" disabled>-- Select Product --</option>
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name} ({p.code})
@@ -853,7 +818,7 @@ export const OrdersPage: React.FC = () => {
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || customers.length === 0}
+              disabled={isSubmitting || customers.length === 0 || products.length === 0}
               className="px-4 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl shadow-md transition-colors disabled:opacity-50"
             >
               Confirm Customer Order

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Moon, Bell, ShieldCheck, Compass } from 'lucide-react';
+import { Sun, Moon, Bell, Compass } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useTour } from '../../context/TourContext';
@@ -11,12 +11,10 @@ export const Navbar: React.FC = () => {
 
   return (
     <header className="h-16 bg-white dark:bg-factory-900 border-b border-slate-200 dark:border-slate-800 px-8 flex items-center justify-between sticky top-0 z-20 backdrop-blur-md bg-white/90 dark:bg-factory-900/90 transition-colors">
-      <div className="flex items-center gap-3">
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-          <ShieldCheck className="w-3.5 h-3.5" />
-          Supabase RLS Protected
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+          Standard Unit: Kilograms (kg)
         </span>
-        <span className="text-xs text-slate-400 dark:text-slate-500 hidden sm:inline">| Standard Unit: Kilograms (kg)</span>
       </div>
 
       <div className="flex items-center gap-3">

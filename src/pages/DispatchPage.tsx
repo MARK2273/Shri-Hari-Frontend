@@ -179,30 +179,37 @@ export const DispatchPage: React.FC = () => {
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Select Customer Order (DEL-02)
             </label>
-            <select
-              required
-              value={dispatchForm.orderId}
-              onChange={(e) => {
-                const ord = orders.find((o) => o.id === e.target.value);
-                const item = ord?.customer_order_items?.[0] || {};
-                const availableFG = fgBatches.find((b) => b.product_id === item.product_id);
-                setDispatchForm({
-                  ...dispatchForm,
-                  orderId: e.target.value,
-                  orderItemId: item.id || '',
-                  productId: item.product_id || '',
-                  finishedGoodsBatchId: availableFG?.id || '',
-                  destinationAddress: ord?.customers?.delivery_address || dispatchForm.destinationAddress,
-                });
-              }}
-              className="w-full text-xs px-3 py-2.5 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl"
-            >
-              {orders.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.order_number} - {o.customers?.name || o.customer_name}
-                </option>
-              ))}
-            </select>
+            {orders.length === 0 ? (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-300">
+                No customer orders available for dispatch.
+              </div>
+            ) : (
+              <select
+                required
+                value={dispatchForm.orderId}
+                onChange={(e) => {
+                  const ord = orders.find((o) => o.id === e.target.value);
+                  const item = ord?.customer_order_items?.[0] || {};
+                  const availableFG = fgBatches.find((b) => b.product_id === item.product_id);
+                  setDispatchForm({
+                    ...dispatchForm,
+                    orderId: e.target.value,
+                    orderItemId: item.id || '',
+                    productId: item.product_id || '',
+                    finishedGoodsBatchId: availableFG?.id || '',
+                    destinationAddress: ord?.customers?.delivery_address || dispatchForm.destinationAddress,
+                  });
+                }}
+                className="w-full text-xs px-3 py-2.5 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl"
+              >
+                <option value="" disabled>-- Select Customer Order --</option>
+                {orders.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.order_number} - {o.customers?.name || o.customer_name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div>
@@ -222,18 +229,25 @@ export const DispatchPage: React.FC = () => {
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Allocate From Finished Goods Batch (DEL-05, FG-07)
             </label>
-            <select
-              required
-              value={dispatchForm.finishedGoodsBatchId}
-              onChange={(e) => setDispatchForm({ ...dispatchForm, finishedGoodsBatchId: e.target.value })}
-              className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
-            >
-              {fgBatches.map((fg) => (
-                <option key={fg.id} value={fg.id}>
-                  {fg.batch_number} (On-Hand: {fg.quantity_on_hand_kg} kg)
-                </option>
-              ))}
-            </select>
+            {fgBatches.length === 0 ? (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-300">
+                No finished goods batches in inventory to allocate.
+              </div>
+            ) : (
+              <select
+                required
+                value={dispatchForm.finishedGoodsBatchId}
+                onChange={(e) => setDispatchForm({ ...dispatchForm, finishedGoodsBatchId: e.target.value })}
+                className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
+              >
+                <option value="" disabled>-- Select Finished Goods Batch --</option>
+                {fgBatches.map((fg) => (
+                  <option key={fg.id} value={fg.id}>
+                    {fg.batch_number} (On-Hand: {fg.quantity_on_hand_kg} kg)
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -282,7 +296,8 @@ export const DispatchPage: React.FC = () => {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl shadow-md transition-colors"
+              disabled={orders.length === 0 || fgBatches.length === 0}
+              className="px-4 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Confirm Dispatch & Deduct Stock
             </button>

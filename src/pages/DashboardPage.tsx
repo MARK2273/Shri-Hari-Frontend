@@ -9,7 +9,8 @@ import {
   ArrowUpRight,
   TrendingUp,
   CheckCircle2,
-  Clock
+  Clock,
+  Plus
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Link } from 'react-router-dom';
@@ -78,15 +79,17 @@ export const DashboardPage: React.FC = () => {
         <div className="flex items-center gap-2">
           <Link
             to="/materials"
-            className="px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
           >
-            + Receive Stock
+            <Plus className="w-3.5 h-3.5 text-brand-500" />
+            Receive Stock
           </Link>
           <Link
             to="/production"
-            className="px-3.5 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl transition-colors shadow-md shadow-brand-500/20"
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl transition-colors shadow-md shadow-brand-500/20"
           >
-            + New Production Run
+            <Plus className="w-3.5 h-3.5" />
+            New Production Run
           </Link>
         </div>
       </div>

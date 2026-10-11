@@ -3,6 +3,7 @@ import { api } from '../api/client';
 import { Factory, Plus, Play, CheckCircle2, AlertCircle, ArrowRight, Layers } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
+import { Link } from 'react-router-dom';
 
 export const ProductionPage: React.FC = () => {
   const [batches, setBatches] = useState<any[]>([]);
@@ -245,29 +246,45 @@ export const ProductionPage: React.FC = () => {
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Select Customer Order (ORD-04)
             </label>
-            <select
-              required
-              value={draftForm.orderId}
-              onChange={(e) => {
-                const ord = orders.find((o) => o.id === e.target.value);
-                const item = ord?.customer_order_items?.[0] || {};
-                const prod = products.find((p) => p.id === item.product_id);
-                setDraftForm({
-                  ...draftForm,
-                  orderId: e.target.value,
-                  orderItemId: item.id || '',
-                  recipeId: prod?.active_recipe?.id || '',
-                  plannedQuantityKg: Number(item.requested_quantity_kg) || 200,
-                });
-              }}
-              className="w-full text-xs px-3 py-2.5 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl"
-            >
-              {orders.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.order_number} - {o.customers?.name || o.customer_name} ({o.total_requested_weight_kg} kg)
-                </option>
-              ))}
-            </select>
+            {orders.length === 0 ? (
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-300 flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-bold">No customer orders available</p>
+                  <p className="text-[11px] opacity-85">You need to register at least one customer order before launching a production run.</p>
+                </div>
+                <Link
+                  to="/orders"
+                  className="px-3 py-1.5 rounded-lg bg-amber-500 text-white font-bold text-xs shrink-0 hover:bg-amber-600 transition-colors shadow-sm"
+                >
+                  Create Order
+                </Link>
+              </div>
+            ) : (
+              <select
+                required
+                value={draftForm.orderId}
+                onChange={(e) => {
+                  const ord = orders.find((o) => o.id === e.target.value);
+                  const item = ord?.customer_order_items?.[0] || {};
+                  const prod = products.find((p) => p.id === item.product_id);
+                  setDraftForm({
+                    ...draftForm,
+                    orderId: e.target.value,
+                    orderItemId: item.id || '',
+                    recipeId: prod?.active_recipe?.id || '',
+                    plannedQuantityKg: Number(item.requested_quantity_kg) || 200,
+                  });
+                }}
+                className="w-full text-xs px-3 py-2.5 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
+              >
+                <option value="" disabled>-- Select an active customer order --</option>
+                {orders.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.order_number} - {o.customers?.name || o.customer_name} ({o.total_requested_weight_kg} kg)
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div>
@@ -296,7 +313,8 @@ export const ProductionPage: React.FC = () => {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl shadow-md transition-colors"
+              disabled={orders.length === 0}
+              className="px-4 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Create Production Batch
             </button>
@@ -352,11 +370,15 @@ export const ProductionPage: React.FC = () => {
                       }}
                       className="w-full text-xs px-2.5 py-1.5 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-lg font-mono"
                     >
-                      {availableLotsForMat.map((lot) => (
-                        <option key={lot.id} value={lot.id}>
-                          {lot.batch_number} (Rem: {lot.remaining_quantity_kg} kg)
-                        </option>
-                      ))}
+                      {availableLotsForMat.length === 0 ? (
+                        <option value="" disabled>No lots in stock (0 kg)</option>
+                      ) : (
+                        availableLotsForMat.map((lot) => (
+                          <option key={lot.id} value={lot.id}>
+                            {lot.batch_number} (Rem: {lot.remaining_quantity_kg} kg)
+                          </option>
+                        ))
+                      )}
                     </select>
                   </div>
 
