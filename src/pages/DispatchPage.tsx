@@ -205,31 +205,17 @@ export const DispatchPage: React.FC = () => {
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Dispatch Document #
-              </label>
-              <div className="w-full text-xs px-3 py-2 bg-slate-100 dark:bg-factory-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-600 dark:text-slate-400 font-mono flex items-center justify-between">
-                <span>Auto-Generated (DEL-...)</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold uppercase tracking-wider">
-                  Auto
-                </span>
-              </div>
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Unique delivery note auto-assigned</span>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Vehicle / Transport Number
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. GJ-01-AB-1234"
-                value={dispatchForm.vehicleNumber}
-                onChange={(e) => setDispatchForm({ ...dispatchForm, vehicleNumber: e.target.value })}
-                className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
-              />
-            </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Vehicle / Transport Number
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. GJ-01-AB-1234"
+              value={dispatchForm.vehicleNumber}
+              onChange={(e) => setDispatchForm({ ...dispatchForm, vehicleNumber: e.target.value })}
+              className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
+            />
           </div>
 
           <div>
