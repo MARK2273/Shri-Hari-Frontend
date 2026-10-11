@@ -3,6 +3,8 @@ import { api } from '../api/client';
 import { Factory, Plus, Play, CheckCircle2, AlertCircle, ArrowRight, Layers } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
+import { Button } from '../components/common/Button';
+import { PageSkeleton } from '../components/common/Skeleton';
 import { Link } from 'react-router-dom';
 
 export const ProductionPage: React.FC = () => {
@@ -11,6 +13,7 @@ export const ProductionPage: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [rawBatches, setRawBatches] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Modal 1: Create Draft Production Batch
   const [isDraftModalOpen, setIsDraftModalOpen] = useState(false);
@@ -103,6 +106,7 @@ export const ProductionPage: React.FC = () => {
       alert('Please select an active customer order first.');
       return;
     }
+    setIsSubmitting(true);
     try {
       const ord = orders.find((o) => o.id === draftForm.orderId);
       const item = ord?.customer_order_items?.[0] || {};
@@ -121,6 +125,8 @@ export const ProductionPage: React.FC = () => {
       await fetchData();
     } catch (err: any) {
       alert(err.response?.data?.message || err.response?.data?.errors?.[0]?.message || 'Failed to start batch');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -173,6 +179,7 @@ export const ProductionPage: React.FC = () => {
     e.preventDefault();
     if (!selectedBatchToConfirm) return;
 
+    setIsSubmitting(true);
     try {
       await api.post(`/production/${selectedBatchToConfirm.id}/confirm`, {
         consumption: confirmForm.consumption.map((c) => ({
@@ -190,6 +197,8 @@ export const ProductionPage: React.FC = () => {
       await fetchData();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to confirm production run');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -198,6 +207,10 @@ export const ProductionPage: React.FC = () => {
     Number(confirmForm.acceptedOutputKg || 0) +
     Number(confirmForm.wasteKg || 0) +
     Number(confirmForm.rejectedKg || 0);
+
+  if (isLoading) {
+    return <PageSkeleton type="table" />;
+  }
 
   return (
     <div className="space-y-6">
@@ -391,13 +404,14 @@ export const ProductionPage: React.FC = () => {
             >
               Cancel
             </button>
-            <button
+            <Button
               type="submit"
               disabled={orders.length === 0}
-              className="px-4 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              isLoading={isSubmitting}
+              loadingText="Creating Batch..."
             >
               Create Production Batch
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -565,12 +579,14 @@ export const ProductionPage: React.FC = () => {
             >
               Cancel
             </button>
-            <button
+            <Button
               type="submit"
-              className="px-5 py-2.5 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl shadow-md transition-colors"
+              isLoading={isSubmitting}
+              loadingText="Confirming & Updating Finished Stock..."
+              size="lg"
             >
               Confirm Production & Update Finished Stock
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>

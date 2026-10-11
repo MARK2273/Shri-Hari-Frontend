@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
+import { Button } from '../components/common/Button';
+import { PageSkeleton } from '../components/common/Skeleton';
 
 export const MaterialsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'batches' | 'catalog'>('batches');
@@ -211,6 +213,10 @@ export const MaterialsPage: React.FC = () => {
     selectedMaterial === 'all'
       ? batches
       : batches.filter((b) => b.material_id === selectedMaterial);
+
+  if (isLoading) {
+    return <PageSkeleton type="table" />;
+  }
 
   return (
     <div className="space-y-6">
@@ -625,13 +631,13 @@ export const MaterialsPage: React.FC = () => {
             >
               Cancel
             </button>
-            <button
+            <Button
               type="submit"
-              disabled={isSubmitting}
-              className="px-4 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl shadow-md transition-colors disabled:opacity-50"
+              isLoading={isSubmitting}
+              loadingText="Saving..."
             >
               {materialToEdit ? 'Save Changes' : 'Create Material Type'}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -778,13 +784,14 @@ export const MaterialsPage: React.FC = () => {
             >
               Cancel
             </button>
-            <button
+            <Button
               type="submit"
-              disabled={isSubmitting || materials.length === 0}
-              className="px-4 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl shadow-md transition-colors disabled:opacity-50"
+              disabled={materials.length === 0}
+              isLoading={isSubmitting}
+              loadingText="Confirming Receipt..."
             >
               Confirm Stock Receipt
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -856,13 +863,13 @@ export const MaterialsPage: React.FC = () => {
             >
               Cancel
             </button>
-            <button
+            <Button
               type="submit"
-              disabled={isSubmitting}
-              className="px-4 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl shadow-md transition-colors disabled:opacity-50"
+              isLoading={isSubmitting}
+              loadingText="Saving Adjustment..."
             >
               Save Stock Adjustment
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -894,15 +901,16 @@ export const MaterialsPage: React.FC = () => {
             >
               Cancel
             </button>
-            <button
+            <Button
               type="button"
-              disabled={isSubmitting}
+              variant="danger"
               onClick={confirmDeleteMaterial}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-md transition-colors disabled:opacity-50"
+              isLoading={isSubmitting}
+              loadingText="Deleting..."
+              icon={Trash2}
             >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>{isSubmitting ? 'Deleting...' : 'Yes, Delete Material'}</span>
-            </button>
+              Yes, Delete Material
+            </Button>
           </div>
         </div>
       </Modal>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { BarChart3, TrendingUp, AlertTriangle, ShieldCheck, History, Trash2, CheckCircle2 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
+import { PageSkeleton } from '../components/common/Skeleton';
 
 export const ReportsPage: React.FC = () => {
   const [varianceReport, setVarianceReport] = useState<any[]>([]);
@@ -30,6 +31,10 @@ export const ReportsPage: React.FC = () => {
     };
     fetchReports();
   }, []);
+
+  if (isLoading) {
+    return <PageSkeleton type="reports" />;
+  }
 
   return (
     <div className="space-y-6">

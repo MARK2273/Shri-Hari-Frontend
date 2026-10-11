@@ -3,12 +3,15 @@ import { api } from '../api/client';
 import { Truck, Plus, MapPin, Calendar, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
+import { Button } from '../components/common/Button';
+import { PageSkeleton } from '../components/common/Skeleton';
 
 export const DispatchPage: React.FC = () => {
   const [deliveries, setDeliveries] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [fgBatches, setFgBatches] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Modal State
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
@@ -63,6 +66,7 @@ export const DispatchPage: React.FC = () => {
 
   const handleCreateDispatch = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
       await api.post('/dispatch/confirm', {
         orderId: dispatchForm.orderId,
@@ -85,11 +89,17 @@ export const DispatchPage: React.FC = () => {
       });
 
       setIsDispatchModalOpen(false);
-      fetchData();
+      await fetchData();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to confirm dispatch');
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
+  if (isLoading) {
+    return <PageSkeleton type="table" />;
+  }
 
   return (
     <div className="space-y-6">
@@ -302,13 +312,14 @@ export const DispatchPage: React.FC = () => {
             >
               Cancel
             </button>
-            <button
+            <Button
               type="submit"
               disabled={orders.length === 0 || fgBatches.length === 0}
-              className="px-4 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              isLoading={isSubmitting}
+              loadingText="Confirming Dispatch & Deducting Stock..."
             >
               Confirm Dispatch & Deduct Stock
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>

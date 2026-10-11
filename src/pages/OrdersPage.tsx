@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
+import { Button } from '../components/common/Button';
+import { PageSkeleton } from '../components/common/Skeleton';
 
 export const OrdersPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'orders' | 'customers'>('orders');
@@ -209,6 +211,10 @@ export const OrdersPage: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+
+  if (isLoading) {
+    return <PageSkeleton type="table" />;
+  }
 
   return (
     <div className="space-y-6">
@@ -625,13 +631,13 @@ export const OrdersPage: React.FC = () => {
             >
               Cancel
             </button>
-            <button
+            <Button
               type="submit"
-              disabled={isSubmitting}
-              className="px-4 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl shadow-md transition-colors disabled:opacity-50"
+              isLoading={isSubmitting}
+              loadingText="Saving Customer..."
             >
               {customerToEdit ? 'Save Changes' : 'Create Customer Account'}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -663,15 +669,16 @@ export const OrdersPage: React.FC = () => {
             >
               Cancel
             </button>
-            <button
+            <Button
               type="button"
-              disabled={isDeleting}
+              variant="danger"
               onClick={confirmDeleteCustomer}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-md transition-colors disabled:opacity-50"
+              isLoading={isDeleting}
+              loadingText="Deleting..."
+              icon={Trash2}
             >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>{isDeleting ? 'Deleting...' : 'Yes, Delete Customer'}</span>
-            </button>
+              Yes, Delete Customer
+            </Button>
           </div>
         </div>
       </Modal>
@@ -816,13 +823,14 @@ export const OrdersPage: React.FC = () => {
             >
               Cancel
             </button>
-            <button
+            <Button
               type="submit"
-              disabled={isSubmitting || customers.length === 0 || products.length === 0}
-              className="px-4 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl shadow-md transition-colors disabled:opacity-50"
+              disabled={customers.length === 0 || products.length === 0}
+              isLoading={isSubmitting}
+              loadingText="Creating Order..."
             >
               Confirm Customer Order
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>

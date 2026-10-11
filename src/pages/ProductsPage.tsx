@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
+import { Button } from '../components/common/Button';
+import { PageSkeleton } from '../components/common/Skeleton';
 
 export const ProductsPage: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
@@ -273,6 +275,10 @@ export const ProductsPage: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+
+  if (isLoading) {
+    return <PageSkeleton type="table" />;
+  }
 
   return (
     <div className="space-y-6">
@@ -773,13 +779,13 @@ export const ProductsPage: React.FC = () => {
             >
               Cancel
             </button>
-            <button
+            <Button
               type="submit"
-              disabled={isSubmitting}
-              className="px-5 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl shadow-md transition-colors disabled:opacity-50"
+              isLoading={isSubmitting}
+              loadingText="Saving Product..."
             >
               {productToEdit ? 'Save Changes' : 'Create Product'}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -900,13 +906,14 @@ export const ProductsPage: React.FC = () => {
             >
               Cancel
             </button>
-            <button
+            <Button
               type="submit"
-              disabled={isSubmitting || recipeForm.items.length === 0}
-              className="px-5 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl shadow-md transition-colors disabled:opacity-50"
+              disabled={recipeForm.items.length === 0}
+              isLoading={isSubmitting}
+              loadingText="Activating..."
             >
               Activate New Version
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -938,15 +945,16 @@ export const ProductsPage: React.FC = () => {
             >
               Cancel
             </button>
-            <button
+            <Button
               type="button"
-              disabled={isDeleting}
+              variant="danger"
               onClick={confirmDeleteProduct}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-md transition-colors disabled:opacity-50"
+              isLoading={isDeleting}
+              loadingText="Deleting..."
+              icon={Trash2}
             >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>{isDeleting ? 'Deleting...' : 'Yes, Delete Product'}</span>
-            </button>
+              Yes, Delete Product
+            </Button>
           </div>
         </div>
       </Modal>

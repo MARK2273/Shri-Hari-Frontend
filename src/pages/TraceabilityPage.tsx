@@ -17,12 +17,14 @@ import {
   Boxes
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
+import { Button } from '../components/common/Button';
+import { PageSkeleton } from '../components/common/Skeleton';
 
 export const TraceabilityPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [traceData, setTraceData] = useState<any>(null);
   const [availableBatches, setAvailableBatches] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchTraceability = async (term: string) => {
     setIsLoading(true);
@@ -52,6 +54,10 @@ export const TraceabilityPage: React.FC = () => {
       (sum: number, l: any) => sum + (Number(l.consumed_kg) || 0),
       0
     ) || Number(traceData?.planned_quantity_kg) || 0;
+
+  if (isLoading && !traceData) {
+    return <PageSkeleton type="traceability" />;
+  }
 
   return (
     <div className="space-y-6">
@@ -85,13 +91,15 @@ export const TraceabilityPage: React.FC = () => {
               className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono font-medium focus:outline-none focus:border-brand-500"
             />
           </div>
-          <button
+          <Button
             type="submit"
-            disabled={isLoading}
-            className="w-full sm:w-auto px-5 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl shadow-md transition-colors disabled:opacity-50"
+            isLoading={isLoading}
+            loadingText="Searching..."
+            icon={Search}
+            className="w-full sm:w-auto"
           >
-            {isLoading ? 'Searching...' : 'Trace Supply Chain'}
-          </button>
+            Trace Supply Chain
+          </Button>
         </form>
 
         {availableBatches.length > 0 && (

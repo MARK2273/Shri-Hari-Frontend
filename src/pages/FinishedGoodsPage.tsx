@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { PackageCheck, Truck, Layers, CheckCircle2 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
+import { PageSkeleton } from '../components/common/Skeleton';
 import { Link } from 'react-router-dom';
 
 export const FinishedGoodsPage: React.FC = () => {
@@ -24,6 +25,10 @@ export const FinishedGoodsPage: React.FC = () => {
     };
     fetchInventory();
   }, []);
+
+  if (isLoading) {
+    return <PageSkeleton type="table" />;
+  }
 
   return (
     <div className="space-y-6">

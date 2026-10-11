@@ -13,6 +13,7 @@ import {
   Plus
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
+import { PageSkeleton } from '../components/common/Skeleton';
 import { Link } from 'react-router-dom';
 
 export const DashboardPage: React.FC = () => {
@@ -57,11 +58,7 @@ export const DashboardPage: React.FC = () => {
     .reduce((acc, o) => acc + (Number(o.total_requested_weight_kg) || 0), 0);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+    return <PageSkeleton type="dashboard" />;
   }
 
   return (
