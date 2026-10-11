@@ -117,30 +117,16 @@ export const LoginPage: React.FC = () => {
             </button>
           </form>
 
-          {/* Quick Demo Logins */}
+          {/* Single Admin Access */}
           <div className="mt-6 pt-5 border-t border-white/10 text-center">
-            <p className="text-[11px] text-slate-400 mb-2 font-medium">Quick Demo Profiles (Click to test):</p>
-            <div className="flex flex-wrap justify-center gap-2">
+            <p className="text-[11px] text-slate-400 mb-2 font-medium">Admin Access Credentials:</p>
+            <div className="flex justify-center">
               <button
                 type="button"
                 onClick={() => fillQuick('admin@shrihari.com')}
-                className="px-2.5 py-1 text-[11px] font-semibold bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-emerald-400 transition-colors"
+                className="px-3 py-1.5 text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-emerald-400 transition-colors"
               >
-                Factory Admin
-              </button>
-              <button
-                type="button"
-                onClick={() => fillQuick('supervisor@shrihari.com')}
-                className="px-2.5 py-1 text-[11px] font-semibold bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sky-400 transition-colors"
-              >
-                Supervisor
-              </button>
-              <button
-                type="button"
-                onClick={() => fillQuick('operator@shrihari.com')}
-                className="px-2.5 py-1 text-[11px] font-semibold bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-amber-400 transition-colors"
-              >
-                Operator
+                Auto-fill Admin (admin@shrihari.com)
               </button>
             </div>
           </div>
