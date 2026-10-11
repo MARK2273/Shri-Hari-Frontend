@@ -81,14 +81,46 @@ export const ProductionPage: React.FC = () => {
     fetchData();
   }, []);
 
+  const openDraftModal = () => {
+    if (orders.length > 0) {
+      const selectedOrd = orders.find((o) => o.id === draftForm.orderId) || orders[0];
+      const item = selectedOrd?.customer_order_items?.[0] || {};
+      const prod = products.find((p) => p.id === item.product_id);
+      setDraftForm({
+        orderId: selectedOrd.id,
+        orderItemId: item.id || '',
+        recipeId: prod?.active_recipe?.id || prod?.product_recipes?.[0]?.id || '',
+        plannedQuantityKg: Number(item.requested_quantity_kg) || Number(selectedOrd.total_requested_weight_kg) || 200,
+        notes: '',
+      });
+    }
+    setIsDraftModalOpen(true);
+  };
+
   const handleStartDraftBatch = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!draftForm.orderId) {
+      alert('Please select an active customer order first.');
+      return;
+    }
     try {
-      await api.post('/production', draftForm);
+      const ord = orders.find((o) => o.id === draftForm.orderId);
+      const item = ord?.customer_order_items?.[0] || {};
+      const prod = products.find((p) => p.id === item.product_id);
+      const recipeId = draftForm.recipeId || prod?.active_recipe?.id || prod?.product_recipes?.[0]?.id || '';
+      const orderItemId = draftForm.orderItemId || item.id || '';
+
+      await api.post('/production', {
+        orderId: draftForm.orderId,
+        orderItemId,
+        recipeId,
+        plannedQuantityKg: Number(draftForm.plannedQuantityKg),
+        notes: draftForm.notes,
+      });
       setIsDraftModalOpen(false);
-      fetchData();
+      await fetchData();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to start batch');
+      alert(err.response?.data?.message || err.response?.data?.errors?.[0]?.message || 'Failed to start batch');
     }
   };
 
@@ -96,20 +128,37 @@ export const ProductionPage: React.FC = () => {
     setSelectedBatchToConfirm(batch);
     // Find recipe items
     const prod = products.find((p) => p.id === batch.product_id);
-    const recipeItems = prod?.active_recipe?.product_recipe_items || prod?.active_recipe?.items || [];
+    const recipeItems =
+      prod?.active_recipe?.product_recipe_items ||
+      prod?.active_recipe?.items ||
+      prod?.product_recipes?.[0]?.product_recipe_items ||
+      batch.product_recipes?.product_recipe_items ||
+      [];
 
     const defaultConsumption = recipeItems.map((item: any) => {
-      const plannedKg = Number(batch.planned_quantity_kg) * Number(item.planned_kg_per_kg_output);
+      const plannedKg =
+        Number(batch.planned_quantity_kg) *
+        Number(item.planned_kg_per_kg_output || (Number(item.percentage) / 100) || 1);
       // Auto-suggest first FIFO available batch of this material
       const availableLot = rawBatches.find((b) => b.material_id === item.material_id);
       return {
         materialId: item.material_id,
-        materialName: item.materials?.name || item.material_name,
+        materialName: item.materials?.name || item.material_name || 'Material',
         materialBatchId: availableLot?.id || '',
         plannedQuantityKg: plannedKg,
         actualQuantityKg: plannedKg,
       };
     });
+
+    if (defaultConsumption.length === 0 && rawBatches.length > 0) {
+      defaultConsumption.push({
+        materialId: rawBatches[0].material_id,
+        materialName: rawBatches[0].materials?.name || 'Raw Material',
+        materialBatchId: rawBatches[0].id,
+        plannedQuantityKg: Number(batch.planned_quantity_kg),
+        actualQuantityKg: Number(batch.planned_quantity_kg),
+      });
+    }
 
     setConfirmForm({
       consumption: defaultConsumption,
@@ -138,7 +187,7 @@ export const ProductionPage: React.FC = () => {
       });
 
       setIsConfirmModalOpen(false);
-      fetchData();
+      await fetchData();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to confirm production run');
     }
@@ -164,7 +213,7 @@ export const ProductionPage: React.FC = () => {
           </p>
         </div>
         <button
-          onClick={() => setIsDraftModalOpen(true)}
+          onClick={openDraftModal}
           className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl transition-colors shadow-md shadow-brand-500/20"
         >
           <Plus className="w-4 h-4" />
@@ -286,6 +335,29 @@ export const ProductionPage: React.FC = () => {
               </select>
             )}
           </div>
+
+          {draftForm.orderId && (() => {
+            const ord = orders.find((o) => o.id === draftForm.orderId);
+            const item = ord?.customer_order_items?.[0] || {};
+            const prod = products.find((p) => p.id === item.product_id);
+            return (
+              <div className="p-3 bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700/60 rounded-xl space-y-1.5 text-xs">
+                <div className="flex justify-between font-bold text-slate-800 dark:text-white">
+                  <span>Product: {prod?.name || 'Selected Product'}</span>
+                  <span className="font-mono text-brand-600 dark:text-brand-400">{prod?.code || ''}</span>
+                </div>
+                <div className="text-[11px] text-slate-500 flex justify-between">
+                  <span>Customer: {ord?.customers?.name || ord?.customer_name}</span>
+                  <span>Order Quantity: {ord?.total_requested_weight_kg || item.requested_quantity_kg || 0} kg</span>
+                </div>
+                {prod?.active_recipe && (
+                  <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                    Active Formula: V{prod.active_recipe.version || 1}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
