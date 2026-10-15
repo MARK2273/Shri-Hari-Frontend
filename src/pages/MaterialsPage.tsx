@@ -328,22 +328,41 @@ export const MaterialsPage: React.FC = () => {
                     </span>
                     <span className="text-[10px] text-slate-400 font-medium">/ Min: {m.min_stock_level_kg} kg</span>
                   </div>
-                  {Number(m.cost_per_kg) > 0 && (
-                    <div className="mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800 space-y-0.5">
-                      <div className="flex items-center justify-between text-[11px] font-mono">
-                        <span className="text-slate-400 font-sans text-[10px] uppercase font-bold">Weighted Avg</span>
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                          ₹{Number(m.cost_per_kg).toFixed(2)}/kg
-                        </span>
-                      </div>
-                      {Number(m.total_stock_value) > 0 && (
-                        <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
-                          <span className="font-sans text-[9px] uppercase">Valuation</span>
-                          <span>₹{Number(m.total_stock_value).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                  {(() => {
+                    const activeLots = batches.filter(
+                      (b) =>
+                        b.material_id === m.id &&
+                        b.status === 'available' &&
+                        Number(b.remaining_quantity_kg) > 0 &&
+                        Number(b.cost_per_kg) > 0
+                    );
+                    const remKg = activeLots.reduce((sum, b) => sum + Number(b.remaining_quantity_kg), 0);
+                    const val = activeLots.reduce(
+                      (sum, b) => sum + Number(b.remaining_quantity_kg) * Number(b.cost_per_kg),
+                      0
+                    );
+                    const avg = remKg > 0 ? val / remKg : Number(m.cost_per_kg) || 0;
+                    const stockVal = val > 0 ? val : Number(m.total_stock_value) || 0;
+
+                    if (avg <= 0) return null;
+
+                    return (
+                      <div className="mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800 space-y-0.5">
+                        <div className="flex items-center justify-between text-[11px] font-mono">
+                          <span className="text-slate-400 font-sans text-[10px] uppercase font-bold">Weighted Avg</span>
+                          <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                            ₹{avg.toFixed(2)}/kg
+                          </span>
                         </div>
-                      )}
-                    </div>
-                  )}
+                        {stockVal > 0 && (
+                          <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                            <span className="font-sans text-[9px] uppercase">Valuation</span>
+                            <span>₹{stockVal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
