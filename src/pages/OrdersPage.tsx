@@ -41,6 +41,8 @@ export const OrdersPage: React.FC = () => {
     customerId: '',
     orderNumber: `ORD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-00${Math.floor(Math.random() * 90 + 10)}`,
     requiredDeliveryDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+    grade: '',
+    sizeMicron: '',
     notes: '',
     productId: '',
     requestedQuantityKg: 500,
@@ -190,17 +192,24 @@ export const OrdersPage: React.FC = () => {
       await api.post('/orders', {
         customerId: orderForm.customerId,
         requiredDeliveryDate: orderForm.requiredDeliveryDate,
+        grade: orderForm.grade,
+        sizeMicron: orderForm.sizeMicron,
         notes: orderForm.notes,
         items: [
           {
             productId: orderForm.productId,
             requestedQuantityKg: orderForm.requestedQuantityKg,
+            grade: orderForm.grade,
+            sizeMicron: orderForm.sizeMicron,
+            notes: orderForm.notes,
           },
         ],
       });
       setIsOrderModalOpen(false);
       setOrderForm((prev) => ({
         ...prev,
+        grade: '',
+        sizeMicron: '',
         notes: '',
         requestedQuantityKg: 500,
       }));
@@ -311,6 +320,9 @@ export const OrdersPage: React.FC = () => {
           ) : (
             orders.map((order) => {
               const item = order.customer_order_items?.[0] || order.items?.[0] || {};
+              const productName = item.products?.name || products.find((p) => p.id === item.product_id)?.name;
+              const orderGrade = order.grade || item.grade;
+              const orderSizeMicron = order.size_micron || order.sizeMicron || item.size_micron || item.sizeMicron;
               const requested = Number(item.requested_quantity_kg || order.total_requested_weight_kg || 0);
               const produced = Number(item.produced_quantity_kg || 0);
               const dispatched = Number(item.dispatched_quantity_kg || 0);
@@ -354,6 +366,35 @@ export const OrdersPage: React.FC = () => {
                           <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
                           <span className="truncate">{order.customers.delivery_address}</span>
                         </p>
+                      )}
+
+                      {/* Product Specifications: Product, Grade, Size / Micron */}
+                      {(productName || orderGrade || orderSizeMicron || (order.notes && !order.notes.startsWith('{'))) && (
+                        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                          {productName && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-slate-100 dark:bg-factory-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                              <Package className="w-3 h-3 text-brand-500" />
+                              {productName}
+                            </span>
+                          )}
+                          {orderGrade && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40">
+                              <span className="text-[10px] uppercase font-semibold text-emerald-600 dark:text-emerald-400">Grade:</span>
+                              {orderGrade}
+                            </span>
+                          )}
+                          {orderSizeMicron && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/40">
+                              <span className="text-[10px] uppercase font-semibold text-sky-600 dark:text-sky-400">Size / Micron:</span>
+                              {orderSizeMicron}
+                            </span>
+                          )}
+                          {order.notes && !order.notes.startsWith('{') && (
+                            <span className="text-[11px] text-slate-400 italic">
+                              "{order.notes}"
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
 
@@ -799,6 +840,35 @@ export const OrdersPage: React.FC = () => {
                 />
                 <span className="absolute right-3 top-2 text-xs text-slate-400 font-bold">kg</span>
               </div>
+            </div>
+          </div>
+
+          {/* Grade & Size / Micron */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Grade
+              </label>
+              <input
+                type="text"
+                placeholder="Enter grade (e.g. HDPE, Virgin, Relene 010F18)"
+                value={orderForm.grade}
+                onChange={(e) => setOrderForm({ ...orderForm, grade: e.target.value })}
+                className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Size / Micron
+              </label>
+              <input
+                type="text"
+                placeholder="Enter size / micron (e.g. 50 Micron, 24x36)"
+                value={orderForm.sizeMicron}
+                onChange={(e) => setOrderForm({ ...orderForm, sizeMicron: e.target.value })}
+                className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl"
+              />
             </div>
           </div>
 
