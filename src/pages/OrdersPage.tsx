@@ -14,7 +14,8 @@ import {
   Mail,
   MapPin,
   Building2,
-  AlertTriangle
+  AlertTriangle,
+  IndianRupee,
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
@@ -26,6 +27,7 @@ export const OrdersPage: React.FC = () => {
   const [orders, setOrders] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
+  const [materials, setMaterials] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -37,16 +39,47 @@ export const OrdersPage: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Form state: Order
-  const [orderForm, setOrderForm] = useState({
+  const [orderForm, setOrderForm] = useState<{
+    customerId: string;
+    orderNumber: string;
+    requiredDeliveryDate: string;
+    grade: string;
+    sizeMicron: string;
+    sellingPricePerKg: number | '';
+    notes: string;
+    productId: string;
+    requestedQuantityKg: number;
+  }>({
     customerId: '',
     orderNumber: `ORD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-00${Math.floor(Math.random() * 90 + 10)}`,
     requiredDeliveryDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
     grade: '',
     sizeMicron: '',
+    sellingPricePerKg: '',
     notes: '',
     productId: '',
     requestedQuantityKg: 500,
   });
+
+  // Calculate product formulation BOM cost per kg dynamically
+  const getProductRecipeCost = (product: any): number => {
+    if (!product) return 0;
+    if (product.recipe_cost_per_kg && Number(product.recipe_cost_per_kg) > 0) {
+      return Number(product.recipe_cost_per_kg);
+    }
+    const activeRecipe =
+      product.active_recipe ||
+      product.product_recipes?.find((r: any) => r.is_active) ||
+      product.product_recipes?.[0];
+    if (!activeRecipe?.product_recipe_items?.length) return 0;
+
+    return activeRecipe.product_recipe_items.reduce((sum: number, it: any) => {
+      const mat = materials.find((m) => m.id === it.material_id);
+      const cost = Number(mat?.cost_per_kg || mat?.latest_cost_per_kg || mat?.avg_cost_per_kg || 0);
+      const ratio = (Number(it.percentage) || 0) / 100;
+      return sum + ratio * cost;
+    }, 0);
+  };
 
   // Form state: Customer Details
   const [customerForm, setCustomerForm] = useState({
@@ -63,17 +96,20 @@ export const OrdersPage: React.FC = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [ordRes, custRes, prdRes] = await Promise.all([
+      const [ordRes, custRes, prdRes, matRes] = await Promise.all([
         api.get('/orders'),
         api.get('/orders/customers'),
         api.get('/products'),
+        api.get('/materials'),
       ]);
       const fetchedCustomers = custRes.data.customers || [];
       const fetchedProducts = prdRes.data.products || [];
+      const fetchedMaterials = matRes.data.materials || [];
 
       setOrders(ordRes.data.orders || []);
       setCustomers(fetchedCustomers);
       setProducts(fetchedProducts);
+      setMaterials(fetchedMaterials);
 
       if (fetchedCustomers.length > 0 && !orderForm.customerId) {
         setOrderForm((prev) => ({ ...prev, customerId: fetchedCustomers[0].id }));
@@ -187,6 +223,15 @@ export const OrdersPage: React.FC = () => {
       alert('Please select a product. If none exist, configure a product first.');
       return;
     }
+    const sellPrice = parseFloat(String(orderForm.sellingPricePerKg));
+    if (!sellPrice || sellPrice <= 0) {
+      alert('Please enter a valid Selling Price Per KG greater than 0.');
+      return;
+    }
+
+    const selectedProduct = products.find((p) => p.id === orderForm.productId);
+    const recipeCost = getProductRecipeCost(selectedProduct);
+
     setIsSubmitting(true);
     try {
       await api.post('/orders', {
@@ -194,11 +239,15 @@ export const OrdersPage: React.FC = () => {
         requiredDeliveryDate: orderForm.requiredDeliveryDate,
         grade: orderForm.grade,
         sizeMicron: orderForm.sizeMicron,
+        sellingPricePerKg: sellPrice,
+        recipeCostPerKg: recipeCost,
         notes: orderForm.notes,
         items: [
           {
             productId: orderForm.productId,
             requestedQuantityKg: orderForm.requestedQuantityKg,
+            sellingPricePerKg: sellPrice,
+            recipeCostPerKg: recipeCost,
             grade: orderForm.grade,
             sizeMicron: orderForm.sizeMicron,
             notes: orderForm.notes,
@@ -210,6 +259,7 @@ export const OrdersPage: React.FC = () => {
         ...prev,
         grade: '',
         sizeMicron: '',
+        sellingPricePerKg: '',
         notes: '',
         requestedQuantityKg: 500,
       }));
@@ -389,6 +439,18 @@ export const OrdersPage: React.FC = () => {
                               {orderSizeMicron}
                             </span>
                           )}
+                          {Number(order.selling_price_per_kg || item.selling_price_per_kg) > 0 && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800/40">
+                              <span className="text-[10px] uppercase font-semibold text-teal-600 dark:text-teal-400">Sell:</span>
+                              ₹{Number(order.selling_price_per_kg || item.selling_price_per_kg).toFixed(2)}/kg
+                            </span>
+                          )}
+                          {Number(order.recipe_cost_per_kg || item.recipe_cost_per_kg) > 0 && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-slate-100 dark:bg-factory-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                              <span className="text-[10px] uppercase font-semibold text-slate-500">BOM Cost:</span>
+                              ₹{Number(order.recipe_cost_per_kg || item.recipe_cost_per_kg).toFixed(2)}/kg
+                            </span>
+                          )}
                           {order.notes && !order.notes.startsWith('{') && (
                             <span className="text-[11px] text-slate-400 italic">
                               "{order.notes}"
@@ -407,8 +469,13 @@ export const OrdersPage: React.FC = () => {
                         <Clock className="w-3.5 h-3.5 text-amber-500" />
                         <span>Target Delivery: {order.required_delivery_date}</span>
                       </div>
-                      <div className="font-mono font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 px-3 py-1 rounded-lg border border-brand-200 dark:border-brand-800/40">
-                        Total: {order.total_requested_weight_kg} kg
+                      <div className="font-mono font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 px-3 py-1 rounded-lg border border-brand-200 dark:border-brand-800/40 flex items-center gap-2">
+                        <span>Total: {order.total_requested_weight_kg} kg</span>
+                        {Number(order.total_order_value) > 0 && (
+                          <span className="text-emerald-600 dark:text-emerald-400 border-l border-brand-200 dark:border-brand-800/60 pl-2">
+                            ₹{Number(order.total_order_value).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -871,6 +938,138 @@ export const OrdersPage: React.FC = () => {
               />
             </div>
           </div>
+
+          {/* Pricing: Recipe Cost (View Only) & Selling Price Per KG (Input) */}
+          {(() => {
+            const selectedProduct = products.find((p) => p.id === orderForm.productId);
+            const recipeCost = getProductRecipeCost(selectedProduct);
+            const sellPrice =
+              typeof orderForm.sellingPricePerKg === 'number'
+                ? orderForm.sellingPricePerKg
+                : parseFloat(String(orderForm.sellingPricePerKg)) || 0;
+            const margin = sellPrice > 0 ? sellPrice - recipeCost : 0;
+            const marginPct = recipeCost > 0 ? (margin / recipeCost) * 100 : 0;
+            const weight = Number(orderForm.requestedQuantityKg) || 0;
+            const totalVal = sellPrice * weight;
+
+            return (
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Recipe Cost Price - Viewable only */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        Recipe Cost Price
+                      </label>
+                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-factory-800 px-1.5 py-0.5 rounded border border-slate-200/60 dark:border-slate-700/60">
+                        View Only
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between px-3 py-2 bg-slate-100/90 dark:bg-factory-800/80 border border-slate-200 dark:border-slate-700 rounded-xl">
+                      <span className="font-mono text-xs font-black text-slate-800 dark:text-slate-200">
+                        ₹{recipeCost.toFixed(2)}{' '}
+                        <span className="text-[10px] font-semibold text-slate-400 font-sans">/ kg</span>
+                      </span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                        BOM Cost
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Selling Price Per KG - Input field */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Selling Price Per KG (₹) *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        required
+                        placeholder="e.g. 135.00"
+                        value={orderForm.sellingPricePerKg}
+                        onChange={(e) =>
+                          setOrderForm({
+                            ...orderForm,
+                            sellingPricePerKg: e.target.value === '' ? '' : parseFloat(e.target.value),
+                          })
+                        }
+                        className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono pr-12 font-bold text-emerald-600 dark:text-emerald-400 focus:ring-2 focus:ring-emerald-500/20"
+                      />
+                      <span className="absolute right-3 top-2 text-xs text-slate-400 font-bold">₹/kg</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dynamic Price & Profit Margin Card */}
+                {sellPrice > 0 && (
+                  <div
+                    className={`p-3 rounded-2xl border transition-all ${
+                      margin >= 0
+                        ? 'bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/40 border-emerald-200 dark:border-emerald-800/60'
+                        : 'bg-gradient-to-r from-rose-50 to-amber-50 dark:from-rose-950/40 dark:to-amber-950/40 border-rose-200 dark:border-rose-800/60'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                            margin >= 0
+                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                              : 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                          }`}
+                        >
+                          <IndianRupee className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400">
+                            Estimated Gross Margin
+                          </p>
+                          <p
+                            className={`text-xs font-bold ${
+                              margin >= 0
+                                ? 'text-emerald-700 dark:text-emerald-300'
+                                : 'text-rose-600 dark:text-rose-400'
+                            }`}
+                          >
+                            {margin >= 0 ? '+' : ''}₹{margin.toFixed(2)} / kg
+                            {recipeCost > 0 && (
+                              <span className="text-[10px] font-normal ml-1.5 opacity-80">
+                                ({margin >= 0 ? '+' : ''}
+                                {marginPct.toFixed(1)}%)
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">
+                          Est. Total Order Value
+                        </span>
+                        <p className="font-mono text-sm font-black text-slate-900 dark:text-white leading-tight">
+                          ₹{totalVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                        {weight > 0 && (
+                          <p className="text-[10px] text-slate-400 font-mono">
+                            {weight} kg @ ₹{sellPrice.toFixed(2)}/kg
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {margin < 0 && (
+                      <p className="text-[11px] text-rose-600 dark:text-rose-400 font-medium mt-1.5 pt-1.5 border-t border-rose-200/60 dark:border-rose-800/60 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3 shrink-0" />
+                        Warning: Selling price is below the BOM recipe cost of ₹{recipeCost.toFixed(2)}/kg
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">

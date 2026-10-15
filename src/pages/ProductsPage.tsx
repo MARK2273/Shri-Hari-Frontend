@@ -162,12 +162,12 @@ export const ProductsPage: React.FC = () => {
       initialRecipeItems:
         materials.length > 0
           ? [
-              {
-                materialId: materials[0].id,
-                percentage: 100,
-                plannedKgPerKgOutput: 1.0,
-              },
-            ]
+            {
+              materialId: materials[0].id,
+              percentage: 100,
+              plannedKgPerKgOutput: 1.0,
+            },
+          ]
           : [],
     });
     setIsProductModalOpen(true);
@@ -259,13 +259,13 @@ export const ProductsPage: React.FC = () => {
       items:
         currentItems.length > 0
           ? currentItems.map((ci: any) => ({
-              materialId: ci.material_id,
-              percentage: Number(ci.percentage),
-              plannedKgPerKgOutput: Number(ci.planned_kg_per_kg_output),
-            }))
+            materialId: ci.material_id,
+            percentage: Number(ci.percentage),
+            plannedKgPerKgOutput: Number(ci.planned_kg_per_kg_output),
+          }))
           : materials.length > 0
-          ? [{ materialId: materials[0].id, percentage: 100, plannedKgPerKgOutput: 1.0 }]
-          : [],
+            ? [{ materialId: materials[0].id, percentage: 100, plannedKgPerKgOutput: 1.0 }]
+            : [],
     });
     setIsRecipeModalOpen(true);
   };
@@ -370,11 +370,10 @@ export const ProductsPage: React.FC = () => {
                   <div
                     key={p.id}
                     onClick={() => setSelectedProduct(p)}
-                    className={`p-4 rounded-2xl border transition-all cursor-pointer relative group ${
-                      isSelected
+                    className={`p-4 rounded-2xl border transition-all cursor-pointer relative group ${isSelected
                         ? 'bg-white dark:bg-factory-900 border-brand-500 shadow-md ring-2 ring-brand-500/20'
                         : 'bg-white/70 dark:bg-factory-900/70 border-slate-200/80 dark:border-slate-800 hover:border-slate-300'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
@@ -855,11 +854,11 @@ export const ProductsPage: React.FC = () => {
                           ₹{calculateFormulationCost(productForm.initialRecipeItems).toFixed(2)}{' '}
                           <span className="text-xs font-semibold text-slate-500">/ kg</span>
                         </p>
-                        {productForm.standardWeightKg !== 1 && (
+                        {/* {productForm.standardWeightKg !== 1 && (
                           <p className="text-[10px] text-slate-500 font-mono">
                             ₹{(calculateFormulationCost(productForm.initialRecipeItems) * productForm.standardWeightKg).toFixed(2)} / {productForm.unit}
                           </p>
-                        )}
+                        )} */}
                       </div>
                     </div>
                   )}
