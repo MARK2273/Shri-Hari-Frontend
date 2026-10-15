@@ -268,11 +268,10 @@ export const MaterialsPage: React.FC = () => {
       <div className="flex border-b border-slate-200 dark:border-slate-800 gap-3 sm:gap-6 overflow-x-auto whitespace-nowrap">
         <button
           onClick={() => setActiveTab('batches')}
-          className={`pb-3 text-xs font-bold transition-all relative flex items-center gap-2 ${
-            activeTab === 'batches'
+          className={`pb-3 text-xs font-bold transition-all relative flex items-center gap-2 ${activeTab === 'batches'
               ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-500'
               : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-          }`}
+            }`}
         >
           <Box className="w-4 h-4" />
           <span>Traceable Lots / Batches ({batches.length})</span>
@@ -280,11 +279,10 @@ export const MaterialsPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('catalog')}
-          className={`pb-3 text-xs font-bold transition-all relative flex items-center gap-2 ${
-            activeTab === 'catalog'
+          className={`pb-3 text-xs font-bold transition-all relative flex items-center gap-2 ${activeTab === 'catalog'
               ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-500'
               : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-          }`}
+            }`}
         >
           <SlidersHorizontal className="w-4 h-4" />
           <span>Plastic Material Types ({materials.length})</span>
@@ -301,11 +299,10 @@ export const MaterialsPage: React.FC = () => {
                 <div
                   key={m.id}
                   onClick={() => setSelectedMaterial(selectedMaterial === m.id ? 'all' : m.id)}
-                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
-                    selectedMaterial === m.id
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${selectedMaterial === m.id
                       ? 'bg-brand-50/50 dark:bg-brand-950/20 border-brand-500 shadow-md ring-2 ring-brand-500/20'
                       : 'bg-white dark:bg-factory-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
@@ -330,6 +327,14 @@ export const MaterialsPage: React.FC = () => {
                     </span>
                     <span className="text-[10px] text-slate-400 font-medium">/ Min: {m.min_stock_level_kg} kg</span>
                   </div>
+                  {Number(m.cost_per_kg) > 0 && (
+                    <div className="mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] font-mono">
+                      <span className="text-slate-400 font-sans text-[10px] uppercase font-bold">Buying Rate</span>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                        ₹{Number(m.cost_per_kg).toFixed(2)}/kg
+                      </span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -391,7 +396,7 @@ export const MaterialsPage: React.FC = () => {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs min-w-[700px]">
+                <table className="w-full text-left text-xs min-w-[750px]">
                   <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                     <tr>
                       <th className="py-2.5 whitespace-nowrap">Batch Number</th>
@@ -400,6 +405,7 @@ export const MaterialsPage: React.FC = () => {
                       <th className="py-2.5 whitespace-nowrap">Receipt Date</th>
                       <th className="py-2.5 whitespace-nowrap">Received (kg)</th>
                       <th className="py-2.5 whitespace-nowrap">Remaining (kg)</th>
+                      <th className="py-2.5 whitespace-nowrap">Buying Price</th>
                       <th className="py-2.5 whitespace-nowrap">Status</th>
                       <th className="py-2.5 text-right whitespace-nowrap">Actions</th>
                     </tr>
@@ -426,6 +432,23 @@ export const MaterialsPage: React.FC = () => {
                         <td className="py-3 font-mono">{b.received_quantity_kg} kg</td>
                         <td className="py-3 font-mono font-bold text-slate-900 dark:text-white">
                           {b.remaining_quantity_kg} kg
+                        </td>
+                        <td className="py-3 whitespace-nowrap">
+                          {Number(b.cost_per_kg) > 0 ? (
+                            <div>
+                              <span className="font-mono font-bold text-slate-900 dark:text-white text-xs">
+                                ₹{Number(b.cost_per_kg).toFixed(2)}
+                                <span className="text-[10px] text-slate-400 font-sans font-normal ml-0.5">/kg</span>
+                              </span>
+                              {/* {Number(b.received_quantity_kg) > 0 && (
+                                <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                                  Tot: ₹{(Number(b.cost_per_kg) * Number(b.received_quantity_kg)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                                </p>
+                              )} */}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 italic text-[11px]">—</span>
+                          )}
                         </td>
                         <td className="py-3">
                           <Badge variant={b.status === 'available' ? 'success' : 'neutral'}>{b.status}</Badge>
@@ -820,6 +843,14 @@ export const MaterialsPage: React.FC = () => {
                 {activeBatchToAdjust?.remaining_quantity_kg} kg
               </span>
             </p>
+            {Number(activeBatchToAdjust?.cost_per_kg) > 0 && (
+              <p>
+                <strong>Buying Price:</strong>{' '}
+                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                  ₹{Number(activeBatchToAdjust?.cost_per_kg).toFixed(2)} / kg
+                </span>
+              </p>
+            )}
           </div>
 
           <div>
