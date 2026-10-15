@@ -171,6 +171,10 @@ export const MaterialsPage: React.FC = () => {
       alert('Please select or create a plastic material first.');
       return;
     }
+    if (!receiveForm.costPerKg || receiveForm.costPerKg <= 0) {
+      alert('Please enter a valid Cost Per KG (₹). It is required for dynamic recipe formulation costing.');
+      return;
+    }
     setIsSubmitting(true);
     try {
       await api.post('/materials/batches/receive', receiveForm);
@@ -751,13 +755,15 @@ export const MaterialsPage: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Cost Per KG (₹)
+                Cost Per KG (₹) *
               </label>
               <input
                 type="number"
                 step="0.01"
-                min="0"
-                value={receiveForm.costPerKg}
+                min="0.01"
+                required
+                placeholder="e.g. 110.00"
+                value={receiveForm.costPerKg || ''}
                 onChange={(e) => setReceiveForm({ ...receiveForm, costPerKg: parseFloat(e.target.value) || 0 })}
                 className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
               />

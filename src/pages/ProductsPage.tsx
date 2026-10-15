@@ -11,7 +11,8 @@ import {
   Trash2,
   GitBranch,
   Box,
-  Scale
+  Scale,
+  IndianRupee,
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
@@ -23,6 +24,23 @@ export const ProductsPage: React.FC = () => {
   const [materials, setMaterials] = useState<any[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [calcQuantityKg, setCalcQuantityKg] = useState<number>(200);
+
+  // Helper to fetch cost for a given raw material ID
+  const getMaterial = (matId: string) => materials.find((m) => m.id === matId);
+
+  const getMaterialCost = (matId: string): number => {
+    const mat = getMaterial(matId);
+    return Number(mat?.cost_per_kg || mat?.latest_cost_per_kg || mat?.avg_cost_per_kg || 0);
+  };
+
+  // Dynamically calculate recipe formulation cost per kg based on composition percentages
+  const calculateFormulationCost = (items: Array<{ materialId: string; percentage: number }>): number => {
+    return items.reduce((sum, item) => {
+      const cost = getMaterialCost(item.materialId);
+      const ratio = (Number(item.percentage) || 0) / 100;
+      return sum + ratio * cost;
+    }, 0);
+  };
   const [calculationResult, setCalculationResult] = useState<any>(null);
   const [isCalcLoading, setIsCalcLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -458,12 +476,20 @@ export const ProductsPage: React.FC = () => {
                         Active recipe: Version {selectedProduct.active_recipe?.version || 1} &bull; Effective for production batch consumption
                       </p>
                     </div>
-                    <button
-                      onClick={handleOpenAddRecipe}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-factory-800 hover:bg-brand-50 dark:hover:bg-brand-950/30 text-xs font-bold text-brand-600 dark:text-brand-400 transition-colors"
-                    >
-                      <GitBranch className="w-3 h-3" /> New Recipe Version
-                    </button>
+                    <div className="flex items-center gap-2.5">
+                      <div className="px-3 py-1 rounded-xl bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800/40 text-right">
+                        <span className="text-[9px] uppercase font-bold text-slate-400 block leading-tight">Recipe Cost / KG</span>
+                        <span className="font-mono text-xs font-black text-brand-600 dark:text-brand-400">
+                          ₹{calculateFormulationCost((selectedProduct.active_recipe?.product_recipe_items || []).map((it: any) => ({ materialId: it.material_id, percentage: it.percentage }))).toFixed(2)} / kg
+                        </span>
+                      </div>
+                      <button
+                        onClick={handleOpenAddRecipe}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-factory-800 hover:bg-brand-50 dark:hover:bg-brand-950/30 text-xs font-bold text-brand-600 dark:text-brand-400 transition-colors shrink-0"
+                      >
+                        <GitBranch className="w-3 h-3" /> New Recipe Version
+                      </button>
+                    </div>
                   </div>
 
                   {/* Plastic Material Breakdown */}
@@ -479,31 +505,41 @@ export const ProductsPage: React.FC = () => {
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         {(selectedProduct.active_recipe?.product_recipe_items || []).map(
-                          (item: any, idx: number) => (
-                            <div
-                              key={idx}
-                              className="p-3.5 rounded-xl bg-slate-50 dark:bg-factory-800/60 border border-slate-200/80 dark:border-slate-700/60"
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate">
-                                  {item.materials?.name || item.material_name || `Polymer #${idx + 1}`}
-                                </span>
-                                <span className="font-mono text-xs font-black text-brand-600 dark:text-brand-400">
-                                  {item.percentage}%
-                                </span>
+                          (item: any, idx: number) => {
+                            const matCost = getMaterialCost(item.material_id);
+                            const rowCost = ((Number(item.percentage) || 0) / 100) * matCost;
+                            return (
+                              <div
+                                key={idx}
+                                className="p-3.5 rounded-xl bg-slate-50 dark:bg-factory-800/60 border border-slate-200/80 dark:border-slate-700/60"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate pr-2">
+                                    {item.materials?.name || item.material_name || `Polymer #${idx + 1}`}
+                                  </span>
+                                  <span className="font-mono text-xs font-black text-brand-600 dark:text-brand-400 shrink-0">
+                                    {item.percentage}%
+                                  </span>
+                                </div>
+                                <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full mt-2.5 overflow-hidden">
+                                  <div
+                                    className="bg-brand-500 h-full rounded-full transition-all"
+                                    style={{ width: `${item.percentage}%` }}
+                                  ></div>
+                                </div>
+                                <div className="text-[10px] text-slate-400 mt-2 font-mono space-y-1">
+                                  <div className="flex items-center justify-between">
+                                    <span>Code: {item.materials?.code || 'RAW-LOT'}</span>
+                                    <span>{item.planned_kg_per_kg_output} kg / 1 kg</span>
+                                  </div>
+                                  <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-slate-700/60 font-semibold text-slate-600 dark:text-slate-300">
+                                    <span>Rate: ₹{matCost.toFixed(2)}/kg</span>
+                                    <span className="text-brand-600 dark:text-brand-400">Cost: ₹{rowCost.toFixed(2)}</span>
+                                  </div>
+                                </div>
                               </div>
-                              <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full mt-2.5 overflow-hidden">
-                                <div
-                                  className="bg-brand-500 h-full rounded-full transition-all"
-                                  style={{ width: `${item.percentage}%` }}
-                                ></div>
-                              </div>
-                              <p className="text-[10px] text-slate-400 mt-2 font-mono flex items-center justify-between">
-                                <span>Code: {item.materials?.code || 'RAW-LOT'}</span>
-                                <span>{item.planned_kg_per_kg_output} kg / 1 kg output</span>
-                              </p>
-                            </div>
-                          )
+                            );
+                          }
                         )}
                       </div>
                     )}
@@ -705,67 +741,128 @@ export const ProductsPage: React.FC = () => {
                   No raw materials configured yet. You can add materials in &ldquo;Raw Materials&rdquo; tab anytime.
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {productForm.initialRecipeItems.map((item, index) => (
-                    <div
-                      key={index}
-                      className="p-2.5 rounded-xl bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700 flex items-center gap-2 text-xs"
-                    >
-                      <select
-                        value={item.materialId}
-                        onChange={(e) => {
-                          const updated = [...productForm.initialRecipeItems];
-                          updated[index].materialId = e.target.value;
-                          setProductForm({ ...productForm, initialRecipeItems: updated });
-                        }}
-                        className="flex-1 text-xs px-2.5 py-1.5 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-lg"
+                <div className="space-y-2.5">
+                  {productForm.initialRecipeItems.map((item, index) => {
+                    const cost = getMaterialCost(item.materialId);
+                    const rowContribution = (Number(item.percentage || 0) / 100) * cost;
+                    return (
+                      <div
+                        key={index}
+                        className="p-2.5 rounded-xl bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
                       >
-                        {materials.length === 0 ? (
-                          <option value="" disabled>No plastic materials configured</option>
-                        ) : (
-                          <>
-                            <option value="" disabled>-- Select Polymer Material --</option>
-                            {materials.map((m) => (
-                              <option key={m.id} value={m.id}>
-                                {m.name} ({m.code})
-                              </option>
-                            ))}
-                          </>
-                        )}
-                      </select>
-
-                      <div className="flex items-center gap-1 w-28">
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={item.percentage}
+                        <select
+                          value={item.materialId}
                           onChange={(e) => {
-                            const val = parseFloat(e.target.value) || 0;
                             const updated = [...productForm.initialRecipeItems];
-                            updated[index].percentage = val;
-                            updated[index].plannedKgPerKgOutput = val / 100;
+                            updated[index].materialId = e.target.value;
                             setProductForm({ ...productForm, initialRecipeItems: updated });
                           }}
-                          className="w-16 text-xs px-2 py-1.5 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-lg font-mono text-center"
-                        />
-                        <span className="text-slate-400 font-bold">%</span>
+                          className="flex-1 text-xs px-2.5 py-1.5 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-lg min-w-0"
+                        >
+                          {materials.length === 0 ? (
+                            <option value="" disabled>No plastic materials configured</option>
+                          ) : (
+                            <>
+                              <option value="" disabled>-- Select Polymer Material --</option>
+                              {materials.map((m) => (
+                                <option key={m.id} value={m.id}>
+                                  {m.name} ({m.code}) — ₹{Number(m.cost_per_kg || 0).toFixed(2)}/kg
+                                </option>
+                              ))}
+                            </>
+                          )}
+                        </select>
+
+                        <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
+                          <div className="flex items-center gap-1 w-24">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={item.percentage}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0;
+                                const updated = [...productForm.initialRecipeItems];
+                                updated[index].percentage = val;
+                                updated[index].plannedKgPerKgOutput = val / 100;
+                                setProductForm({ ...productForm, initialRecipeItems: updated });
+                              }}
+                              className="w-16 text-xs px-2 py-1.5 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-lg font-mono text-center"
+                            />
+                            <span className="text-slate-400 font-bold">%</span>
+                          </div>
+
+                          <div className="text-right min-w-[85px] font-mono leading-tight">
+                            <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200">
+                              ₹{rowContribution.toFixed(2)}
+                            </p>
+                            <p className="text-[9px] text-slate-400">
+                              @ ₹{cost.toFixed(2)}/kg
+                            </p>
+                          </div>
+
+                          {productForm.initialRecipeItems.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = productForm.initialRecipeItems.filter((_, i) => i !== index);
+                                setProductForm({ ...productForm, initialRecipeItems: updated });
+                              }}
+                              className="p-1 text-rose-500 hover:bg-rose-50 rounded"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Dynamic Recipe Cost & Ratio Summary */}
+                  {productForm.initialRecipeItems.length > 0 && (
+                    <div className="p-3.5 rounded-2xl bg-gradient-to-r from-brand-50 to-emerald-50 dark:from-brand-950/40 dark:to-emerald-950/40 border border-brand-200/80 dark:border-brand-800/60 flex items-center justify-between gap-3 shadow-sm">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-brand-500/15 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
+                          <IndianRupee className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400">
+                            Dynamic Formulation Cost
+                          </p>
+                          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                            Ratio:{' '}
+                            <span
+                              className={
+                                productForm.initialRecipeItems.reduce((acc, it) => acc + (Number(it.percentage) || 0), 0) === 100
+                                  ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+                                  : 'text-amber-500 font-bold'
+                              }
+                            >
+                              {productForm.initialRecipeItems.reduce((acc, it) => acc + (Number(it.percentage) || 0), 0)}%
+                            </span>
+                            {productForm.initialRecipeItems.reduce((acc, it) => acc + (Number(it.percentage) || 0), 0) !== 100 && (
+                              <span className="text-[10px] text-amber-600 dark:text-amber-400 font-normal ml-1">
+                                (Standard total is 100%)
+                              </span>
+                            )}
+                          </p>
+                        </div>
                       </div>
 
-                      {productForm.initialRecipeItems.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updated = productForm.initialRecipeItems.filter((_, i) => i !== index);
-                            setProductForm({ ...productForm, initialRecipeItems: updated });
-                          }}
-                          className="p-1 text-rose-500 hover:bg-rose-50 rounded"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                      <div className="text-right">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">Recipe Cost / KG</span>
+                        <p className="font-mono text-base font-black text-brand-600 dark:text-brand-400 leading-tight">
+                          ₹{calculateFormulationCost(productForm.initialRecipeItems).toFixed(2)}{' '}
+                          <span className="text-xs font-semibold text-slate-500">/ kg</span>
+                        </p>
+                        {productForm.standardWeightKg !== 1 && (
+                          <p className="text-[10px] text-slate-500 font-mono">
+                            ₹{(calculateFormulationCost(productForm.initialRecipeItems) * productForm.standardWeightKg).toFixed(2)} / {productForm.unit}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  ))}
+                  )}
                 </div>
               )}
             </div>
@@ -836,66 +933,122 @@ export const ProductsPage: React.FC = () => {
               )}
             </div>
 
-            {recipeForm.items.map((item, index) => (
-              <div
-                key={index}
-                className="p-2.5 rounded-xl bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700 flex items-center gap-2 text-xs"
-              >
-                <select
-                  value={item.materialId}
-                  onChange={(e) => {
-                    const updated = [...recipeForm.items];
-                    updated[index].materialId = e.target.value;
-                    setRecipeForm({ ...recipeForm, items: updated });
-                  }}
-                  className="flex-1 text-xs px-2.5 py-1.5 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-lg"
+            {recipeForm.items.map((item, index) => {
+              const cost = getMaterialCost(item.materialId);
+              const rowContribution = (Number(item.percentage || 0) / 100) * cost;
+              return (
+                <div
+                  key={index}
+                  className="p-2.5 rounded-xl bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
                 >
-                  {materials.length === 0 ? (
-                    <option value="" disabled>No plastic materials configured</option>
-                  ) : (
-                    <>
-                      <option value="" disabled>-- Select Polymer Material --</option>
-                      {materials.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.name} ({m.code})
-                        </option>
-                      ))}
-                    </>
-                  )}
-                </select>
-
-                <div className="flex items-center gap-1 w-28">
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={item.percentage}
+                  <select
+                    value={item.materialId}
                     onChange={(e) => {
-                      const val = parseFloat(e.target.value) || 0;
                       const updated = [...recipeForm.items];
-                      updated[index].percentage = val;
-                      updated[index].plannedKgPerKgOutput = val / 100;
+                      updated[index].materialId = e.target.value;
                       setRecipeForm({ ...recipeForm, items: updated });
                     }}
-                    className="w-16 text-xs px-2 py-1.5 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-lg font-mono text-center"
-                  />
-                  <span className="text-slate-400 font-bold">%</span>
+                    className="flex-1 text-xs px-2.5 py-1.5 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-lg min-w-0"
+                  >
+                    {materials.length === 0 ? (
+                      <option value="" disabled>No plastic materials configured</option>
+                    ) : (
+                      <>
+                        <option value="" disabled>-- Select Polymer Material --</option>
+                        {materials.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.name} ({m.code}) — ₹{Number(m.cost_per_kg || 0).toFixed(2)}/kg
+                          </option>
+                        ))}
+                      </>
+                    )}
+                  </select>
+
+                  <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
+                    <div className="flex items-center gap-1 w-24">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={item.percentage}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value) || 0;
+                          const updated = [...recipeForm.items];
+                          updated[index].percentage = val;
+                          updated[index].plannedKgPerKgOutput = val / 100;
+                          setRecipeForm({ ...recipeForm, items: updated });
+                        }}
+                        className="w-16 text-xs px-2 py-1.5 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-lg font-mono text-center"
+                      />
+                      <span className="text-slate-400 font-bold">%</span>
+                    </div>
+
+                    <div className="text-right min-w-[85px] font-mono leading-tight">
+                      <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200">
+                        ₹{rowContribution.toFixed(2)}
+                      </p>
+                      <p className="text-[9px] text-slate-400">
+                        @ ₹{cost.toFixed(2)}/kg
+                      </p>
+                    </div>
+
+                    {recipeForm.items.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = recipeForm.items.filter((_, i) => i !== index);
+                          setRecipeForm({ ...recipeForm, items: updated });
+                        }}
+                        className="p-1 text-rose-500 hover:bg-rose-50 rounded"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Dynamic Recipe Cost & Ratio Summary */}
+            {recipeForm.items.length > 0 && (
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-brand-50 to-emerald-50 dark:from-brand-950/40 dark:to-emerald-950/40 border border-brand-200/80 dark:border-brand-800/60 flex items-center justify-between gap-3 shadow-sm">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-brand-500/15 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
+                    <IndianRupee className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400">
+                      Dynamic Formulation Cost
+                    </p>
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Ratio:{' '}
+                      <span
+                        className={
+                          recipeForm.items.reduce((acc, it) => acc + (Number(it.percentage) || 0), 0) === 100
+                            ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+                            : 'text-amber-500 font-bold'
+                        }
+                      >
+                        {recipeForm.items.reduce((acc, it) => acc + (Number(it.percentage) || 0), 0)}%
+                      </span>
+                      {recipeForm.items.reduce((acc, it) => acc + (Number(it.percentage) || 0), 0) !== 100 && (
+                        <span className="text-[10px] text-amber-600 dark:text-amber-400 font-normal ml-1">
+                          (Total is not 100%)
+                        </span>
+                      )}
+                    </p>
+                  </div>
                 </div>
 
-                {recipeForm.items.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const updated = recipeForm.items.filter((_, i) => i !== index);
-                      setRecipeForm({ ...recipeForm, items: updated });
-                    }}
-                    className="p-1 text-rose-500 hover:bg-rose-50 rounded"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
+                <div className="text-right">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Recipe Cost / KG</span>
+                  <p className="font-mono text-base font-black text-brand-600 dark:text-brand-400 leading-tight">
+                    ₹{calculateFormulationCost(recipeForm.items).toFixed(2)}{' '}
+                    <span className="text-xs font-semibold text-slate-500">/ kg</span>
+                  </p>
+                </div>
               </div>
-            ))}
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
