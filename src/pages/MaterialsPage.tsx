@@ -11,7 +11,8 @@ import {
   Trash2,
   SlidersHorizontal,
   Box,
-  Scale
+  Scale,
+  Calculator,
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
@@ -269,8 +270,8 @@ export const MaterialsPage: React.FC = () => {
         <button
           onClick={() => setActiveTab('batches')}
           className={`pb-3 text-xs font-bold transition-all relative flex items-center gap-2 ${activeTab === 'batches'
-              ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-500'
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+            ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-500'
+            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
         >
           <Box className="w-4 h-4" />
@@ -280,8 +281,8 @@ export const MaterialsPage: React.FC = () => {
         <button
           onClick={() => setActiveTab('catalog')}
           className={`pb-3 text-xs font-bold transition-all relative flex items-center gap-2 ${activeTab === 'catalog'
-              ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-500'
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+            ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-500'
+            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
         >
           <SlidersHorizontal className="w-4 h-4" />
@@ -300,8 +301,8 @@ export const MaterialsPage: React.FC = () => {
                   key={m.id}
                   onClick={() => setSelectedMaterial(selectedMaterial === m.id ? 'all' : m.id)}
                   className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${selectedMaterial === m.id
-                      ? 'bg-brand-50/50 dark:bg-brand-950/20 border-brand-500 shadow-md ring-2 ring-brand-500/20'
-                      : 'bg-white dark:bg-factory-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300'
+                    ? 'bg-brand-50/50 dark:bg-brand-950/20 border-brand-500 shadow-md ring-2 ring-brand-500/20'
+                    : 'bg-white dark:bg-factory-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300'
                     }`}
                 >
                   <div className="flex items-center justify-between mb-1.5">
@@ -328,11 +329,19 @@ export const MaterialsPage: React.FC = () => {
                     <span className="text-[10px] text-slate-400 font-medium">/ Min: {m.min_stock_level_kg} kg</span>
                   </div>
                   {Number(m.cost_per_kg) > 0 && (
-                    <div className="mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] font-mono">
-                      <span className="text-slate-400 font-sans text-[10px] uppercase font-bold">Buying Rate</span>
-                      <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                        ₹{Number(m.cost_per_kg).toFixed(2)}/kg
-                      </span>
+                    <div className="mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800 space-y-0.5">
+                      <div className="flex items-center justify-between text-[11px] font-mono">
+                        <span className="text-slate-400 font-sans text-[10px] uppercase font-bold">Weighted Avg</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                          ₹{Number(m.cost_per_kg).toFixed(2)}/kg
+                        </span>
+                      </div>
+                      {Number(m.total_stock_value) > 0 && (
+                        <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                          <span className="font-sans text-[9px] uppercase">Valuation</span>
+                          <span>₹{Number(m.total_stock_value).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -389,6 +398,63 @@ export const MaterialsPage: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Real-time Weighted Average Cost Calculation Banner */}
+            {(() => {
+              const activeBatchesWithCost = filteredBatches.filter(
+                (b) => b.status === 'available' && Number(b.remaining_quantity_kg) > 0 && Number(b.cost_per_kg) > 0
+              );
+              const totalRemainingKg = activeBatchesWithCost.reduce(
+                (sum, b) => sum + Number(b.remaining_quantity_kg),
+                0
+              );
+              const totalValuation = activeBatchesWithCost.reduce(
+                (sum, b) => sum + Number(b.remaining_quantity_kg) * Number(b.cost_per_kg),
+                0
+              );
+              const weightedAvg = totalRemainingKg > 0 ? totalValuation / totalRemainingKg : 0;
+
+              if (activeBatchesWithCost.length === 0) return null;
+
+              return (
+                <div className="mb-4 p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50/80 via-teal-50/80 to-brand-50/80 dark:from-emerald-950/30 dark:via-teal-950/30 dark:to-brand-950/30 border border-emerald-200/80 dark:border-emerald-800/60 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <Calculator className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        Weighted Average Cost on Remaining Stock
+                      </span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300">
+                        {activeBatchesWithCost.length} Active {activeBatchesWithCost.length === 1 ? 'Lot' : 'Lots'}
+                      </span>
+                    </div>
+                    {activeBatchesWithCost.length > 1 && (
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-mono">
+                        Formula: ({activeBatchesWithCost.map((b) => `${b.remaining_quantity_kg}kg × ₹${Number(b.cost_per_kg).toFixed(2)}`).join(' + ')}) ÷ {totalRemainingKg}kg
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-4 text-right shrink-0">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Remaining Stock Value</span>
+                      <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
+                        ₹{totalValuation.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="border-l border-emerald-200 dark:border-emerald-800/60 pl-4">
+                      <span className="text-[10px] uppercase font-bold text-emerald-600 dark:text-emerald-400 block">
+                        Weighted Avg / KG
+                      </span>
+                      <span className="font-mono text-base font-black text-emerald-700 dark:text-emerald-300">
+                        ₹{weightedAvg.toFixed(2)}{' '}
+                        <span className="text-xs font-normal text-slate-500 font-sans">/ kg</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {filteredBatches.length === 0 ? (
               <div className="py-12 text-center text-slate-400 text-xs">
