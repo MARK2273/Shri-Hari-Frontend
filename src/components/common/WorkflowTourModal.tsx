@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   Compass,
@@ -28,11 +29,25 @@ export const WorkflowTourModal: React.FC<WorkflowTourModalProps> = ({ isOpen, on
   const [currentStep, setCurrentStep] = useState(initialStep);
   const navigate = useNavigate();
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpen) {
       setCurrentStep(initialStep);
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          onClose();
+        }
+      };
+
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        window.removeEventListener('keydown', handleKeyDown);
+      };
     }
-  }, [isOpen, initialStep]);
+  }, [isOpen, initialStep, onClose]);
 
   if (!isOpen) return null;
 
@@ -300,9 +315,19 @@ export const WorkflowTourModal: React.FC<WorkflowTourModalProps> = ({ isOpen, on
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-900/70 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-2xl bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-800 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh]">
+  return createPortal(
+    <div
+      className="fixed inset-0 top-0 left-0 right-0 bottom-0 !m-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-900/70 backdrop-blur-md animate-fade-in"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div
+        className="relative w-full max-w-2xl bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-800 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Modal Top Header with Step Indicator */}
         <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -385,6 +410,7 @@ export const WorkflowTourModal: React.FC<WorkflowTourModalProps> = ({ isOpen, on
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
