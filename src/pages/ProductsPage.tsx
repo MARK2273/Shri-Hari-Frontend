@@ -34,7 +34,7 @@ export const ProductsPage: React.FC = () => {
   };
 
   // Dynamically calculate recipe formulation cost per kg based on composition percentages
-  const calculateFormulationCost = (items: Array<{ materialId: string; percentage: number }>): number => {
+  const calculateFormulationCost = (items: Array<{ materialId: string; percentage: number | string }>): number => {
     return items.reduce((sum, item) => {
       const cost = getMaterialCost(item.materialId);
       const ratio = (Number(item.percentage) || 0) / 100;
@@ -62,7 +62,7 @@ export const ProductsPage: React.FC = () => {
     standardWeightKg: number;
     initialRecipeItems: Array<{
       materialId: string;
-      percentage: number;
+      percentage: number | string;
       plannedKgPerKgOutput: number;
     }>;
   }>({
@@ -78,7 +78,7 @@ export const ProductsPage: React.FC = () => {
     notes: string;
     items: Array<{
       materialId: string;
-      percentage: number;
+      percentage: number | string;
       plannedKgPerKgOutput: number;
     }>;
   }>({
@@ -778,12 +778,14 @@ export const ProductsPage: React.FC = () => {
                               type="number"
                               min="0"
                               max="100"
+                              step="any"
                               value={item.percentage}
                               onChange={(e) => {
-                                const val = parseFloat(e.target.value) || 0;
+                                const raw = e.target.value;
+                                const num = parseFloat(raw);
                                 const updated = [...productForm.initialRecipeItems];
-                                updated[index].percentage = val;
-                                updated[index].plannedKgPerKgOutput = val / 100;
+                                updated[index].percentage = raw;
+                                updated[index].plannedKgPerKgOutput = isNaN(num) ? 0 : num / 100;
                                 setProductForm({ ...productForm, initialRecipeItems: updated });
                               }}
                               className="w-16 text-xs px-2 py-1.5 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-lg font-mono text-center"
@@ -830,20 +832,29 @@ export const ProductsPage: React.FC = () => {
                           </p>
                           <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                             Ratio:{' '}
-                            <span
-                              className={
-                                productForm.initialRecipeItems.reduce((acc, it) => acc + (Number(it.percentage) || 0), 0) === 100
-                                  ? 'text-emerald-600 dark:text-emerald-400 font-bold'
-                                  : 'text-amber-500 font-bold'
-                              }
-                            >
-                              {productForm.initialRecipeItems.reduce((acc, it) => acc + (Number(it.percentage) || 0), 0)}%
-                            </span>
-                            {productForm.initialRecipeItems.reduce((acc, it) => acc + (Number(it.percentage) || 0), 0) !== 100 && (
-                              <span className="text-[10px] text-amber-600 dark:text-amber-400 font-normal ml-1">
-                                (Standard total is 100%)
-                              </span>
-                            )}
+                            {(() => {
+                              const total = productForm.initialRecipeItems.reduce((acc, it) => acc + (Number(it.percentage) || 0), 0);
+                              const is100 = Math.abs(total - 100) < 0.01;
+                              const displayTotal = Number(total.toFixed(2));
+                              return (
+                                <>
+                                  <span
+                                    className={
+                                      is100
+                                        ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+                                        : 'text-amber-500 font-bold'
+                                    }
+                                  >
+                                    {displayTotal}%
+                                  </span>
+                                  {!is100 && (
+                                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-normal ml-1">
+                                      (Standard total is 100%)
+                                    </span>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </p>
                         </div>
                       </div>
@@ -969,12 +980,14 @@ export const ProductsPage: React.FC = () => {
                         type="number"
                         min="0"
                         max="100"
+                        step="any"
                         value={item.percentage}
                         onChange={(e) => {
-                          const val = parseFloat(e.target.value) || 0;
+                          const raw = e.target.value;
+                          const num = parseFloat(raw);
                           const updated = [...recipeForm.items];
-                          updated[index].percentage = val;
-                          updated[index].plannedKgPerKgOutput = val / 100;
+                          updated[index].percentage = raw;
+                          updated[index].plannedKgPerKgOutput = isNaN(num) ? 0 : num / 100;
                           setRecipeForm({ ...recipeForm, items: updated });
                         }}
                         className="w-16 text-xs px-2 py-1.5 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-lg font-mono text-center"
@@ -1021,20 +1034,29 @@ export const ProductsPage: React.FC = () => {
                     </p>
                     <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                       Ratio:{' '}
-                      <span
-                        className={
-                          recipeForm.items.reduce((acc, it) => acc + (Number(it.percentage) || 0), 0) === 100
-                            ? 'text-emerald-600 dark:text-emerald-400 font-bold'
-                            : 'text-amber-500 font-bold'
-                        }
-                      >
-                        {recipeForm.items.reduce((acc, it) => acc + (Number(it.percentage) || 0), 0)}%
-                      </span>
-                      {recipeForm.items.reduce((acc, it) => acc + (Number(it.percentage) || 0), 0) !== 100 && (
-                        <span className="text-[10px] text-amber-600 dark:text-amber-400 font-normal ml-1">
-                          (Total is not 100%)
-                        </span>
-                      )}
+                      {(() => {
+                        const total = recipeForm.items.reduce((acc, it) => acc + (Number(it.percentage) || 0), 0);
+                        const is100 = Math.abs(total - 100) < 0.01;
+                        const displayTotal = Number(total.toFixed(2));
+                        return (
+                          <>
+                            <span
+                              className={
+                                is100
+                                  ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+                                  : 'text-amber-500 font-bold'
+                              }
+                            >
+                              {displayTotal}%
+                            </span>
+                            {!is100 && (
+                              <span className="text-[10px] text-amber-600 dark:text-amber-400 font-normal ml-1">
+                                (Total is not 100%)
+                              </span>
+                            )}
+                          </>
+                        );
+                      })()}
                     </p>
                   </div>
                 </div>
