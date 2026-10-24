@@ -165,3 +165,17 @@ export interface Delivery {
     products?: { name: string; code: string };
   }>;
 }
+
+export interface SizeMicron {
+  id: string;
+  tenant_id?: string;
+  label: string;
+  size?: string;
+  micron: number;
+  unit: string;
+  description?: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+

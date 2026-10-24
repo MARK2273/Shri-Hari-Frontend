@@ -14,6 +14,7 @@ import { FinishedGoodsPage } from './pages/FinishedGoodsPage';
 import { DispatchPage } from './pages/DispatchPage';
 import { TraceabilityPage } from './pages/TraceabilityPage';
 import { ReportsPage } from './pages/ReportsPage';
+import { SizeMicronPage } from './pages/SizeMicronPage';
 
 export function App() {
   return (
@@ -30,6 +31,7 @@ export function App() {
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/materials" element={<MaterialsPage />} />
               <Route path="/products" element={<ProductsPage />} />
+              <Route path="/size-microns" element={<SizeMicronPage />} />
               <Route path="/orders" element={<OrdersPage />} />
               <Route path="/production" element={<ProductionPage />} />
               <Route path="/finished-goods" element={<FinishedGoodsPage />} />

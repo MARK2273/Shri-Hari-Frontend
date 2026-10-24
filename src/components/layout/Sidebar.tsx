@@ -14,6 +14,7 @@ import {
   Building2,
   Compass,
   X,
+  Ruler,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTour } from '../../context/TourContext';
@@ -31,6 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Raw Materials & Batches', href: '/materials', icon: Layers },
     { name: 'Products & Recipes', href: '/products', icon: FlaskConical },
+    { name: 'Size & Micron', href: '/size-microns', icon: Ruler },
     { name: 'Customer Orders', href: '/orders', icon: ShoppingCart },
     { name: 'Production Runs', href: '/production', icon: Factory },
     { name: 'Finished Goods', href: '/finished-goods', icon: PackageCheck },
@@ -94,10 +96,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
                 }
               }}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 ${
-                  isActive
-                    ? 'bg-brand-500 text-white font-semibold shadow-sm shadow-brand-500/25'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-factory-800/70'
+                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 ${isActive
+                  ? 'bg-brand-500 text-white font-semibold shadow-sm shadow-brand-500/25'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-factory-800/70'
                 }`
               }
             >

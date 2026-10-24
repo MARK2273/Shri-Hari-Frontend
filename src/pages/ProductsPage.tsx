@@ -13,15 +13,18 @@ import {
   Box,
   Scale,
   IndianRupee,
+  Ruler,
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import { Button } from '../components/common/Button';
 import { PageSkeleton } from '../components/common/Skeleton';
+import { SizeMicron } from '../types';
 
 export const ProductsPage: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
+  const [sizeMicrons, setSizeMicrons] = useState<SizeMicron[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [calcQuantityKg, setCalcQuantityKg] = useState<number>(200);
 
@@ -60,6 +63,7 @@ export const ProductsPage: React.FC = () => {
     description: string;
     unit: 'kg' | 'pcs' | 'rolls';
     standardWeightKg: number;
+    sizeMicron: string;
     initialRecipeItems: Array<{
       materialId: string;
       percentage: number | string;
@@ -70,6 +74,7 @@ export const ProductsPage: React.FC = () => {
     description: '',
     unit: 'kg',
     standardWeightKg: 1.0,
+    sizeMicron: '',
     initialRecipeItems: [],
   });
 
@@ -89,16 +94,19 @@ export const ProductsPage: React.FC = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [prodRes, matRes] = await Promise.all([
+      const [prodRes, matRes, smRes] = await Promise.all([
         api.get('/products'),
         api.get('/materials'),
+        api.get('/size-microns'),
       ]);
 
       const fetchedProducts = prodRes.data.products || [];
       const fetchedMaterials = matRes.data.materials || [];
+      const fetchedSizeMicrons = smRes.data.sizeMicrons || [];
 
       setProducts(fetchedProducts);
       setMaterials(fetchedMaterials);
+      setSizeMicrons(fetchedSizeMicrons);
 
       if (fetchedProducts.length > 0) {
         // Keep selected product if it still exists, else select first
@@ -159,6 +167,7 @@ export const ProductsPage: React.FC = () => {
       description: '',
       unit: 'kg',
       standardWeightKg: 1.0,
+      sizeMicron: '',
       initialRecipeItems:
         materials.length > 0
           ? [
@@ -181,6 +190,7 @@ export const ProductsPage: React.FC = () => {
       description: prod.description || '',
       unit: prod.unit || 'kg',
       standardWeightKg: Number(prod.standard_weight_kg) || 1.0,
+      sizeMicron: prod.size_micron || '',
       initialRecipeItems: [],
     });
     setIsProductModalOpen(true);
@@ -198,6 +208,7 @@ export const ProductsPage: React.FC = () => {
           description: productForm.description,
           unit: productForm.unit,
           standardWeightKg: productForm.standardWeightKg,
+          sizeMicron: productForm.sizeMicron,
         });
       } else {
         // Create new product (NO manual code sent - backend auto-assigns PRD-XXXX)
@@ -206,6 +217,7 @@ export const ProductsPage: React.FC = () => {
           description: productForm.description,
           unit: productForm.unit,
           standardWeightKg: productForm.standardWeightKg,
+          sizeMicron: productForm.sizeMicron,
         };
 
         if (productForm.initialRecipeItems.length > 0) {
@@ -380,6 +392,11 @@ export const ProductsPage: React.FC = () => {
                         {p.code}
                       </span>
                       <div className="flex items-center gap-1.5">
+                        {p.size_micron && (
+                          <span className="px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-mono text-[10px] font-bold border border-indigo-200/50">
+                            {p.size_micron}
+                          </span>
+                        )}
                         <Badge variant="success">Version {p.active_recipe?.version || 1}</Badge>
                       </div>
                     </div>
@@ -643,11 +660,11 @@ export const ProductsPage: React.FC = () => {
         isOpen={isProductModalOpen}
         onClose={() => setIsProductModalOpen(false)}
         title={productToEdit ? `Edit Product: ${productToEdit.name}` : 'Add New Manufactured Product'}
-        maxWidth="lg"
+        maxWidth="2xl"
       >
         <form onSubmit={handleSaveProduct} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
               Product Title / Packaging Name *
             </label>
             <input
@@ -656,12 +673,12 @@ export const ProductsPage: React.FC = () => {
               placeholder="e.g. 3-Layer Milk Pouch Packaging Film (50 Micron)"
               value={productForm.name}
               onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
-              className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl"
+              className="w-full text-xs px-3.5 py-2.5 bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
               Description & Specifications
             </label>
             <textarea
@@ -669,19 +686,19 @@ export const ProductsPage: React.FC = () => {
               placeholder="e.g. Co-extruded film for pouch packaging machines. High dart-impact puncture resistance."
               value={productForm.description}
               onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
-              className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl resize-none"
+              className="w-full text-xs px-3.5 py-2.5 bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 items-start">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 whitespace-nowrap">
                 Standard Unit
               </label>
               <select
                 value={productForm.unit}
                 onChange={(e: any) => setProductForm({ ...productForm, unit: e.target.value })}
-                className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
+                className="w-full h-10 text-xs px-3 bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all cursor-pointer"
               >
                 <option value="kg">Kilograms (kg)</option>
                 <option value="pcs">Pieces (pcs)</option>
@@ -690,7 +707,7 @@ export const ProductsPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 whitespace-nowrap">
                 Standard Output Weight (kg)
               </label>
               <input
@@ -699,8 +716,29 @@ export const ProductsPage: React.FC = () => {
                 min="0.01"
                 value={productForm.standardWeightKg}
                 onChange={(e) => setProductForm({ ...productForm, standardWeightKg: parseFloat(e.target.value) || 1.0 })}
-                className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
+                className="w-full h-10 text-xs px-3 bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
               />
+            </div>
+
+            {/* Default Size / Micron dropdown from Master */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 whitespace-nowrap">
+                Default Size / Micron
+              </label>
+              <select
+                value={productForm.sizeMicron}
+                onChange={(e) => setProductForm({ ...productForm, sizeMicron: e.target.value })}
+                className="w-full h-10 text-xs px-3 bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all cursor-pointer"
+              >
+                <option value="">-- None / Select Master --</option>
+                {sizeMicrons
+                  .filter((sm) => sm.is_active)
+                  .map((sm) => (
+                    <option key={sm.id} value={sm.label}>
+                      {sm.label}
+                    </option>
+                  ))}
+              </select>
             </div>
           </div>
 
@@ -747,7 +785,7 @@ export const ProductsPage: React.FC = () => {
                     return (
                       <div
                         key={index}
-                        className="p-2.5 rounded-xl bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
+                        className="p-3 rounded-2xl bg-slate-50/80 dark:bg-factory-800/80 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
                       >
                         <select
                           value={item.materialId}
@@ -756,7 +794,7 @@ export const ProductsPage: React.FC = () => {
                             updated[index].materialId = e.target.value;
                             setProductForm({ ...productForm, initialRecipeItems: updated });
                           }}
-                          className="flex-1 text-xs px-2.5 py-1.5 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-lg min-w-0"
+                          className="flex-1 min-w-0 h-10 text-xs px-3 bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 font-medium cursor-pointer"
                         >
                           {materials.length === 0 ? (
                             <option value="" disabled>No plastic materials configured</option>
@@ -772,8 +810,8 @@ export const ProductsPage: React.FC = () => {
                           )}
                         </select>
 
-                        <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
-                          <div className="flex items-center gap-1 w-24">
+                        <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+                          <div className="flex items-center gap-1.5">
                             <input
                               type="number"
                               min="0"
@@ -788,16 +826,16 @@ export const ProductsPage: React.FC = () => {
                                 updated[index].plannedKgPerKgOutput = isNaN(num) ? 0 : num / 100;
                                 setProductForm({ ...productForm, initialRecipeItems: updated });
                               }}
-                              className="w-16 text-xs px-2 py-1.5 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-lg font-mono text-center"
+                              className="w-20 h-10 text-xs px-2.5 bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-center focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
                             />
-                            <span className="text-slate-400 font-bold">%</span>
+                            <span className="text-slate-400 font-bold text-xs">%</span>
                           </div>
 
-                          <div className="text-right min-w-[85px] font-mono leading-tight">
-                            <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200">
+                          <div className="text-right min-w-[100px] font-mono leading-tight">
+                            <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
                               ₹{rowContribution.toFixed(2)}
                             </p>
-                            <p className="text-[9px] text-slate-400">
+                            <p className="text-[10px] text-slate-400">
                               @ ₹{cost.toFixed(2)}/kg
                             </p>
                           </div>
@@ -809,9 +847,9 @@ export const ProductsPage: React.FC = () => {
                                 const updated = productForm.initialRecipeItems.filter((_, i) => i !== index);
                                 setProductForm({ ...productForm, initialRecipeItems: updated });
                               }}
-                              className="p-1 text-rose-500 hover:bg-rose-50 rounded"
+                              className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           )}
                         </div>
