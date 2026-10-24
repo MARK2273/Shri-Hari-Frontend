@@ -534,10 +534,7 @@ export const MaterialsPage: React.FC = () => {
                     : 'bg-white dark:bg-factory-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300'
                     }`}
                 >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                      {m.code}
-                    </span>
+                  <div className="flex items-center justify-end mb-1.5">
                     {m.is_low_stock ? (
                       <span className="text-[10px] font-bold text-amber-500 flex items-center gap-0.5">
                         <AlertTriangle className="w-3 h-3" /> Low
@@ -639,7 +636,7 @@ export const MaterialsPage: React.FC = () => {
                     <option value="all">All Material Types</option>
                     {materials.map((m) => (
                       <option key={m.id} value={m.id}>
-                        {m.code} - {m.name}
+                        {m.name}
                       </option>
                     ))}
                   </select>
@@ -823,7 +820,6 @@ export const MaterialsPage: React.FC = () => {
               <table className="w-full text-left text-xs min-w-[700px]">
                 <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                   <tr>
-                    <th className="py-2.5 whitespace-nowrap">Code</th>
                     <th className="py-2.5 whitespace-nowrap">Polymer Name</th>
                     <th className="py-2.5 whitespace-nowrap">Description & Properties</th>
                     <th className="py-2.5 whitespace-nowrap">Min Stock Alert</th>
@@ -835,11 +831,6 @@ export const MaterialsPage: React.FC = () => {
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
                   {materials.map((mat) => (
                     <tr key={mat.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                      <td className="py-3 font-mono font-bold text-slate-900 dark:text-white">
-                        <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                          {mat.code}
-                        </span>
-                      </td>
                       <td className="py-3 font-bold text-slate-800 dark:text-slate-200">
                         {mat.name}
                       </td>
@@ -931,7 +922,6 @@ export const MaterialsPage: React.FC = () => {
               <table className="w-full text-left text-xs min-w-[700px]">
                 <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                   <tr>
-                    <th className="py-2.5 whitespace-nowrap">Code</th>
                     <th className="py-2.5 whitespace-nowrap">Vendor / Supplier Name</th>
                     <th className="py-2.5 whitespace-nowrap">Contact Person</th>
                     <th className="py-2.5 whitespace-nowrap">Phone & Email</th>
@@ -943,11 +933,6 @@ export const MaterialsPage: React.FC = () => {
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
                   {filteredSuppliers.map((sup) => (
                     <tr key={sup.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                      <td className="py-3 font-mono font-bold text-slate-900 dark:text-white">
-                        <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                          {sup.code || '—'}
-                        </span>
-                      </td>
                       <td className="py-3 font-bold text-slate-800 dark:text-slate-200">
                         {sup.name}
                       </td>
@@ -1015,7 +1000,7 @@ export const MaterialsPage: React.FC = () => {
       <Modal
         isOpen={isMaterialModalOpen}
         onClose={() => setIsMaterialModalOpen(false)}
-        title={materialToEdit ? `Edit Plastic Material: ${materialToEdit.code}` : 'Configure New Plastic Material Type'}
+        title={materialToEdit ? `Edit Plastic Material: ${materialToEdit.name}` : 'Configure New Plastic Material Type'}
         maxWidth="md"
       >
         <form onSubmit={handleSaveMaterial} className="space-y-4">
@@ -1167,7 +1152,7 @@ export const MaterialsPage: React.FC = () => {
                   <option value="">-- Direct / Unspecified --</option>
                   {suppliers.filter((s) => s.is_active !== false).map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.name} {s.code ? `(${s.code})` : ''}
+                      {s.name}
                     </option>
                   ))}
                 </select>
@@ -1314,7 +1299,7 @@ export const MaterialsPage: React.FC = () => {
                             <option value="" disabled>-- Select Polymer Grade --</option>
                             {materials.map((m) => (
                               <option key={m.id} value={m.id}>
-                                {m.code} — {m.name}
+                                {m.name}
                               </option>
                             ))}
                           </select>
@@ -1469,7 +1454,7 @@ export const MaterialsPage: React.FC = () => {
       <Modal
         isOpen={isAdjustModalOpen}
         onClose={() => setIsAdjustModalOpen(false)}
-        title={`Adjust Stock: Batch ${activeBatchToAdjust?.batch_number || ''}`}
+        title={`Adjust Stock: ${activeBatchToAdjust?.materials?.name || 'Material Lot'}`}
         maxWidth="md"
       >
         <form onSubmit={handleAdjustStock} className="space-y-4">
@@ -1564,7 +1549,7 @@ export const MaterialsPage: React.FC = () => {
             <div className="text-xs text-rose-900 dark:text-rose-200">
               <p className="font-bold">Are you sure you want to delete this plastic material?</p>
               <p className="mt-1">
-                <strong>{materialToDelete?.name}</strong> ({materialToDelete?.code}) will be permanently removed from your catalog.
+                <strong>{materialToDelete?.name}</strong> will be permanently removed from your catalog.
               </p>
             </div>
           </div>

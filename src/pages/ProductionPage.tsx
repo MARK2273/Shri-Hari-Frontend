@@ -292,8 +292,8 @@ export const ProductionPage: React.FC = () => {
           <table className="w-full text-left text-xs min-w-[820px]">
             <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
               <tr>
-                <th className="py-2.5 whitespace-nowrap">Batch #</th>
-                <th className="py-2.5 whitespace-nowrap">Linked Order</th>
+                <th className="py-2.5 whitespace-nowrap">Date</th>
+                <th className="py-2.5 whitespace-nowrap">Customer</th>
                 <th className="py-2.5 whitespace-nowrap">Finished Product</th>
                 <th className="py-2.5 whitespace-nowrap">Operator</th>
                 <th className="py-2.5 whitespace-nowrap">Planned (kg)</th>
@@ -314,11 +314,11 @@ export const ProductionPage: React.FC = () => {
               ) : (
                 batches.map((batch) => (
                   <tr key={batch.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                    <td className="py-3 font-mono font-bold text-brand-600 dark:text-brand-400">
-                      {batch.batch_number}
+                    <td className="py-3 font-semibold text-slate-800 dark:text-slate-200">
+                      {new Date(batch.created_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}
                     </td>
-                    <td className="py-3 text-slate-600 dark:text-slate-300 font-mono">
-                      {batch.customer_orders?.order_number || batch.order_number}
+                    <td className="py-3 text-slate-700 dark:text-slate-300">
+                      {batch.customer_orders?.customers?.name || batch.customer_orders?.customer_name || 'Direct Customer'}
                     </td>
                     <td className="py-3 text-slate-800 dark:text-slate-200">
                       {batch.products?.name || batch.product_name}
@@ -430,7 +430,7 @@ export const ProductionPage: React.FC = () => {
                 <option value="" disabled>-- Select an active customer order --</option>
                 {orders.map((o) => (
                   <option key={o.id} value={o.id}>
-                    {o.order_number} - {o.customers?.name || o.customer_name} ({o.total_requested_weight_kg} kg)
+                    {o.customers?.name || o.customer_name} ({o.total_requested_weight_kg} kg)
                   </option>
                 ))}
               </select>
@@ -445,7 +445,6 @@ export const ProductionPage: React.FC = () => {
               <div className="p-3 bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700/60 rounded-xl space-y-1.5 text-xs">
                 <div className="flex justify-between font-bold text-slate-800 dark:text-white">
                   <span>Product: {prod?.name || 'Selected Product'}</span>
-                  <span className="font-mono text-brand-600 dark:text-brand-400">{prod?.code || ''}</span>
                 </div>
                 <div className="text-[11px] text-slate-500 flex justify-between">
                   <span>Customer: {ord?.customers?.name || ord?.customer_name}</span>
@@ -517,7 +516,7 @@ export const ProductionPage: React.FC = () => {
       <Modal
         isOpen={isConfirmModalOpen}
         onClose={() => setIsConfirmModalOpen(false)}
-        title={`Execute Production Run: ${selectedBatchToConfirm?.batch_number}`}
+        title={`Execute Production Run: ${selectedBatchToConfirm?.products?.name || 'Batch'}`}
         maxWidth="2xl"
       >
         <form onSubmit={handleConfirmBatch} className="space-y-5">
@@ -588,7 +587,7 @@ export const ProductionPage: React.FC = () => {
                       ) : (
                         availableLotsForMat.map((lot) => (
                           <option key={lot.id} value={lot.id}>
-                            {lot.batch_number} (Rem: {formatNumber(lot.remaining_quantity_kg)} kg)
+                            Lot from {lot.suppliers?.name || 'Stock'} (Rem: {formatNumber(lot.remaining_quantity_kg)} kg)
                           </option>
                         ))
                       )}
@@ -751,7 +750,7 @@ export const ProductionPage: React.FC = () => {
       <Modal
         isOpen={isEditOperatorModalOpen}
         onClose={() => setIsEditOperatorModalOpen(false)}
-        title={`Assign / Edit Operator: ${activeBatchForOperator?.batch_number || ''}`}
+        title={`Assign / Edit Operator: ${activeBatchForOperator?.products?.name || 'Batch'}`}
         maxWidth="md"
       >
         <form onSubmit={handleSaveOperator} className="space-y-4">
@@ -770,7 +769,7 @@ export const ProductionPage: React.FC = () => {
               className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium focus:ring-2 focus:ring-brand-500 outline-none"
             />
             <span className="text-[10px] text-slate-400 mt-1 block">
-              Record or update the operator who handled production batch {activeBatchForOperator?.batch_number}.
+              Record or update the operator who handled this production run.
             </span>
           </div>
 

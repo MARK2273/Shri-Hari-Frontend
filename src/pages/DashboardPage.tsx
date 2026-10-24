@@ -208,7 +208,7 @@ export const DashboardPage: React.FC = () => {
             <table className="w-full text-left text-xs">
               <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                 <tr>
-                  <th className="py-2.5">Batch #</th>
+                  <th className="py-2.5">Date</th>
                   <th className="py-2.5">Product</th>
                   <th className="py-2.5">Output (kg)</th>
                   <th className="py-2.5">Waste (kg)</th>
@@ -225,8 +225,8 @@ export const DashboardPage: React.FC = () => {
                 ) : (
                   productionRuns.slice(0, 5).map((run) => (
                     <tr key={run.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                      <td className="py-3 font-mono font-bold text-brand-600 dark:text-brand-400">
-                        {run.batch_number}
+                      <td className="py-3 font-semibold text-slate-800 dark:text-slate-200">
+                        {new Date(run.created_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}
                       </td>
                       <td className="py-3 text-slate-700 dark:text-slate-300 truncate max-w-[140px]">
                         {run.products?.name || run.product_name}
@@ -262,7 +262,6 @@ export const DashboardPage: React.FC = () => {
             <table className="w-full text-left text-xs">
               <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                 <tr>
-                  <th className="py-2.5">Order #</th>
                   <th className="py-2.5">Customer</th>
                   <th className="py-2.5">Requested</th>
                   <th className="py-2.5">Status</th>
@@ -271,17 +270,14 @@ export const DashboardPage: React.FC = () => {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
                 {orders.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-6 text-center text-slate-400 text-xs">
+                    <td colSpan={3} className="py-6 text-center text-slate-400 text-xs">
                       No active orders placed yet.
                     </td>
                   </tr>
                 ) : (
                   orders.slice(0, 5).map((order) => (
                   <tr key={order.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                    <td className="py-3 font-mono font-bold text-slate-800 dark:text-slate-200">
-                      {order.order_number}
-                    </td>
-                    <td className="py-3 text-slate-700 dark:text-slate-300 truncate max-w-[140px]">
+                    <td className="py-3 font-bold text-slate-800 dark:text-slate-200 truncate max-w-[160px]">
                       {order.customers?.name || order.customer_name}
                     </td>
                     <td className="py-3 font-mono">{order.total_requested_weight_kg} kg</td>

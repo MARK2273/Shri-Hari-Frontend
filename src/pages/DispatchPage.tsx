@@ -133,8 +133,6 @@ export const DispatchPage: React.FC = () => {
           <table className="w-full text-left text-xs min-w-[700px]">
             <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
               <tr>
-                <th className="py-2.5 whitespace-nowrap">Document #</th>
-                <th className="py-2.5 whitespace-nowrap">Customer Order #</th>
                 <th className="py-2.5 whitespace-nowrap">Customer</th>
                 <th className="py-2.5 whitespace-nowrap">Destination</th>
                 <th className="py-2.5 whitespace-nowrap">Vehicle #</th>
@@ -146,20 +144,14 @@ export const DispatchPage: React.FC = () => {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
               {deliveries.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-400 text-xs">
+                  <td colSpan={6} className="py-8 text-center text-slate-400 text-xs">
                     No dispatch delivery notes recorded yet.
                   </td>
                 </tr>
               ) : (
                 deliveries.map((del) => (
                   <tr key={del.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                    <td className="py-3 font-mono font-bold text-brand-600 dark:text-brand-400">
-                      {del.delivery_number}
-                    </td>
-                    <td className="py-3 font-mono text-slate-700 dark:text-slate-300">
-                      {del.customer_orders?.order_number || del.order_number}
-                    </td>
-                    <td className="py-3 text-slate-800 dark:text-slate-200">
+                    <td className="py-3 font-bold text-slate-800 dark:text-slate-200">
                       {del.customers?.name || del.customer_name}
                     </td>
                     <td className="py-3 text-slate-500 max-w-[180px] truncate" title={del.destination_address}>
@@ -223,7 +215,7 @@ export const DispatchPage: React.FC = () => {
                 <option value="" disabled>-- Select Customer Order --</option>
                 {orders.map((o) => (
                   <option key={o.id} value={o.id}>
-                    {o.order_number} - {o.customers?.name || o.customer_name}
+                    {o.customers?.name || o.customer_name}
                   </option>
                 ))}
               </select>
@@ -261,7 +253,7 @@ export const DispatchPage: React.FC = () => {
                 <option value="" disabled>-- Select Finished Goods Batch --</option>
                 {fgBatches.map((fg) => (
                   <option key={fg.id} value={fg.id}>
-                    {fg.batch_number} (On-Hand: {fg.quantity_on_hand_kg} kg)
+                    {fg.products?.name || 'Finished Goods'} (On-Hand: {fg.quantity_on_hand_kg} kg)
                   </option>
                 ))}
               </select>

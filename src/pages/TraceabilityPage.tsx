@@ -88,7 +88,7 @@ export const TraceabilityPage: React.FC = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by Production Batch # (e.g. PB-20261011-509), Order #, or Material Lot #"
+              placeholder="Search by Product Name, Customer, or Run..."
               className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono font-medium focus:outline-none focus:border-brand-500"
             />
           </div>
@@ -138,12 +138,9 @@ export const TraceabilityPage: React.FC = () => {
                   <ShoppingCart className="w-4 h-4" />
                 </div>
                 <span className="text-[10px] font-bold uppercase text-slate-400">Step 1: Originating Demand</span>
-                <h4 className="text-xs font-mono font-bold text-slate-900 dark:text-white mt-1">
-                  {traceData.customer_order?.order_number || traceData.customer_orders?.order_number || 'ORD-01'}
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white mt-1">
+                  {traceData.customer_order?.customer_name || traceData.customer_orders?.customers?.name || 'Customer Demand'}
                 </h4>
-                <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 mt-1">
-                  {traceData.customer_order?.customer_name || traceData.customer_orders?.customers?.name || 'Customer Account'}
-                </p>
                 {traceData.customer_order?.delivery_address && (
                   <p className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1 truncate">
                     <MapPin className="w-3 h-3 shrink-0" />
@@ -182,11 +179,11 @@ export const TraceabilityPage: React.FC = () => {
                   <Factory className="w-4 h-4" />
                 </div>
                 <span className="text-[10px] font-bold uppercase text-slate-400">Step 3: Factory Execution</span>
-                <h4 className="text-xs font-mono font-bold text-brand-600 dark:text-brand-400 mt-1">
-                  {traceData.production_batch?.batch_number || traceData.batch_number}
+                <h4 className="text-xs font-bold text-brand-600 dark:text-brand-400 mt-1">
+                  {traceData.products?.name || 'Factory Production Run'}
                 </h4>
                 <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1">
-                  Product: {traceData.products?.name} ({traceData.products?.code})
+                  Finished Product: {traceData.products?.name}
                 </p>
                 <p className="text-[10px] text-slate-400 mt-0.5">
                   Output: {formatNumber(traceData.accepted_output_kg || traceData.planned_quantity_kg)} kg accepted
@@ -219,10 +216,8 @@ export const TraceabilityPage: React.FC = () => {
                 <span className="text-[10px] font-bold uppercase text-slate-400">
                   {traceData.dispatch ? 'Step 4: Dispatch Delivery' : 'Step 4: Finished Goods Stock'}
                 </span>
-                <h4 className="text-xs font-mono font-bold text-slate-900 dark:text-white mt-1">
-                  {traceData.dispatch?.delivery_number ||
-                    traceData.finished_goods_batch?.batch_number ||
-                    `FG-${traceData.batch_number?.replace('PB-', '')}`}
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white mt-1">
+                  {traceData.dispatch ? (traceData.dispatch.destination_address || 'Customer Dispatch') : 'Finished Goods Bay'}
                 </h4>
                 <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 truncate">
                   {traceData.dispatch
@@ -245,7 +240,7 @@ export const TraceabilityPage: React.FC = () => {
                   Raw Material Lot Lineage & Batch Contribution
                 </h3>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  Detailed breakdown of raw material lots consumed into batch {traceData.batch_number}
+                  Detailed breakdown of raw material lots consumed into this production run
                 </p>
               </div>
               <div className="text-xs font-mono text-slate-500 dark:text-slate-400">
@@ -258,8 +253,6 @@ export const TraceabilityPage: React.FC = () => {
                 <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                   <tr>
                     <th className="py-2.5 whitespace-nowrap">Plastic Grade</th>
-                    <th className="py-2.5 whitespace-nowrap">Code</th>
-                    <th className="py-2.5 whitespace-nowrap">Warehouse Lot #</th>
                     <th className="py-2.5 whitespace-nowrap">Supplier / Lot Ref</th>
                     <th className="py-2.5 whitespace-nowrap">Consumed Weight</th>
                     <th className="py-2.5 text-right whitespace-nowrap">Contribution %</th>
@@ -268,7 +261,7 @@ export const TraceabilityPage: React.FC = () => {
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
                   {(traceData.raw_material_lots_consumed || []).length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-4 text-center text-slate-400 text-xs">
+                      <td colSpan={4} className="py-4 text-center text-slate-400 text-xs">
                         No raw material consumption logs recorded for this batch.
                       </td>
                     </tr>
@@ -284,10 +277,6 @@ export const TraceabilityPage: React.FC = () => {
                         <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
                           <td className="py-3 text-slate-800 dark:text-slate-200 font-bold">
                             {lot.material_name}
-                          </td>
-                          <td className="py-3 font-mono text-slate-500">{lot.material_code}</td>
-                          <td className="py-3 font-mono text-brand-600 dark:text-brand-400 font-bold">
-                            {lot.batch_number}
                           </td>
                           <td className="py-3 text-slate-500">{lot.supplier}</td>
                           <td className="py-3 font-mono font-bold text-slate-800 dark:text-slate-200">

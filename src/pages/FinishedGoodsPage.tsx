@@ -103,10 +103,9 @@ export const FinishedGoodsPage: React.FC = () => {
           <table className="w-full text-left text-xs min-w-[720px]">
             <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
               <tr>
-                <th className="py-2.5 whitespace-nowrap">FG Batch Number</th>
-                <th className="py-2.5 whitespace-nowrap">Originating Production Batch</th>
-                <th className="py-2.5 whitespace-nowrap">Operator</th>
                 <th className="py-2.5 whitespace-nowrap">Product</th>
+                <th className="py-2.5 whitespace-nowrap">Production Date</th>
+                <th className="py-2.5 whitespace-nowrap">Operator</th>
                 <th className="py-2.5 whitespace-nowrap">Produced (kg)</th>
                 <th className="py-2.5 whitespace-nowrap">On-Hand (kg)</th>
                 <th className="py-2.5 whitespace-nowrap">Dispatched (kg)</th>
@@ -116,18 +115,18 @@ export const FinishedGoodsPage: React.FC = () => {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
               {(data.batches || []).length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-400 text-xs">
+                  <td colSpan={7} className="py-8 text-center text-slate-400 text-xs">
                     No finished goods batches in inventory. Complete a production run to generate finished goods lots.
                   </td>
                 </tr>
               ) : (
                 (data.batches || []).map((batch) => (
                   <tr key={batch.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                    <td className="py-3 font-mono font-bold text-brand-600 dark:text-brand-400">
-                      {batch.batch_number}
+                    <td className="py-3 font-bold text-slate-800 dark:text-slate-200">
+                      {batch.products?.name || 'Finished Product'}
                     </td>
-                    <td className="py-3 font-mono text-slate-600 dark:text-slate-300">
-                      {batch.production_batches?.batch_number || batch.production_batch_number}
+                    <td className="py-3 text-slate-600 dark:text-slate-300">
+                      {new Date(batch.created_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}
                     </td>
                     <td className="py-3 text-slate-700 dark:text-slate-300">
                       {batch.production_batches?.operator_name || batch.operator_name ? (
@@ -138,9 +137,6 @@ export const FinishedGoodsPage: React.FC = () => {
                       ) : (
                         <span className="text-slate-400 italic text-[11px]">—</span>
                       )}
-                    </td>
-                    <td className="py-3 text-slate-800 dark:text-slate-200">
-                      {batch.products?.name || batch.product_code}
                     </td>
                     <td className="py-3 font-mono">{batch.quantity_produced_kg} kg</td>
                     <td className="py-3 font-mono font-bold text-slate-900 dark:text-white">

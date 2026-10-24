@@ -91,9 +91,8 @@ export const ReportsPage: React.FC = () => {
             <table className="w-full text-left text-xs min-w-[780px]">
               <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                 <tr>
-                  <th className="py-2.5 whitespace-nowrap">Batch #</th>
-                  <th className="py-2.5 whitespace-nowrap">Operator</th>
                   <th className="py-2.5 whitespace-nowrap">Product</th>
+                  <th className="py-2.5 whitespace-nowrap">Operator</th>
                   <th className="py-2.5 whitespace-nowrap">Planned Input</th>
                   <th className="py-2.5 whitespace-nowrap">Actual Input</th>
                   <th className="py-2.5 whitespace-nowrap">Accepted Output</th>
@@ -105,16 +104,14 @@ export const ReportsPage: React.FC = () => {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
                 {varianceReport.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-6 text-center text-slate-400 text-xs">
+                    <td colSpan={8} className="py-6 text-center text-slate-400 text-xs">
                       No production batch variance records logged yet.
                     </td>
                   </tr>
                 ) : (
                   varianceReport.map((row, idx) => (
                     <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                      <td className="py-3 font-mono font-bold text-brand-600 dark:text-brand-400">
-                        {row.batch_number}
-                      </td>
+                      <td className="py-3 font-bold text-slate-800 dark:text-slate-200">{row.product_name}</td>
                       <td className="py-3 text-slate-700 dark:text-slate-300">
                         {row.operator_name ? (
                           <span className="inline-flex items-center gap-1 font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-factory-800 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700/60">
@@ -125,7 +122,6 @@ export const ReportsPage: React.FC = () => {
                           <span className="text-slate-400 italic text-[11px]">—</span>
                         )}
                       </td>
-                      <td className="py-3 text-slate-800 dark:text-slate-200">{row.product_name}</td>
                       <td className="py-3 font-mono">{formatNumber(row.planned_input_kg)} kg</td>
                       <td className="py-3 font-mono">{formatNumber(row.actual_input_kg)} kg</td>
                       <td className="py-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">
@@ -205,9 +201,8 @@ export const ReportsPage: React.FC = () => {
               <table className="w-full text-left text-xs min-w-[820px]">
                 <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                   <tr>
-                    <th className="py-2.5 whitespace-nowrap">Batch #</th>
-                    <th className="py-2.5 whitespace-nowrap">Operator</th>
                     <th className="py-2.5 whitespace-nowrap">Product</th>
+                    <th className="py-2.5 whitespace-nowrap">Operator</th>
                     <th className="py-2.5 whitespace-nowrap">Accepted (kg)</th>
                     <th className="py-2.5 whitespace-nowrap">Trim Waste (kg)</th>
                     <th className="py-2.5 whitespace-nowrap">Plant Waste (kg)</th>
@@ -219,15 +214,15 @@ export const ReportsPage: React.FC = () => {
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
                   {(wasteData.records || []).length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="py-4 text-center text-slate-400 text-xs">
+                      <td colSpan={8} className="py-4 text-center text-slate-400 text-xs">
                         No production waste or scrap entries recorded.
                       </td>
                     </tr>
                   ) : (
                     (wasteData.records || []).map((rec: any, idx: number) => (
                       <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                        <td className="py-3 font-mono font-bold text-brand-600 dark:text-brand-400">
-                          {rec.batch_number}
+                        <td className="py-3 font-bold text-slate-800 dark:text-slate-200">
+                          {rec.product_name || 'Manufactured Item'}
                         </td>
                         <td className="py-3 text-slate-700 dark:text-slate-300">
                           {rec.operator_name ? (

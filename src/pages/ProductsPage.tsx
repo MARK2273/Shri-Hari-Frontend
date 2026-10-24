@@ -387,10 +387,7 @@ export const ProductsPage: React.FC = () => {
                         : 'bg-white/70 dark:bg-factory-900/70 border-slate-200/80 dark:border-slate-800 hover:border-slate-300'
                       }`}
                   >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                        {p.code}
-                      </span>
+                    <div className="flex items-center justify-end mb-1">
                       <div className="flex items-center gap-1.5">
                         {p.size_micron && (
                           <span className="px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-mono text-[10px] font-bold border border-indigo-200/50">
@@ -451,9 +448,6 @@ export const ProductsPage: React.FC = () => {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-brand-500/10 text-brand-600 dark:text-brand-400">
-                          {selectedProduct.code}
-                        </span>
                         <h2 className="text-base font-bold text-slate-900 dark:text-white">
                           {selectedProduct.name}
                         </h2>
@@ -545,8 +539,7 @@ export const ProductsPage: React.FC = () => {
                                 </div>
                                 <div className="text-[10px] text-slate-400 mt-2 font-mono space-y-1">
                                   <div className="flex items-center justify-between">
-                                    <span>Code: {item.materials?.code || 'RAW-LOT'}</span>
-                                    <span>{item.planned_kg_per_kg_output} kg / 1 kg</span>
+                                    <span>Ratio: {item.planned_kg_per_kg_output} kg / 1 kg</span>
                                   </div>
                                   <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-slate-700/60 font-semibold text-slate-600 dark:text-slate-300">
                                     <span>Rate: ₹{matCost.toFixed(2)}/kg</span>
@@ -803,7 +796,7 @@ export const ProductsPage: React.FC = () => {
                               <option value="" disabled>-- Select Polymer Material --</option>
                               {materials.map((m) => (
                                 <option key={m.id} value={m.id}>
-                                  {m.name} ({m.code}) — ₹{Number(m.cost_per_kg || 0).toFixed(2)}/kg
+                                  {m.name} — ₹{Number(m.cost_per_kg || 0).toFixed(2)}/kg
                                 </option>
                               ))}
                             </>
@@ -1005,7 +998,7 @@ export const ProductsPage: React.FC = () => {
                         <option value="" disabled>-- Select Polymer Material --</option>
                         {materials.map((m) => (
                           <option key={m.id} value={m.id}>
-                            {m.name} ({m.code}) — ₹{Number(m.cost_per_kg || 0).toFixed(2)}/kg
+                            {m.name} — ₹{Number(m.cost_per_kg || 0).toFixed(2)}/kg
                           </option>
                         ))}
                       </>
@@ -1143,7 +1136,7 @@ export const ProductsPage: React.FC = () => {
             <div className="text-xs text-rose-900 dark:text-rose-200">
               <p className="font-bold">Are you sure you want to delete this product?</p>
               <p className="mt-1">
-                <strong>{productToDelete?.name}</strong> ({productToDelete?.code}) and all its recipe versions will be removed from your catalog.
+                <strong>{productToDelete?.name}</strong> and all its recipe versions will be removed from your catalog.
               </p>
             </div>
           </div>

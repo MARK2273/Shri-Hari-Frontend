@@ -420,9 +420,14 @@ export const OrdersPage: React.FC = () => {
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-black text-slate-900 dark:text-white">
-                          {order.order_number}
-                        </span>
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                          {order.customers?.name || order.customer_name || 'Direct Client'}
+                          {order.customers?.contact_person && (
+                            <span className="text-[11px] text-slate-400 font-normal">
+                              ({order.customers.contact_person})
+                            </span>
+                          )}
+                        </h3>
                         <Badge
                           variant={
                             order.status === 'completed'
@@ -435,14 +440,6 @@ export const OrdersPage: React.FC = () => {
                           {order.status}
                         </Badge>
                       </div>
-                      <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 mt-1 flex items-center gap-2">
-                        <span>Customer: {order.customers?.name || order.customer_name || 'Direct Client'}</span>
-                        {order.customers?.contact_person && (
-                          <span className="text-[11px] text-slate-400 font-normal">
-                            ({order.customers.contact_person})
-                          </span>
-                        )}
-                      </h3>
                       {order.customers?.delivery_address && (
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1">
                           <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
@@ -584,7 +581,6 @@ export const OrdersPage: React.FC = () => {
               <table className="w-full text-left text-xs min-w-[700px]">
                 <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                   <tr>
-                    <th className="py-2.5 whitespace-nowrap">Code</th>
                     <th className="py-2.5 whitespace-nowrap">Company Name</th>
                     <th className="py-2.5 whitespace-nowrap">Contact Person</th>
                     <th className="py-2.5 whitespace-nowrap">Phone & Email</th>
@@ -596,11 +592,6 @@ export const OrdersPage: React.FC = () => {
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
                   {customers.map((cust) => (
                     <tr key={cust.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                      <td className="py-3 font-mono font-bold text-slate-900 dark:text-white">
-                        <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                          {cust.code}
-                        </span>
-                      </td>
                       <td className="py-3 font-bold text-slate-800 dark:text-slate-200">
                         {cust.name}
                       </td>
@@ -924,7 +915,7 @@ export const OrdersPage: React.FC = () => {
             <div className="text-xs text-rose-900 dark:text-rose-200">
               <p className="font-bold">Are you sure you want to delete this customer?</p>
               <p className="mt-1">
-                <strong>{customerToDelete?.name}</strong> ({customerToDelete?.code}) will be permanently removed from your client directory.
+                <strong>{customerToDelete?.name}</strong> will be permanently removed from your client directory.
               </p>
             </div>
           </div>
@@ -1004,7 +995,7 @@ export const OrdersPage: React.FC = () => {
                 <option value="" disabled>-- Select Customer --</option>
                 {customers.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name} ({c.code})
+                    {c.name}
                   </option>
                 ))}
               </select>
@@ -1051,7 +1042,7 @@ export const OrdersPage: React.FC = () => {
                   <option value="" disabled>-- Select Product --</option>
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} ({p.code})
+                      {p.name}
                     </option>
                   ))}
                 </select>
