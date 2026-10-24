@@ -111,7 +111,7 @@ export const DispatchPage: React.FC = () => {
             Dispatch & Delivery Management
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Confirmed dispatches deduct finished stock atomically with full lot allocation (DEL-01..DEL-10)
+            Confirmed dispatches deduct finished stock atomically with full lot allocation
           </p>
         </div>
         <button
@@ -195,7 +195,7 @@ export const DispatchPage: React.FC = () => {
         <form onSubmit={handleCreateDispatch} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Select Customer Order (DEL-02)
+              Select Customer Order
             </label>
             {orders.length === 0 ? (
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-300">
@@ -245,7 +245,7 @@ export const DispatchPage: React.FC = () => {
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Allocate From Finished Goods Batch (DEL-05, FG-07)
+              Allocate From Finished Goods Batch
             </label>
             {fgBatches.length === 0 ? (
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-300">
@@ -301,7 +301,7 @@ export const DispatchPage: React.FC = () => {
           <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-400">
             ⚠️ <strong>Stock Deduction Notice:</strong> Confirming this dispatch will immediately deduct{' '}
             <span className="font-mono font-bold">{dispatchForm.quantityKg} kg</span> from the selected finished
-            goods batch and register an irreversible delivery ledger transaction (DEL-06).
+            goods batch and register an irreversible delivery ledger transaction.
           </div>
 
           <div className="pt-2 flex justify-end gap-2">

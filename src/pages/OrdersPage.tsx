@@ -308,7 +308,7 @@ export const OrdersPage: React.FC = () => {
             Customer Orders & Production Demand
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Order-driven manufacturing workflow. All production batches link back to confirmed orders (ORD-01..ORD-09).
+            Order-driven manufacturing workflow. All production batches link back to confirmed orders.
           </p>
         </div>
 

@@ -40,7 +40,7 @@ export const FinishedGoodsPage: React.FC = () => {
             Finished Goods Inventory
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Maintained separately from raw plastic. Decreases when dispatches are confirmed (FG-01..FG-07).
+            Maintained separately from raw plastic. Decreases when dispatches are confirmed.
           </p>
         </div>
         <Link

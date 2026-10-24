@@ -46,7 +46,7 @@ export const ReportsPage: React.FC = () => {
           Factory Analytics & Audit Ledger
         </h1>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-          Production variance (planned vs actual), scrap loss metrics, and tamper-proof user audit trails (REP-01..REP-08)
+          Production variance (planned vs actual), scrap loss metrics, and tamper-proof user audit trails
         </p>
       </div>
 
@@ -60,7 +60,7 @@ export const ReportsPage: React.FC = () => {
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-factory-800'
           }`}
         >
-          Production Variance (REP-03)
+          Production Variance
         </button>
         <button
           onClick={() => setActiveTab('waste')}
@@ -70,7 +70,7 @@ export const ReportsPage: React.FC = () => {
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-factory-800'
           }`}
         >
-          Waste & Scrap Metrics (REP-04)
+          Waste & Scrap Metrics
         </button>
         <button
           onClick={() => setActiveTab('audit')}
@@ -80,7 +80,7 @@ export const ReportsPage: React.FC = () => {
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-factory-800'
           }`}
         >
-          Audit Ledger (AUD-01..AUD-06)
+          Audit Ledger
         </button>
       </div>
 
@@ -273,7 +273,7 @@ export const ReportsPage: React.FC = () => {
         <div className="bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
           <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
             <History className="w-4 h-4 text-brand-500" />
-            Append-Only User Business Actions (AUD-01..AUD-06)
+            Append-Only User Business Actions
           </h3>
 
           <div className="overflow-x-auto">

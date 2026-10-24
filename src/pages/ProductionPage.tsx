@@ -274,7 +274,7 @@ export const ProductionPage: React.FC = () => {
             Production Batches & Recipe Execution
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Order-linked batch manufacturing with lot-by-lot raw plastic consumption & finished goods generation (PRO-01..PRO-13)
+            Order-linked batch manufacturing with lot-by-lot raw plastic consumption & finished goods generation
           </p>
         </div>
         <button
@@ -394,7 +394,7 @@ export const ProductionPage: React.FC = () => {
         <form onSubmit={handleStartDraftBatch} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Select Customer Order (ORD-04)
+              Select Customer Order
             </label>
             {orders.length === 0 ? (
               <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-300 flex items-center justify-between gap-3">
@@ -545,7 +545,7 @@ export const ProductionPage: React.FC = () => {
 
           <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700/60">
             <h4 className="text-xs font-bold text-slate-800 dark:text-white">
-              Raw Material Lot Consumption (Lot-by-Lot Traceability PRO-05)
+              Raw Material Lot Consumption (Lot-by-Lot Traceability)
             </h4>
             <p className="text-[11px] text-slate-400 mt-0.5">
               Select the specific warehouse lots consumed and record actual kilograms used.
@@ -621,7 +621,7 @@ export const ProductionPage: React.FC = () => {
           <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700/60">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold text-slate-800 dark:text-white">
-                Production Output Reconciliation (PRO-07)
+                Production Output Reconciliation
               </h4>
               <span className="text-[11px] font-mono font-semibold px-2.5 py-0.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                 Total Waste: {formatNumber(totalWasteKg)} kg

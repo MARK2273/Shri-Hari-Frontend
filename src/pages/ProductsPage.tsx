@@ -320,7 +320,7 @@ export const ProductsPage: React.FC = () => {
             Product Catalog & Versioned Recipes (BOM)
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Bill of materials, multi-plastic formulations & automated requirements checking (PRD-01..PRD-08)
+            Bill of materials, multi-plastic formulations & automated requirements checking
           </p>
         </div>
 

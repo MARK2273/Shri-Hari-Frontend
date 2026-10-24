@@ -66,7 +66,7 @@ export const TraceabilityPage: React.FC = () => {
       <div>
         <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
           <GitBranch className="w-6 h-6 text-brand-500" />
-          End-to-End Batch Traceability (REP-07)
+          End-to-End Batch Traceability
         </h1>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
           Full 360° audit trail connecting customer order demand, raw plastic supplier lots, production run yields, and finished goods inventory.

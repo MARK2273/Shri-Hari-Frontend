@@ -341,9 +341,6 @@ export const SizeMicronPage: React.FC = () => {
                           <p className="font-bold text-slate-900 dark:text-white">
                             {item.label}
                           </p>
-                          <p className="text-[10px] text-slate-400 font-mono">
-                            ID: {item.id}
-                          </p>
                         </div>
                       </div>
                     </td>

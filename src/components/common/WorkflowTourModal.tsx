@@ -96,7 +96,7 @@ export const WorkflowTourModal: React.FC<WorkflowTourModalProps> = ({ isOpen, on
     },
     {
       title: 'Step 1: Receive Raw Plastic (Traceable Lots)',
-      subtitle: 'Batch-Level Raw Material Tracking (INV-01..INV-12)',
+      subtitle: 'Batch-Level Raw Material Tracking',
       icon: Layers,
       color: 'from-emerald-600 to-teal-500',
       badge: 'Inventory Module',
@@ -126,7 +126,7 @@ export const WorkflowTourModal: React.FC<WorkflowTourModalProps> = ({ isOpen, on
     },
     {
       title: 'Step 2: Product Catalog & Versioned Recipes',
-      subtitle: 'Bill of Materials (BOM) & Pre-Calculations (PRD-01..PRD-08)',
+      subtitle: 'Bill of Materials (BOM) & Pre-Calculations',
       icon: FlaskConical,
       color: 'from-indigo-600 to-blue-500',
       badge: 'Product Formulation',
@@ -153,7 +153,7 @@ export const WorkflowTourModal: React.FC<WorkflowTourModalProps> = ({ isOpen, on
     },
     {
       title: 'Step 3: Customer Orders (Demand Source)',
-      subtitle: 'Order-Driven Manufacturing (ORD-01..ORD-09)',
+      subtitle: 'Order-Driven Manufacturing',
       icon: ShoppingCart,
       color: 'from-sky-600 to-cyan-500',
       badge: 'Sales & Orders',
@@ -180,7 +180,7 @@ export const WorkflowTourModal: React.FC<WorkflowTourModalProps> = ({ isOpen, on
     },
     {
       title: 'Step 4: Execute Production & Mass Balance',
-      subtitle: 'Lot Consumption, Output & Waste Recording (PRO-01..PRO-13)',
+      subtitle: 'Lot Consumption, Output & Waste Recording',
       icon: Factory,
       color: 'from-amber-600 to-orange-500',
       badge: 'Shop Floor Production',
@@ -210,7 +210,7 @@ export const WorkflowTourModal: React.FC<WorkflowTourModalProps> = ({ isOpen, on
     },
     {
       title: 'Step 5: Finished Goods Inventory',
-      subtitle: 'Traceable Warehouse Batches (FG-01..FG-07)',
+      subtitle: 'Traceable Warehouse Batches',
       icon: PackageCheck,
       color: 'from-purple-600 to-pink-500',
       badge: 'Warehouse Storage',
@@ -237,7 +237,7 @@ export const WorkflowTourModal: React.FC<WorkflowTourModalProps> = ({ isOpen, on
     },
     {
       title: 'Step 6: Dispatch & Stock Deduction',
-      subtitle: 'Delivery Notes & Final Inventory Deduction (DEL-01..DEL-10)',
+      subtitle: 'Delivery Notes & Final Inventory Deduction',
       icon: Truck,
       color: 'from-rose-600 to-red-500',
       badge: 'Logistics & Dispatch',
@@ -264,7 +264,7 @@ export const WorkflowTourModal: React.FC<WorkflowTourModalProps> = ({ isOpen, on
     },
     {
       title: 'Step 7: 360° Traceability & Variance Reports',
-      subtitle: 'Supply Chain Genealogy & Audit Trail (REP-01..REP-08)',
+      subtitle: 'Supply Chain Genealogy & Audit Trail',
       icon: GitBranch,
       color: 'from-emerald-600 to-sky-500',
       badge: 'Traceability & Quality',
