@@ -43,10 +43,10 @@ export const ProductionPage: React.FC = () => {
     rejectedKg: number;
   }>({
     consumption: [],
-    acceptedOutputKg: 194,
-    trimWasteKg: 4,
-    plantWasteKg: 2,
-    wasteKg: 6,
+    acceptedOutputKg: 0,
+    trimWasteKg: 0,
+    plantWasteKg: 0,
+    wasteKg: 0,
     rejectedKg: 0,
   });
 
@@ -171,16 +171,13 @@ export const ProductionPage: React.FC = () => {
     }
 
     const planned = Number(batch.planned_quantity_kg) || 0;
-    const defaultTrim = Number((planned * 0.02).toFixed(3));
-    const defaultPlant = Number((planned * 0.01).toFixed(3));
-    const defaultAccepted = Number((planned - defaultTrim - defaultPlant).toFixed(3));
 
     setConfirmForm({
       consumption: defaultConsumption,
-      acceptedOutputKg: defaultAccepted,
-      trimWasteKg: defaultTrim,
-      plantWasteKg: defaultPlant,
-      wasteKg: Number((defaultTrim + defaultPlant).toFixed(3)),
+      acceptedOutputKg: planned,
+      trimWasteKg: 0,
+      plantWasteKg: 0,
+      wasteKg: 0,
       rejectedKg: 0,
     });
     setIsConfirmModalOpen(true);
