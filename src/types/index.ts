@@ -124,6 +124,7 @@ export interface ProductionBatch {
   rejected_kg: number;
   status: 'draft' | 'in_progress' | 'completed' | 'cancelled';
   operator_id?: string;
+  operator_name?: string;
   supervisor_id?: string;
   start_time?: string;
   completion_time?: string;

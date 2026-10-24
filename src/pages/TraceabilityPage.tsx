@@ -199,6 +199,11 @@ export const TraceabilityPage: React.FC = () => {
                     </span>
                   ) : ''}
                 </p>
+                {(traceData.production_batch?.operator_name || traceData.operator_name) && (
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Operator: <strong className="font-semibold text-slate-700 dark:text-slate-300">{traceData.production_batch?.operator_name || traceData.operator_name}</strong>
+                  </p>
+                )}
               </div>
               <Badge variant="success" className="mt-4 w-fit">
                 Yield: {formatNumber(traceData.yield_percentage || traceData.production_batch?.yield_pct || 100)}%

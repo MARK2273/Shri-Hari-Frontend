@@ -23,6 +23,7 @@ export const ProductionPage: React.FC = () => {
     orderItemId: '',
     recipeId: '',
     plannedQuantityKg: 200,
+    operatorName: '',
     notes: '',
   });
 
@@ -42,6 +43,7 @@ export const ProductionPage: React.FC = () => {
     plantWasteKg: number;
     wasteKg: number;
     rejectedKg: number;
+    operatorName: string;
   }>({
     consumption: [],
     acceptedOutputKg: 0,
@@ -49,6 +51,7 @@ export const ProductionPage: React.FC = () => {
     plantWasteKg: 0,
     wasteKg: 0,
     rejectedKg: 0,
+    operatorName: '',
   });
 
   const fetchData = async () => {
@@ -99,6 +102,7 @@ export const ProductionPage: React.FC = () => {
         orderItemId: item.id || '',
         recipeId: prod?.active_recipe?.id || prod?.product_recipes?.[0]?.id || '',
         plannedQuantityKg: Number(item.requested_quantity_kg) || Number(selectedOrd.total_requested_weight_kg) || 200,
+        operatorName: '',
         notes: '',
       });
     }
@@ -124,6 +128,7 @@ export const ProductionPage: React.FC = () => {
         orderItemId,
         recipeId,
         plannedQuantityKg: Number(draftForm.plannedQuantityKg),
+        operatorName: draftForm.operatorName.trim() || undefined,
         notes: draftForm.notes,
       });
       setIsDraftModalOpen(false);
@@ -180,6 +185,7 @@ export const ProductionPage: React.FC = () => {
       plantWasteKg: 0,
       wasteKg: 0,
       rejectedKg: 0,
+      operatorName: batch.operator_name || '',
     });
     setIsConfirmModalOpen(true);
   };
@@ -203,6 +209,7 @@ export const ProductionPage: React.FC = () => {
         plantWasteKg: confirmForm.plantWasteKg,
         wasteKg: computedWaste,
         rejectedKg: confirmForm.rejectedKg,
+        operatorName: confirmForm.operatorName.trim() || undefined,
       });
 
       setIsConfirmModalOpen(false);
@@ -250,12 +257,13 @@ export const ProductionPage: React.FC = () => {
       {/* Production Batches Table */}
       <div className="bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs min-w-[760px]">
+          <table className="w-full text-left text-xs min-w-[820px]">
             <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
               <tr>
                 <th className="py-2.5 whitespace-nowrap">Batch #</th>
                 <th className="py-2.5 whitespace-nowrap">Linked Order</th>
                 <th className="py-2.5 whitespace-nowrap">Finished Product</th>
+                <th className="py-2.5 whitespace-nowrap">Operator</th>
                 <th className="py-2.5 whitespace-nowrap">Planned (kg)</th>
                 <th className="py-2.5 whitespace-nowrap">Actual Input (kg)</th>
                 <th className="py-2.5 whitespace-nowrap">Accepted (kg)</th>
@@ -267,7 +275,7 @@ export const ProductionPage: React.FC = () => {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
               {batches.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-slate-400 text-xs">
+                  <td colSpan={10} className="py-8 text-center text-slate-400 text-xs">
                     No production batches recorded yet. Launch a batch from customer order demand.
                   </td>
                 </tr>
@@ -282,6 +290,15 @@ export const ProductionPage: React.FC = () => {
                     </td>
                     <td className="py-3 text-slate-800 dark:text-slate-200">
                       {batch.products?.name || batch.product_name}
+                    </td>
+                    <td className="py-3 text-slate-700 dark:text-slate-300">
+                      {batch.operator_name ? (
+                        <span className="font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-factory-800 text-slate-800 dark:text-slate-200">
+                          {batch.operator_name}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 italic text-[11px]">—</span>
+                      )}
                     </td>
                     <td className="py-3 font-mono">{formatNumber(batch.planned_quantity_kg)} kg</td>
                     <td className="py-3 font-mono">{formatNumber(batch.actual_input_kg || 0)} kg</td>
@@ -400,20 +417,35 @@ export const ProductionPage: React.FC = () => {
             );
           })()}
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Planned Output (kg)
-            </label>
-            <input
-              type="number"
-              step="1"
-              required
-              value={draftForm.plannedQuantityKg}
-              onChange={(e) =>
-                setDraftForm({ ...draftForm, plannedQuantityKg: parseFloat(e.target.value) || 0 })
-              }
-              className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Planned Output (kg)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={draftForm.plannedQuantityKg}
+                onChange={(e) =>
+                  setDraftForm({ ...draftForm, plannedQuantityKg: parseFloat(e.target.value) || 0 })
+                }
+                className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Operator Name
+              </label>
+              <input
+                type="text"
+                value={draftForm.operatorName}
+                onChange={(e) => setDraftForm({ ...draftForm, operatorName: e.target.value })}
+                placeholder="e.g. Ramesh Kumar, Operator 1"
+                className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
+              />
+            </div>
           </div>
 
           <div className="pt-2 flex justify-end gap-2">
@@ -516,6 +548,20 @@ export const ProductionPage: React.FC = () => {
                 </div>
               );
             })}
+          </div>
+
+          {/* Operator Name Field */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Operator Name (Machine In-Charge)
+            </label>
+            <input
+              type="text"
+              value={confirmForm.operatorName}
+              onChange={(e) => setConfirmForm({ ...confirmForm, operatorName: e.target.value })}
+              placeholder="e.g. Ramesh Kumar, Operator 1"
+              className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
+            />
           </div>
 
           {/* Outputs Section: Accepted Output, Waste (Trim & Plant) & Rejection */}
