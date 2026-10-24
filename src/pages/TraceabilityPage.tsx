@@ -189,7 +189,14 @@ export const TraceabilityPage: React.FC = () => {
                 </p>
                 <p className="text-[10px] text-slate-400 mt-0.5">
                   Output: {traceData.accepted_output_kg || traceData.planned_quantity_kg} kg accepted
-                  {Number(traceData.waste_kg) > 0 ? ` (Waste: ${traceData.waste_kg} kg)` : ''}
+                  {Number(traceData.waste_kg) > 0 ? (
+                    <span>
+                      {' '}(Waste: {traceData.waste_kg} kg
+                      {(Number(traceData.trim_waste_kg) > 0 || Number(traceData.plant_waste_kg) > 0)
+                        ? ` — Trim: ${traceData.trim_waste_kg || 0}kg, Plant: ${traceData.plant_waste_kg || 0}kg`
+                        : ''})
+                    </span>
+                  ) : ''}
                 </p>
               </div>
               <Badge variant="success" className="mt-4 w-fit">

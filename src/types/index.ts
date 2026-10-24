@@ -118,6 +118,8 @@ export interface ProductionBatch {
   planned_quantity_kg: number;
   actual_input_kg: number;
   accepted_output_kg: number;
+  trim_waste_kg?: number;
+  plant_waste_kg?: number;
   waste_kg: number;
   rejected_kg: number;
   status: 'draft' | 'in_progress' | 'completed' | 'cancelled';

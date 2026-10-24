@@ -37,11 +37,15 @@ export const ProductionPage: React.FC = () => {
       actualQuantityKg: number;
     }>;
     acceptedOutputKg: number;
+    trimWasteKg: number;
+    plantWasteKg: number;
     wasteKg: number;
     rejectedKg: number;
   }>({
     consumption: [],
     acceptedOutputKg: 194,
+    trimWasteKg: 4,
+    plantWasteKg: 2,
     wasteKg: 6,
     rejectedKg: 0,
   });
@@ -166,10 +170,17 @@ export const ProductionPage: React.FC = () => {
       });
     }
 
+    const planned = Number(batch.planned_quantity_kg) || 0;
+    const defaultTrim = Number((planned * 0.02).toFixed(3));
+    const defaultPlant = Number((planned * 0.01).toFixed(3));
+    const defaultAccepted = Number((planned - defaultTrim - defaultPlant).toFixed(3));
+
     setConfirmForm({
       consumption: defaultConsumption,
-      acceptedOutputKg: Number(batch.planned_quantity_kg) * 0.97,
-      wasteKg: Number(batch.planned_quantity_kg) * 0.03,
+      acceptedOutputKg: defaultAccepted,
+      trimWasteKg: defaultTrim,
+      plantWasteKg: defaultPlant,
+      wasteKg: Number((defaultTrim + defaultPlant).toFixed(3)),
       rejectedKg: 0,
     });
     setIsConfirmModalOpen(true);
@@ -181,6 +192,7 @@ export const ProductionPage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
+      const computedWaste = Number(((Number(confirmForm.trimWasteKg) || 0) + (Number(confirmForm.plantWasteKg) || 0)).toFixed(3));
       await api.post(`/production/${selectedBatchToConfirm.id}/confirm`, {
         consumption: confirmForm.consumption.map((c) => ({
           materialId: c.materialId,
@@ -189,7 +201,9 @@ export const ProductionPage: React.FC = () => {
           actualQuantityKg: c.actualQuantityKg,
         })),
         acceptedOutputKg: confirmForm.acceptedOutputKg,
-        wasteKg: confirmForm.wasteKg,
+        trimWasteKg: confirmForm.trimWasteKg,
+        plantWasteKg: confirmForm.plantWasteKg,
+        wasteKg: computedWaste,
         rejectedKg: confirmForm.rejectedKg,
       });
 
@@ -203,9 +217,10 @@ export const ProductionPage: React.FC = () => {
   };
 
   const totalInputKg = confirmForm.consumption.reduce((s, c) => s + (Number(c.actualQuantityKg) || 0), 0);
+  const totalWasteKg = Number(((Number(confirmForm.trimWasteKg) || 0) + (Number(confirmForm.plantWasteKg) || 0)).toFixed(3));
   const totalAccountedOutputKg =
     Number(confirmForm.acceptedOutputKg || 0) +
-    Number(confirmForm.wasteKg || 0) +
+    totalWasteKg +
     Number(confirmForm.rejectedKg || 0);
 
   if (isLoading) {
@@ -260,45 +275,52 @@ export const ProductionPage: React.FC = () => {
                 </tr>
               ) : (
                 batches.map((batch) => (
-                <tr key={batch.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                  <td className="py-3 font-mono font-bold text-brand-600 dark:text-brand-400">
-                    {batch.batch_number}
-                  </td>
-                  <td className="py-3 text-slate-600 dark:text-slate-300 font-mono">
-                    {batch.customer_orders?.order_number || batch.order_number}
-                  </td>
-                  <td className="py-3 text-slate-800 dark:text-slate-200">
-                    {batch.products?.name || batch.product_name}
-                  </td>
-                  <td className="py-3 font-mono">{batch.planned_quantity_kg} kg</td>
-                  <td className="py-3 font-mono">{batch.actual_input_kg || 0} kg</td>
-                  <td className="py-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                    {batch.accepted_output_kg || 0} kg
-                  </td>
-                  <td className="py-3 font-mono text-rose-500">{batch.waste_kg || 0} kg</td>
-                  <td className="py-3">
-                    <Badge variant={batch.status === 'completed' ? 'success' : 'info'}>
-                      {batch.status}
-                    </Badge>
-                  </td>
-                  <td className="py-3 text-right">
-                    {batch.status !== 'completed' ? (
-                      <button
-                        onClick={() => openConfirmModal(batch)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-lg shadow-sm transition-colors ml-auto"
-                      >
-                        <Play className="w-3 h-3 fill-current" />
-                        Execute & Stock
-                      </button>
-                    ) : (
-                      <span className="text-[11px] text-slate-400 flex items-center justify-end gap-1 font-semibold">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Stocked
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
+                  <tr key={batch.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
+                    <td className="py-3 font-mono font-bold text-brand-600 dark:text-brand-400">
+                      {batch.batch_number}
+                    </td>
+                    <td className="py-3 text-slate-600 dark:text-slate-300 font-mono">
+                      {batch.customer_orders?.order_number || batch.order_number}
+                    </td>
+                    <td className="py-3 text-slate-800 dark:text-slate-200">
+                      {batch.products?.name || batch.product_name}
+                    </td>
+                    <td className="py-3 font-mono">{batch.planned_quantity_kg} kg</td>
+                    <td className="py-3 font-mono">{batch.actual_input_kg || 0} kg</td>
+                    <td className="py-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                      {batch.accepted_output_kg || 0} kg
+                    </td>
+                    <td className="py-3 font-mono">
+                      <div className="text-rose-500 font-bold">{batch.waste_kg || 0} kg</div>
+                      {(Number(batch.trim_waste_kg) > 0 || Number(batch.plant_waste_kg) > 0) && (
+                        <div className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
+                          Trim: {batch.trim_waste_kg || 0} | Plant: {batch.plant_waste_kg || 0}
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-3">
+                      <Badge variant={batch.status === 'completed' ? 'success' : 'info'}>
+                        {batch.status}
+                      </Badge>
+                    </td>
+                    <td className="py-3 text-right">
+                      {batch.status !== 'completed' ? (
+                        <button
+                          onClick={() => openConfirmModal(batch)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-lg shadow-sm transition-colors ml-auto"
+                        >
+                          <Play className="w-3 h-3 fill-current" />
+                          Execute & Stock
+                        </button>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 flex items-center justify-end gap-1 font-semibold">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Stocked
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -498,15 +520,21 @@ export const ProductionPage: React.FC = () => {
             })}
           </div>
 
-          {/* Outputs Section: Accepted Output, Waste & Rejection */}
+          {/* Outputs Section: Accepted Output, Waste (Trim & Plant) & Rejection */}
           <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700/60">
-            <h4 className="text-xs font-bold text-slate-800 dark:text-white">
-              Production Output Reconciliation (PRO-07)
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-slate-800 dark:text-white">
+                Production Output Reconciliation (PRO-07)
+              </h4>
+              <span className="text-[11px] font-mono font-semibold px-2.5 py-0.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                Total Waste: {totalWasteKg} kg
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
               <div>
                 <label className="block text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mb-1">
-                  Accepted Finished Product (kg)
+                  Accepted Product (kg)
                 </label>
                 <input
                   type="number"
@@ -518,22 +546,53 @@ export const ProductionPage: React.FC = () => {
                   }
                   className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold text-emerald-600 dark:text-emerald-400"
                 />
+                <span className="text-[9px] text-slate-400">Finished goods to stock</span>
               </div>
 
               <div>
                 <label className="block text-[10px] font-bold text-amber-600 dark:text-amber-400 mb-1">
-                  Waste / Trim Scrap (kg)
+                  Trim Waste (kg)
                 </label>
                 <input
                   type="number"
                   step="0.001"
                   required
-                  value={confirmForm.wasteKg}
-                  onChange={(e) =>
-                    setConfirmForm({ ...confirmForm, wasteKg: parseFloat(e.target.value) || 0 })
-                  }
+                  value={confirmForm.trimWasteKg}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value) || 0;
+                    setConfirmForm({
+                      ...confirmForm,
+                      trimWasteKg: val,
+                      wasteKg: Number((val + (confirmForm.plantWasteKg || 0)).toFixed(3)),
+                    });
+                  }}
                   className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold text-amber-600 dark:text-amber-400"
+                  placeholder="0.000"
                 />
+                <span className="text-[9px] text-slate-400">Side trim & slitting scrap</span>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-orange-600 dark:text-orange-400 mb-1">
+                  Plant Waste (kg)
+                </label>
+                <input
+                  type="number"
+                  step="0.001"
+                  required
+                  value={confirmForm.plantWasteKg}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value) || 0;
+                    setConfirmForm({
+                      ...confirmForm,
+                      plantWasteKg: val,
+                      wasteKg: Number(((confirmForm.trimWasteKg || 0) + val).toFixed(3)),
+                    });
+                  }}
+                  className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold text-orange-600 dark:text-orange-400"
+                  placeholder="0.000"
+                />
+                <span className="text-[9px] text-slate-400">Purging, start-up & floor lumps</span>
               </div>
 
               <div>
@@ -550,6 +609,7 @@ export const ProductionPage: React.FC = () => {
                   }
                   className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold text-rose-500"
                 />
+                <span className="text-[9px] text-slate-400">Defective / out-of-spec goods</span>
               </div>
             </div>
 
@@ -562,9 +622,8 @@ export const ProductionPage: React.FC = () => {
                 Accounted Output: <strong className="font-mono text-slate-800 dark:text-slate-200">{totalAccountedOutputKg} kg</strong>
               </span>
               <span
-                className={`font-bold font-mono ${
-                  Math.abs(totalInputKg - totalAccountedOutputKg) < 0.01 ? 'text-emerald-500' : 'text-amber-500'
-                }`}
+                className={`font-bold font-mono ${Math.abs(totalInputKg - totalAccountedOutputKg) < 0.01 ? 'text-emerald-500' : 'text-amber-500'
+                  }`}
               >
                 Variance: {(totalAccountedOutputKg - totalInputKg).toFixed(2)} kg
               </span>
