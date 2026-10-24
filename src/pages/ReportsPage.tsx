@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
-import { BarChart3, TrendingUp, AlertTriangle, ShieldCheck, History, Trash2, CheckCircle2 } from 'lucide-react';
+import { BarChart3, TrendingUp, AlertTriangle, ShieldCheck, History, Trash2, CheckCircle2, User } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { PageSkeleton } from '../components/common/Skeleton';
 import { formatNumber } from '../utils/format';
@@ -88,10 +88,11 @@ export const ReportsPage: React.FC = () => {
       {activeTab === 'variance' && (
         <div className="bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs min-w-[700px]">
+            <table className="w-full text-left text-xs min-w-[780px]">
               <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                 <tr>
                   <th className="py-2.5 whitespace-nowrap">Batch #</th>
+                  <th className="py-2.5 whitespace-nowrap">Operator</th>
                   <th className="py-2.5 whitespace-nowrap">Product</th>
                   <th className="py-2.5 whitespace-nowrap">Planned Input</th>
                   <th className="py-2.5 whitespace-nowrap">Actual Input</th>
@@ -104,7 +105,7 @@ export const ReportsPage: React.FC = () => {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
                 {varianceReport.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-6 text-center text-slate-400 text-xs">
+                    <td colSpan={9} className="py-6 text-center text-slate-400 text-xs">
                       No production batch variance records logged yet.
                     </td>
                   </tr>
@@ -113,6 +114,16 @@ export const ReportsPage: React.FC = () => {
                     <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
                       <td className="py-3 font-mono font-bold text-brand-600 dark:text-brand-400">
                         {row.batch_number}
+                      </td>
+                      <td className="py-3 text-slate-700 dark:text-slate-300">
+                        {row.operator_name ? (
+                          <span className="inline-flex items-center gap-1 font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-factory-800 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700/60">
+                            <User className="w-3 h-3 text-brand-500" />
+                            {row.operator_name}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 italic text-[11px]">—</span>
+                        )}
                       </td>
                       <td className="py-3 text-slate-800 dark:text-slate-200">{row.product_name}</td>
                       <td className="py-3 font-mono">{formatNumber(row.planned_input_kg)} kg</td>
@@ -191,10 +202,11 @@ export const ReportsPage: React.FC = () => {
               Batch-by-Batch Waste & Scrap Breakdown
             </h3>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs min-w-[750px]">
+              <table className="w-full text-left text-xs min-w-[820px]">
                 <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                   <tr>
                     <th className="py-2.5 whitespace-nowrap">Batch #</th>
+                    <th className="py-2.5 whitespace-nowrap">Operator</th>
                     <th className="py-2.5 whitespace-nowrap">Product</th>
                     <th className="py-2.5 whitespace-nowrap">Accepted (kg)</th>
                     <th className="py-2.5 whitespace-nowrap">Trim Waste (kg)</th>
@@ -207,7 +219,7 @@ export const ReportsPage: React.FC = () => {
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
                   {(wasteData.records || []).length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-4 text-center text-slate-400 text-xs">
+                      <td colSpan={9} className="py-4 text-center text-slate-400 text-xs">
                         No production waste or scrap entries recorded.
                       </td>
                     </tr>
@@ -216,6 +228,16 @@ export const ReportsPage: React.FC = () => {
                       <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
                         <td className="py-3 font-mono font-bold text-brand-600 dark:text-brand-400">
                           {rec.batch_number}
+                        </td>
+                        <td className="py-3 text-slate-700 dark:text-slate-300">
+                          {rec.operator_name ? (
+                            <span className="inline-flex items-center gap-1 font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-factory-800 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700/60">
+                              <User className="w-3 h-3 text-brand-500" />
+                              {rec.operator_name}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 italic text-[11px]">—</span>
+                          )}
                         </td>
                         <td className="py-3 text-slate-800 dark:text-slate-200">{rec.product_name}</td>
                         <td className="py-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">

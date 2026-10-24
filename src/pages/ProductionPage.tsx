@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
-import { Factory, Plus, Play, CheckCircle2, AlertCircle, ArrowRight, Layers } from 'lucide-react';
+import { Factory, Plus, Play, CheckCircle2, AlertCircle, ArrowRight, Layers, User, Edit2 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import { Button } from '../components/common/Button';
@@ -53,6 +53,38 @@ export const ProductionPage: React.FC = () => {
     rejectedKg: 0,
     operatorName: '',
   });
+
+  // Modal 3: Quick Assign / Edit Operator Name
+  const [isEditOperatorModalOpen, setIsEditOperatorModalOpen] = useState(false);
+  const [activeBatchForOperator, setActiveBatchForOperator] = useState<any>(null);
+  const [editingOperatorName, setEditingOperatorName] = useState('');
+
+  const openEditOperatorModal = (batch: any) => {
+    setActiveBatchForOperator(batch);
+    setEditingOperatorName(batch.operator_name || '');
+    setIsEditOperatorModalOpen(true);
+  };
+
+  const handleSaveOperator = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeBatchForOperator) return;
+    if (!editingOperatorName.trim()) {
+      alert('Please enter an operator name.');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await api.patch(`/production/${activeBatchForOperator.id}/operator`, {
+        operatorName: editingOperatorName.trim(),
+      });
+      setIsEditOperatorModalOpen(false);
+      await fetchData();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to update operator name');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -292,13 +324,24 @@ export const ProductionPage: React.FC = () => {
                       {batch.products?.name || batch.product_name}
                     </td>
                     <td className="py-3 text-slate-700 dark:text-slate-300">
-                      {batch.operator_name ? (
-                        <span className="font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-factory-800 text-slate-800 dark:text-slate-200">
-                          {batch.operator_name}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400 italic text-[11px]">—</span>
-                      )}
+                      <div className="flex items-center gap-1.5 group">
+                        {batch.operator_name ? (
+                          <span className="inline-flex items-center gap-1 font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-factory-800 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700/60">
+                            <User className="w-3 h-3 text-brand-500 shrink-0" />
+                            {batch.operator_name}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 italic text-[11px]">—</span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => openEditOperatorModal(batch)}
+                          title={batch.operator_name ? "Change Operator" : "Assign Operator"}
+                          className="p-1 rounded-md text-slate-400 hover:text-brand-600 hover:bg-slate-100 dark:hover:bg-factory-800 transition-colors opacity-70 group-hover:opacity-100"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                        </button>
+                      </div>
                     </td>
                     <td className="py-3 font-mono">{formatNumber(batch.planned_quantity_kg)} kg</td>
                     <td className="py-3 font-mono">{formatNumber(batch.actual_input_kg || 0)} kg</td>
@@ -435,16 +478,18 @@ export const ProductionPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Operator Name
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 text-brand-500" />
+                Operator Name (Machine In-Charge)
               </label>
               <input
                 type="text"
                 value={draftForm.operatorName}
                 onChange={(e) => setDraftForm({ ...draftForm, operatorName: e.target.value })}
                 placeholder="e.g. Ramesh Kumar, Operator 1"
-                className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
+                className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
               />
+              <span className="text-[10px] text-slate-400 mt-1 block">Specify who is operating or handling this run</span>
             </div>
           </div>
 
@@ -476,6 +521,28 @@ export const ProductionPage: React.FC = () => {
         maxWidth="2xl"
       >
         <form onSubmit={handleConfirmBatch} className="space-y-5">
+          {/* Operator Name Field (Prominently Placed at the Top) */}
+          <div className="p-3.5 rounded-xl bg-brand-50/70 dark:bg-brand-950/30 border border-brand-200/80 dark:border-brand-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <label className="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                <User className="w-4 h-4 text-brand-500" />
+                Operator Name (Machine In-Charge)
+              </label>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Specify who is operating and handling this production run
+              </p>
+            </div>
+            <div className="w-full sm:w-72">
+              <input
+                type="text"
+                value={confirmForm.operatorName}
+                onChange={(e) => setConfirmForm({ ...confirmForm, operatorName: e.target.value })}
+                placeholder="e.g. Ramesh Kumar, Operator 1"
+                className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-brand-300 dark:border-brand-700/80 rounded-xl font-medium shadow-sm focus:ring-2 focus:ring-brand-500 outline-none"
+              />
+            </div>
+          </div>
+
           <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700/60">
             <h4 className="text-xs font-bold text-slate-800 dark:text-white">
               Raw Material Lot Consumption (Lot-by-Lot Traceability PRO-05)
@@ -548,20 +615,6 @@ export const ProductionPage: React.FC = () => {
                 </div>
               );
             })}
-          </div>
-
-          {/* Operator Name Field */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Operator Name (Machine In-Charge)
-            </label>
-            <input
-              type="text"
-              value={confirmForm.operatorName}
-              onChange={(e) => setConfirmForm({ ...confirmForm, operatorName: e.target.value })}
-              placeholder="e.g. Ramesh Kumar, Operator 1"
-              className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
-            />
           </div>
 
           {/* Outputs Section: Accepted Output, Waste (Trim & Plant) & Rejection */}
@@ -689,6 +742,52 @@ export const ProductionPage: React.FC = () => {
               size="lg"
             >
               Confirm Production & Update Finished Stock
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal 3: Quick Assign / Edit Operator Name */}
+      <Modal
+        isOpen={isEditOperatorModalOpen}
+        onClose={() => setIsEditOperatorModalOpen(false)}
+        title={`Assign / Edit Operator: ${activeBatchForOperator?.batch_number || ''}`}
+        maxWidth="md"
+      >
+        <form onSubmit={handleSaveOperator} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
+              <User className="w-3.5 h-3.5 text-brand-500" />
+              Operator Name (Who ran this batch)
+            </label>
+            <input
+              type="text"
+              required
+              autoFocus
+              value={editingOperatorName}
+              onChange={(e) => setEditingOperatorName(e.target.value)}
+              placeholder="e.g. Ramesh Kumar, Operator 1"
+              className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium focus:ring-2 focus:ring-brand-500 outline-none"
+            />
+            <span className="text-[10px] text-slate-400 mt-1 block">
+              Record or update the operator who handled production batch {activeBatchForOperator?.batch_number}.
+            </span>
+          </div>
+
+          <div className="pt-2 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setIsEditOperatorModalOpen(false)}
+              className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+            >
+              Cancel
+            </button>
+            <Button
+              type="submit"
+              isLoading={isSubmitting}
+              loadingText="Saving..."
+            >
+              Save Operator
             </Button>
           </div>
         </form>
