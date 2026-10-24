@@ -13,14 +13,21 @@ import {
   Box,
   Scale,
   Calculator,
+  Truck,
+  Building2,
+  Phone,
+  Mail,
+  MapPin,
+  Search,
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import { Button } from '../components/common/Button';
 import { PageSkeleton } from '../components/common/Skeleton';
+import { Supplier } from '../types';
 
 export const MaterialsPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'batches' | 'catalog'>('batches');
+  const [activeTab, setActiveTab] = useState<'batches' | 'catalog' | 'suppliers'>('batches');
   const [materials, setMaterials] = useState<any[]>([]);
   const [batches, setBatches] = useState<any[]>([]);
   const [selectedMaterial, setSelectedMaterial] = useState<string>('all');
@@ -35,7 +42,21 @@ export const MaterialsPage: React.FC = () => {
   const [materialToDelete, setMaterialToDelete] = useState<any | null>(null);
   const [activeBatchToAdjust, setActiveBatchToAdjust] = useState<any>(null);
 
-  const [suppliers, setSuppliers] = useState<{ id: string; name: string }[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
+  const [supplierToEdit, setSupplierToEdit] = useState<Supplier | null>(null);
+  const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
+  const [supplierSearchQuery, setSupplierSearchQuery] = useState('');
+
+  // Form state for Supplier / Vendor (Create/Edit - code is auto-generated)
+  const [supplierForm, setSupplierForm] = useState({
+    name: '',
+    contactPerson: '',
+    phone: '',
+    email: '',
+    address: '',
+    isActive: true,
+  });
 
   // Form states for Receive Batch (batchNumber is auto-generated)
   const [receiveForm, setReceiveForm] = useState({
@@ -171,6 +192,93 @@ export const MaterialsPage: React.FC = () => {
     }
   };
 
+  // Open modal to create a new supplier/vendor
+  const handleOpenCreateSupplier = () => {
+    setSupplierToEdit(null);
+    setSupplierForm({
+      name: '',
+      contactPerson: '',
+      phone: '',
+      email: '',
+      address: '',
+      isActive: true,
+    });
+    setIsSupplierModalOpen(true);
+  };
+
+  // Open modal to edit an existing supplier/vendor
+  const handleOpenEditSupplier = (sup: Supplier) => {
+    setSupplierToEdit(sup);
+    setSupplierForm({
+      name: sup.name,
+      contactPerson: sup.contact_person || '',
+      phone: sup.phone || '',
+      email: sup.email || '',
+      address: sup.address || '',
+      isActive: sup.is_active !== false,
+    });
+    setIsSupplierModalOpen(true);
+  };
+
+  // Save (Create or Update) Supplier / Vendor
+  const handleSaveSupplier = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      if (supplierToEdit) {
+        await api.put(`/materials/suppliers/${supplierToEdit.id}`, {
+          name: supplierForm.name,
+          contactPerson: supplierForm.contactPerson,
+          phone: supplierForm.phone,
+          email: supplierForm.email,
+          address: supplierForm.address,
+          isActive: supplierForm.isActive,
+        });
+      } else {
+        const res = await api.post('/materials/suppliers', {
+          name: supplierForm.name,
+          contactPerson: supplierForm.contactPerson,
+          phone: supplierForm.phone,
+          email: supplierForm.email,
+          address: supplierForm.address,
+        });
+        if (res.data?.supplier) {
+          // If created while in the middle of receiving, auto-select it
+          setReceiveForm((prev) => ({
+            ...prev,
+            supplierId: res.data.supplier.id,
+            supplierName: res.data.supplier.name,
+          }));
+        }
+      }
+      setIsSupplierModalOpen(false);
+      await fetchData();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to save vendor / supplier');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Delete Supplier / Vendor
+  const handleDeleteSupplier = (sup: Supplier) => {
+    setSupplierToDelete(sup);
+  };
+
+  const confirmDeleteSupplier = async () => {
+    if (!supplierToDelete) return;
+    setIsSubmitting(true);
+    try {
+      await api.delete(`/materials/suppliers/${supplierToDelete.id}`);
+      setSupplierToDelete(null);
+      await fetchData();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to delete supplier');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Receive Batch
   const handleReceiveBatch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -227,6 +335,17 @@ export const MaterialsPage: React.FC = () => {
       ? batches
       : batches.filter((b) => b.material_id === selectedMaterial);
 
+  const filteredSuppliers = suppliers.filter((s) => {
+    if (!supplierSearchQuery) return true;
+    const q = supplierSearchQuery.toLowerCase();
+    return (
+      s.name?.toLowerCase().includes(q) ||
+      s.code?.toLowerCase().includes(q) ||
+      s.contact_person?.toLowerCase().includes(q) ||
+      s.phone?.toLowerCase().includes(q)
+    );
+  });
+
   if (isLoading) {
     return <PageSkeleton type="table" />;
   }
@@ -255,6 +374,14 @@ export const MaterialsPage: React.FC = () => {
           </button>
 
           <button
+            onClick={handleOpenCreateSupplier}
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-factory-800 transition-colors shadow-sm"
+          >
+            <Truck className="w-4 h-4 text-brand-500" />
+            Add Vendor
+          </button>
+
+          <button
             onClick={() => {
               if (materials.length === 0) {
                 handleOpenCreateMaterial();
@@ -273,7 +400,7 @@ export const MaterialsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabs Switcher: Batches vs Plastic Types Catalog */}
+      {/* Tabs Switcher: Batches vs Plastic Types vs Vendors */}
       <div className="flex border-b border-slate-200 dark:border-slate-800 gap-3 sm:gap-6 overflow-x-auto whitespace-nowrap">
         <button
           onClick={() => setActiveTab('batches')}
@@ -296,10 +423,21 @@ export const MaterialsPage: React.FC = () => {
           <SlidersHorizontal className="w-4 h-4" />
           <span>Plastic Material Types ({materials.length})</span>
         </button>
+
+        <button
+          onClick={() => setActiveTab('suppliers')}
+          className={`pb-3 text-xs font-bold transition-all relative flex items-center gap-2 ${activeTab === 'suppliers'
+            ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-500'
+            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+        >
+          <Truck className="w-4 h-4" />
+          <span>Vendors / Suppliers ({suppliers.length})</span>
+        </button>
       </div>
 
       {/* Content depending on active tab */}
-      {activeTab === 'batches' ? (
+      {activeTab === 'batches' && (
         <div className="space-y-6">
           {/* Quick Filter Cards Grid */}
           {materials.length > 0 ? (
@@ -569,8 +707,10 @@ export const MaterialsPage: React.FC = () => {
             )}
           </div>
         </div>
-      ) : (
-        /* Tab 2: Plastic Material Types Catalog (Manage, Add, Edit, Delete) */
+      )}
+
+      {/* Tab 2: Plastic Material Types Catalog (Manage, Add, Edit, Delete) */}
+      {activeTab === 'catalog' && (
         <div className="bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
@@ -647,6 +787,133 @@ export const MaterialsPage: React.FC = () => {
                             onClick={() => handleDeleteMaterial(mat)}
                             className="p-1.5 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-factory-800 rounded-lg transition-colors"
                             title="Delete Material"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab 3: Vendors / Suppliers Master */}
+      {activeTab === 'suppliers' && (
+        <div className="bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Truck className="w-4 h-4 text-brand-500" />
+                Raw Material Vendors & Suppliers ({suppliers.length})
+              </h3>
+              <p className="text-[11px] text-slate-400">
+                Register supplier vendors to record who supplied each material batch lot during stock receipt.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search vendors..."
+                  value={supplierSearchQuery}
+                  onChange={(e) => setSupplierSearchQuery(e.target.value)}
+                  className="text-xs pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                />
+              </div>
+
+              <button
+                onClick={handleOpenCreateSupplier}
+                className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl transition-colors shadow-md shadow-brand-500/20 whitespace-nowrap"
+              >
+                <Plus className="w-4 h-4" />
+                Add Vendor
+              </button>
+            </div>
+          </div>
+
+          {filteredSuppliers.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 text-xs">
+              <Truck className="w-10 h-10 text-slate-300 dark:text-slate-700 mx-auto mb-2" />
+              <p className="font-semibold text-slate-700 dark:text-slate-300">No vendors / suppliers registered yet</p>
+              <p className="text-[11px] mt-1 text-slate-400">Click "Add Vendor" above to register a supplier.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs min-w-[700px]">
+                <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
+                  <tr>
+                    <th className="py-2.5 whitespace-nowrap">Code</th>
+                    <th className="py-2.5 whitespace-nowrap">Vendor / Supplier Name</th>
+                    <th className="py-2.5 whitespace-nowrap">Contact Person</th>
+                    <th className="py-2.5 whitespace-nowrap">Phone & Email</th>
+                    <th className="py-2.5 whitespace-nowrap">Address</th>
+                    <th className="py-2.5 whitespace-nowrap">Status</th>
+                    <th className="py-2.5 text-right whitespace-nowrap">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
+                  {filteredSuppliers.map((sup) => (
+                    <tr key={sup.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
+                      <td className="py-3 font-mono font-bold text-slate-900 dark:text-white">
+                        <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                          {sup.code || '—'}
+                        </span>
+                      </td>
+                      <td className="py-3 font-bold text-slate-800 dark:text-slate-200">
+                        {sup.name}
+                      </td>
+                      <td className="py-3 text-slate-600 dark:text-slate-300">
+                        {sup.contact_person || '—'}
+                      </td>
+                      <td className="py-3 text-slate-500">
+                        <div className="flex flex-col gap-0.5">
+                          {sup.phone && (
+                            <span className="flex items-center gap-1 font-mono text-[11px] text-slate-700 dark:text-slate-300">
+                              <Phone className="w-3 h-3 text-slate-400" /> {sup.phone}
+                            </span>
+                          )}
+                          {sup.email && (
+                            <span className="flex items-center gap-1 text-[11px] text-slate-500">
+                              <Mail className="w-3 h-3 text-slate-400" /> {sup.email}
+                            </span>
+                          )}
+                          {!sup.phone && !sup.email && '—'}
+                        </div>
+                      </td>
+                      <td className="py-3 text-slate-500 max-w-xs truncate" title={sup.address}>
+                        {sup.address ? (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span className="truncate">{sup.address}</span>
+                          </span>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                      <td className="py-3">
+                        <Badge variant={sup.is_active !== false ? 'success' : 'neutral'}>
+                          {sup.is_active !== false ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </td>
+                      <td className="py-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => handleOpenEditSupplier(sup)}
+                            className="p-1.5 text-slate-500 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-factory-800 rounded-lg transition-colors"
+                            title="Edit Supplier"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteSupplier(sup)}
+                            className="p-1.5 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-factory-800 rounded-lg transition-colors"
+                            title="Delete Supplier"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -828,32 +1095,43 @@ export const MaterialsPage: React.FC = () => {
           {/* Supplier & Supplier Lot Number */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 whitespace-nowrap">
-                Supplier / Vendor Name
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="e.g. Reliance, IOCL, GAIL"
-                  list="suppliers-datalist"
-                  value={receiveForm.supplierName}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    const matched = suppliers.find((s) => s.name.toLowerCase() === val.toLowerCase());
-                    setReceiveForm({
-                      ...receiveForm,
-                      supplierName: val,
-                      supplierId: matched ? matched.id : '',
-                    });
-                  }}
-                  className="w-full h-10 text-xs px-3 bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-medium"
-                />
-                <datalist id="suppliers-datalist">
-                  {suppliers.map((s) => (
-                    <option key={s.id} value={s.name} />
-                  ))}
-                </datalist>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                  Supplier / Vendor Name
+                </label>
+                <button
+                  type="button"
+                  onClick={() => handleOpenCreateSupplier()}
+                  className="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3" /> Add Vendor
+                </button>
               </div>
+              <select
+                value={receiveForm.supplierId}
+                onChange={(e) => {
+                  const sId = e.target.value;
+                  const matched = suppliers.find((s) => s.id === sId);
+                  setReceiveForm({
+                    ...receiveForm,
+                    supplierId: sId,
+                    supplierName: matched ? matched.name : '',
+                  });
+                }}
+                className="w-full h-10 text-xs px-3 bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-medium text-slate-800 dark:text-slate-200"
+              >
+                <option value="">-- Select Supplier / Vendor (Optional) --</option>
+                {suppliers.filter((s) => s.is_active !== false).map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} {s.code ? `(${s.code})` : ''}
+                  </option>
+                ))}
+              </select>
+              {suppliers.length === 0 && (
+                <span className="text-[10px] text-slate-400 mt-1 block">
+                  No vendors registered yet. Click "+ Add Vendor" to add one.
+                </span>
+              )}
             </div>
 
             <div>
@@ -1076,6 +1354,159 @@ export const MaterialsPage: React.FC = () => {
               icon={Trash2}
             >
               Yes, Delete Material
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal: Create or Edit Supplier / Vendor */}
+      <Modal
+        isOpen={isSupplierModalOpen}
+        onClose={() => setIsSupplierModalOpen(false)}
+        title={supplierToEdit ? `Edit Supplier / Vendor: ${supplierToEdit.name}` : 'Add New Supplier / Vendor'}
+        maxWidth="md"
+      >
+        <form onSubmit={handleSaveSupplier} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Supplier / Company Name *
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. ABC Polymers Pvt Ltd"
+              value={supplierForm.name}
+              onChange={(e) => setSupplierForm({ ...supplierForm, name: e.target.value })}
+              className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Contact Person
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Rajesh Kumar"
+                value={supplierForm.contactPerson}
+                onChange={(e) => setSupplierForm({ ...supplierForm, contactPerson: e.target.value })}
+                className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Phone / Mobile Number
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. +91 98765 43210"
+                value={supplierForm.phone}
+                onChange={(e) => setSupplierForm({ ...supplierForm, phone: e.target.value })}
+                className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Email Address
+              </label>
+              <input
+                type="email"
+                placeholder="e.g. sales@abcpolymers.com"
+                value={supplierForm.email}
+                onChange={(e) => setSupplierForm({ ...supplierForm, email: e.target.value })}
+                className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Dispatch / Factory Location
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Dahej, Gujarat"
+                value={supplierForm.address}
+                onChange={(e) => setSupplierForm({ ...supplierForm, address: e.target.value })}
+                className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl"
+              />
+            </div>
+          </div>
+
+          {supplierToEdit && (
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="checkbox"
+                id="isSupplierActiveToggle"
+                checked={supplierForm.isActive}
+                onChange={(e) => setSupplierForm({ ...supplierForm, isActive: e.target.checked })}
+                className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+              />
+              <label htmlFor="isSupplierActiveToggle" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Active vendor (available in stock receipt dropdown)
+              </label>
+            </div>
+          )}
+
+          <div className="pt-2 flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setIsSupplierModalOpen(false)}
+              className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-factory-800 rounded-xl transition-colors"
+            >
+              Cancel
+            </button>
+            <Button
+              type="submit"
+              isLoading={isSubmitting}
+              loadingText="Saving Vendor..."
+            >
+              {supplierToEdit ? 'Save Changes' : 'Create Vendor'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal: Delete Supplier Confirmation */}
+      <Modal
+        isOpen={!!supplierToDelete}
+        onClose={() => setSupplierToDelete(null)}
+        title="Delete Supplier / Vendor"
+        maxWidth="sm"
+      >
+        <div className="space-y-4">
+          <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+            <div className="text-xs text-rose-900 dark:text-rose-200">
+              <p className="font-bold">Are you sure you want to delete this vendor?</p>
+              <p className="mt-1">
+                <strong>{supplierToDelete?.name}</strong> will be permanently removed.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => setSupplierToDelete(null)}
+              className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-factory-800 rounded-xl transition-colors"
+            >
+              Cancel
+            </button>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={confirmDeleteSupplier}
+              isLoading={isSubmitting}
+              loadingText="Deleting..."
+              icon={Trash2}
+            >
+              Yes, Delete Vendor
             </Button>
           </div>
         </div>
