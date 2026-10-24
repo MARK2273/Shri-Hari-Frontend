@@ -23,10 +23,12 @@ export interface MaterialBatch {
   batch_number: string;
   material_id: string;
   supplier_id?: string;
+  supplier_name?: string;
   supplier_lot_number?: string;
   receipt_date: string;
   received_quantity_kg: number;
   remaining_quantity_kg: number;
+  cost_per_kg?: number;
   status: 'available' | 'depleted' | 'quarantined' | 'expired';
   materials?: {
     code: string;

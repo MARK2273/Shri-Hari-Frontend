@@ -35,9 +35,13 @@ export const MaterialsPage: React.FC = () => {
   const [materialToDelete, setMaterialToDelete] = useState<any | null>(null);
   const [activeBatchToAdjust, setActiveBatchToAdjust] = useState<any>(null);
 
+  const [suppliers, setSuppliers] = useState<{ id: string; name: string }[]>([]);
+
   // Form states for Receive Batch (batchNumber is auto-generated)
   const [receiveForm, setReceiveForm] = useState({
     materialId: '',
+    supplierName: '',
+    supplierId: '',
     batchNumber: '',
     supplierLotNumber: '',
     receiptDate: new Date().toISOString().split('T')[0],
@@ -64,13 +68,15 @@ export const MaterialsPage: React.FC = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [matRes, batchRes] = await Promise.all([
+      const [matRes, batchRes, supRes] = await Promise.all([
         api.get('/materials'),
         api.get('/materials/batches'),
+        api.get('/materials/suppliers').catch(() => ({ data: { suppliers: [] } })),
       ]);
       const fetchedMaterials = matRes.data.materials || [];
       setMaterials(fetchedMaterials);
       setBatches(batchRes.data.batches || []);
+      setSuppliers(supRes.data?.suppliers || []);
 
       if (fetchedMaterials.length > 0 && !receiveForm.materialId) {
         setReceiveForm((prev) => ({ ...prev, materialId: fetchedMaterials[0].id }));
@@ -182,6 +188,8 @@ export const MaterialsPage: React.FC = () => {
       setIsReceiveModalOpen(false);
       setReceiveForm({
         materialId: materials[0]?.id || '',
+        supplierName: '',
+        supplierId: '',
         batchNumber: '',
         supplierLotNumber: '',
         receiptDate: new Date().toISOString().split('T')[0],
@@ -509,9 +517,13 @@ export const MaterialsPage: React.FC = () => {
                         <td className="py-3 text-slate-800 dark:text-slate-200">
                           {b.materials?.name || b.material_name || 'N/A'}
                         </td>
-                        <td className="py-3 text-slate-500">
-                          {b.suppliers?.name || b.supplier_name || 'Direct'} /{' '}
-                          <span className="font-mono">{b.supplier_lot_number || 'N/A'}</span>
+                        <td className="py-3 text-slate-600 dark:text-slate-300">
+                          <div className="font-semibold text-slate-800 dark:text-slate-200">
+                            {b.suppliers?.name || b.supplier_name || 'Direct'}
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-mono">
+                            Lot: {b.supplier_lot_number || 'N/A'}
+                          </div>
                         </td>
                         <td className="py-3 text-slate-500">{b.receipt_date}</td>
                         <td className="py-3 font-mono">{b.received_quantity_kg} kg</td>
@@ -759,7 +771,7 @@ export const MaterialsPage: React.FC = () => {
         isOpen={isReceiveModalOpen}
         onClose={() => setIsReceiveModalOpen(false)}
         title="Receive Raw Material Batch (Traceable Lot)"
-        maxWidth="lg"
+        maxWidth="xl"
       >
         <form onSubmit={handleReceiveBatch} className="space-y-4">
           <div>
@@ -813,17 +825,49 @@ export const MaterialsPage: React.FC = () => {
             )}
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Supplier Lot # (Optional)
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. RIL-HDPE-9920"
-              value={receiveForm.supplierLotNumber}
-              onChange={(e) => setReceiveForm({ ...receiveForm, supplierLotNumber: e.target.value })}
-              className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
-            />
+          {/* Supplier & Supplier Lot Number */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 whitespace-nowrap">
+                Supplier / Vendor Name
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="e.g. Reliance, IOCL, GAIL"
+                  list="suppliers-datalist"
+                  value={receiveForm.supplierName}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const matched = suppliers.find((s) => s.name.toLowerCase() === val.toLowerCase());
+                    setReceiveForm({
+                      ...receiveForm,
+                      supplierName: val,
+                      supplierId: matched ? matched.id : '',
+                    });
+                  }}
+                  className="w-full h-10 text-xs px-3 bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-medium"
+                />
+                <datalist id="suppliers-datalist">
+                  {suppliers.map((s) => (
+                    <option key={s.id} value={s.name} />
+                  ))}
+                </datalist>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 whitespace-nowrap">
+                Supplier Lot # (Optional)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. RIL-HDPE-9920"
+                value={receiveForm.supplierLotNumber}
+                onChange={(e) => setReceiveForm({ ...receiveForm, supplierLotNumber: e.target.value })}
+                className="w-full h-10 text-xs px-3 bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
