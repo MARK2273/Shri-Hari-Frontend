@@ -289,41 +289,41 @@ export const ProductionPage: React.FC = () => {
       {/* Production Batches Table */}
       <div className="bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs min-w-[820px]">
-            <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
+          <table className="w-full text-left text-xs min-w-[1050px]">
+            <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800">
               <tr>
-                <th className="py-2.5 whitespace-nowrap">Date</th>
-                <th className="py-2.5 whitespace-nowrap">Customer</th>
-                <th className="py-2.5 whitespace-nowrap">Finished Product</th>
-                <th className="py-2.5 whitespace-nowrap">Operator</th>
-                <th className="py-2.5 whitespace-nowrap">Planned (kg)</th>
-                <th className="py-2.5 whitespace-nowrap">Actual Input (kg)</th>
-                <th className="py-2.5 whitespace-nowrap">Accepted (kg)</th>
-                <th className="py-2.5 whitespace-nowrap">Waste (kg)</th>
-                <th className="py-2.5 whitespace-nowrap">Status</th>
-                <th className="py-2.5 text-right whitespace-nowrap">Action</th>
+                <th className="py-3 px-3.5 whitespace-nowrap">Date</th>
+                <th className="py-3 px-3.5 whitespace-nowrap">Customer</th>
+                <th className="py-3 px-3.5 whitespace-nowrap">Finished Product</th>
+                <th className="py-3 px-3.5 whitespace-nowrap">Operator</th>
+                <th className="py-3 px-3.5 text-right whitespace-nowrap">Planned (kg)</th>
+                <th className="py-3 px-3.5 text-right whitespace-nowrap">Actual Input</th>
+                <th className="py-3 px-3.5 text-right whitespace-nowrap">Accepted</th>
+                <th className="py-3 px-3.5 text-right whitespace-nowrap">Waste</th>
+                <th className="py-3 px-3.5 text-center whitespace-nowrap">Status</th>
+                <th className="py-3 px-3.5 text-right whitespace-nowrap">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
               {batches.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-8 text-center text-slate-400 text-xs">
+                  <td colSpan={10} className="py-8 px-4 text-center text-slate-400 text-xs">
                     No production batches recorded yet. Launch a batch from customer order demand.
                   </td>
                 </tr>
               ) : (
                 batches.map((batch) => (
-                  <tr key={batch.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                    <td className="py-3 font-semibold text-slate-800 dark:text-slate-200">
+                  <tr key={batch.id} className="hover:bg-slate-50/80 dark:hover:bg-factory-800/40 transition-colors">
+                    <td className="py-3.5 px-3.5 whitespace-nowrap font-semibold text-slate-800 dark:text-slate-200">
                       {new Date(batch.created_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}
                     </td>
-                    <td className="py-3 text-slate-700 dark:text-slate-300">
+                    <td className="py-3.5 px-3.5 font-bold text-slate-900 dark:text-white max-w-[180px] truncate" title={batch.customer_orders?.customers?.name || batch.customer_orders?.customer_name}>
                       {batch.customer_orders?.customers?.name || batch.customer_orders?.customer_name || 'Direct Customer'}
                     </td>
-                    <td className="py-3 text-slate-800 dark:text-slate-200">
+                    <td className="py-3.5 px-3.5 font-semibold text-slate-800 dark:text-slate-200 max-w-[180px] truncate" title={batch.products?.name || batch.product_name}>
                       {batch.products?.name || batch.product_name}
                     </td>
-                    <td className="py-3 text-slate-700 dark:text-slate-300">
+                    <td className="py-3.5 px-3.5 whitespace-nowrap text-slate-700 dark:text-slate-300">
                       <div className="flex items-center gap-1.5 group">
                         {batch.operator_name ? (
                           <span className="inline-flex items-center gap-1 font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-factory-800 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700/60">
@@ -343,25 +343,29 @@ export const ProductionPage: React.FC = () => {
                         </button>
                       </div>
                     </td>
-                    <td className="py-3 font-mono">{formatNumber(batch.planned_quantity_kg)} kg</td>
-                    <td className="py-3 font-mono">{formatNumber(batch.actual_input_kg || 0)} kg</td>
-                    <td className="py-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                    <td className="py-3.5 px-3.5 text-right font-mono whitespace-nowrap text-slate-700 dark:text-slate-300">
+                      {formatNumber(batch.planned_quantity_kg)} kg
+                    </td>
+                    <td className="py-3.5 px-3.5 text-right font-mono whitespace-nowrap text-slate-700 dark:text-slate-300">
+                      {formatNumber(batch.actual_input_kg || 0)} kg
+                    </td>
+                    <td className="py-3.5 px-3.5 text-right font-mono font-bold whitespace-nowrap text-emerald-600 dark:text-emerald-400">
                       {formatNumber(batch.accepted_output_kg || 0)} kg
                     </td>
-                    <td className="py-3 font-mono">
+                    <td className="py-3.5 px-3.5 text-right font-mono whitespace-nowrap">
                       <div className="text-rose-500 font-bold">{formatNumber(batch.waste_kg || 0)} kg</div>
                       {(Number(batch.trim_waste_kg) > 0 || Number(batch.plant_waste_kg) > 0) && (
-                        <div className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
+                        <div className="text-[10px] text-slate-400 font-medium">
                           Trim: {formatNumber(batch.trim_waste_kg || 0)} | Plant: {formatNumber(batch.plant_waste_kg || 0)}
                         </div>
                       )}
                     </td>
-                    <td className="py-3">
+                    <td className="py-3.5 px-3.5 text-center whitespace-nowrap">
                       <Badge variant={batch.status === 'completed' ? 'success' : 'info'}>
                         {batch.status}
                       </Badge>
                     </td>
-                    <td className="py-3 text-right">
+                    <td className="py-3.5 px-3.5 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2">
                         <Link
                           to={`/traceability?batchId=${batch.id}`}

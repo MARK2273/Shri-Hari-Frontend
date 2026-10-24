@@ -205,35 +205,35 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-xs min-w-[460px]">
               <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                 <tr>
-                  <th className="py-2.5">Date</th>
-                  <th className="py-2.5">Product</th>
-                  <th className="py-2.5">Output (kg)</th>
-                  <th className="py-2.5">Waste (kg)</th>
-                  <th className="py-2.5">Status</th>
+                  <th className="px-3 py-2.5 whitespace-nowrap">Date</th>
+                  <th className="px-3 py-2.5 whitespace-nowrap">Product</th>
+                  <th className="px-3 py-2.5 text-right whitespace-nowrap">Output</th>
+                  <th className="px-3 py-2.5 text-right whitespace-nowrap">Waste</th>
+                  <th className="px-3 py-2.5 text-center whitespace-nowrap">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
                 {productionRuns.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-6 text-center text-slate-400 text-xs">
+                    <td colSpan={5} className="px-3 py-6 text-center text-slate-400 text-xs">
                       No production batches recorded yet.
                     </td>
                   </tr>
                 ) : (
                   productionRuns.slice(0, 5).map((run) => (
                     <tr key={run.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                      <td className="py-3 font-semibold text-slate-800 dark:text-slate-200">
+                      <td className="px-3 py-3 whitespace-nowrap font-semibold text-slate-800 dark:text-slate-200">
                         {new Date(run.created_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}
                       </td>
-                      <td className="py-3 text-slate-700 dark:text-slate-300 truncate max-w-[140px]">
+                      <td className="px-3 py-3 text-slate-700 dark:text-slate-300 truncate max-w-[140px]">
                         {run.products?.name || run.product_name}
                       </td>
-                      <td className="py-3 font-mono">{run.accepted_output_kg ?? 0}</td>
-                      <td className="py-3 font-mono text-rose-500">{run.waste_kg ?? 0}</td>
-                      <td className="py-3">
+                      <td className="px-3 py-3 text-right font-mono">{run.accepted_output_kg ?? 0} kg</td>
+                      <td className="px-3 py-3 text-right font-mono text-rose-500">{run.waste_kg ?? 0} kg</td>
+                      <td className="px-3 py-3 text-center">
                         <Badge variant={run.status === 'completed' ? 'success' : 'info'}>
                           {run.status}
                         </Badge>
@@ -259,29 +259,29 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-xs min-w-[380px]">
               <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                 <tr>
-                  <th className="py-2.5">Customer</th>
-                  <th className="py-2.5">Requested</th>
-                  <th className="py-2.5">Status</th>
+                  <th className="px-3 py-2.5 whitespace-nowrap">Customer</th>
+                  <th className="px-3 py-2.5 text-right whitespace-nowrap">Requested</th>
+                  <th className="px-3 py-2.5 text-center whitespace-nowrap">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
                 {orders.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="py-6 text-center text-slate-400 text-xs">
+                    <td colSpan={3} className="px-3 py-6 text-center text-slate-400 text-xs">
                       No active orders placed yet.
                     </td>
                   </tr>
                 ) : (
                   orders.slice(0, 5).map((order) => (
                   <tr key={order.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                    <td className="py-3 font-bold text-slate-800 dark:text-slate-200 truncate max-w-[160px]">
+                    <td className="px-3 py-3 font-bold text-slate-800 dark:text-slate-200 truncate max-w-[160px]">
                       {order.customers?.name || order.customer_name}
                     </td>
-                    <td className="py-3 font-mono">{order.total_requested_weight_kg} kg</td>
-                    <td className="py-3">
+                    <td className="px-3 py-3 text-right font-mono">{order.total_requested_weight_kg} kg</td>
+                    <td className="px-3 py-3 text-center">
                       <Badge
                         variant={
                           order.status === 'completed'

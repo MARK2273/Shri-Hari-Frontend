@@ -270,19 +270,19 @@ export const TraceabilityPage: React.FC = () => {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs min-w-[650px]">
+              <table className="w-full text-left text-xs min-w-[700px]">
                 <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                   <tr>
-                    <th className="py-2.5 whitespace-nowrap">Plastic Grade</th>
-                    <th className="py-2.5 whitespace-nowrap">Supplier / Lot Ref</th>
-                    <th className="py-2.5 whitespace-nowrap">Consumed Weight</th>
-                    <th className="py-2.5 text-right whitespace-nowrap">Contribution %</th>
+                    <th className="px-3.5 py-3 whitespace-nowrap">Plastic Grade</th>
+                    <th className="px-3.5 py-3 whitespace-nowrap">Supplier / Lot Ref</th>
+                    <th className="px-3.5 py-3 text-right whitespace-nowrap">Consumed Weight</th>
+                    <th className="px-3.5 py-3 text-right whitespace-nowrap">Contribution %</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
                   {(traceData.raw_material_lots_consumed || []).length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="py-4 text-center text-slate-400 text-xs">
+                      <td colSpan={4} className="px-3.5 py-6 text-center text-slate-400 text-xs">
                         No raw material consumption logs recorded for this batch.
                       </td>
                     </tr>
@@ -296,14 +296,14 @@ export const TraceabilityPage: React.FC = () => {
                       const pct = formatNumber(((lot.consumed_kg / totalInput) * 100));
                       return (
                         <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                          <td className="py-3 text-slate-800 dark:text-slate-200 font-bold">
+                          <td className="px-3.5 py-3.5 text-slate-800 dark:text-slate-200 font-bold">
                             {lot.material_name}
                           </td>
-                          <td className="py-3 text-slate-500">{lot.supplier}</td>
-                          <td className="py-3 font-mono font-bold text-slate-800 dark:text-slate-200">
+                          <td className="px-3.5 py-3.5 text-slate-500">{lot.supplier}</td>
+                          <td className="px-3.5 py-3.5 text-right font-mono font-bold text-slate-800 dark:text-slate-200">
                             {formatNumber(lot.consumed_kg)} kg
                           </td>
-                          <td className="py-3 font-mono font-bold text-right text-emerald-600 dark:text-emerald-400">
+                          <td className="px-3.5 py-3.5 font-mono font-bold text-right text-emerald-600 dark:text-emerald-400">
                             {pct}%
                           </td>
                         </tr>

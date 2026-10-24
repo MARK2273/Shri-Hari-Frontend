@@ -578,50 +578,50 @@ export const OrdersPage: React.FC = () => {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs min-w-[700px]">
+              <table className="w-full text-left text-xs min-w-[900px]">
                 <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                   <tr>
-                    <th className="py-2.5 whitespace-nowrap">Company Name</th>
-                    <th className="py-2.5 whitespace-nowrap">Contact Person</th>
-                    <th className="py-2.5 whitespace-nowrap">Phone & Email</th>
-                    <th className="py-2.5 whitespace-nowrap">Delivery Address</th>
-                    <th className="py-2.5 whitespace-nowrap">Status</th>
-                    <th className="py-2.5 text-right whitespace-nowrap">Actions</th>
+                    <th className="px-3.5 py-3 whitespace-nowrap">Company Name</th>
+                    <th className="px-3.5 py-3 whitespace-nowrap">Contact Person</th>
+                    <th className="px-3.5 py-3 whitespace-nowrap">Phone & Email</th>
+                    <th className="px-3.5 py-3 whitespace-nowrap">Delivery Address</th>
+                    <th className="px-3.5 py-3 text-center whitespace-nowrap">Status</th>
+                    <th className="px-3.5 py-3 text-right whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
                   {customers.map((cust) => (
                     <tr key={cust.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                      <td className="py-3 font-bold text-slate-800 dark:text-slate-200">
+                      <td className="px-3.5 py-3.5 font-bold text-slate-800 dark:text-slate-200">
                         {cust.name}
                       </td>
-                      <td className="py-3 text-slate-600 dark:text-slate-400">
+                      <td className="px-3.5 py-3.5 whitespace-nowrap text-slate-600 dark:text-slate-400">
                         {cust.contact_person || '—'}
                       </td>
-                      <td className="py-3 text-slate-500 space-y-0.5">
+                      <td className="px-3.5 py-3.5 text-slate-500 space-y-0.5">
                         {cust.phone && (
-                          <div className="flex items-center gap-1 text-[11px]">
+                          <div className="flex items-center gap-1 text-[11px] whitespace-nowrap">
                             <Phone className="w-3 h-3 text-slate-400" />
                             <span>{cust.phone}</span>
                           </div>
                         )}
                         {cust.email && (
-                          <div className="flex items-center gap-1 text-[11px]">
+                          <div className="flex items-center gap-1 text-[11px] whitespace-nowrap">
                             <Mail className="w-3 h-3 text-slate-400" />
                             <span>{cust.email}</span>
                           </div>
                         )}
                         {!cust.phone && !cust.email && '—'}
                       </td>
-                      <td className="py-3 text-slate-500 max-w-xs truncate" title={cust.delivery_address}>
+                      <td className="px-3.5 py-3.5 text-slate-500 max-w-xs truncate" title={cust.delivery_address}>
                         {cust.delivery_address || '—'}
                       </td>
-                      <td className="py-3">
+                      <td className="px-3.5 py-3.5 text-center">
                         <Badge variant={cust.is_active !== false ? 'success' : 'neutral'}>
                           {cust.is_active !== false ? 'Active' : 'Inactive'}
                         </Badge>
                       </td>
-                      <td className="py-3 text-right">
+                      <td className="px-3.5 py-3.5 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => handleOpenEditCustomer(cust)}
@@ -692,15 +692,15 @@ export const OrdersPage: React.FC = () => {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs min-w-[650px]">
+            <table className="w-full text-left text-xs min-w-[850px]">
               <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                 <tr>
-                  <th className="py-2.5 whitespace-nowrap">Dropdown Label</th>
-                  <th className="py-2.5 whitespace-nowrap">Thickness / Gauge</th>
-                  <th className="py-2.5 whitespace-nowrap">Size / Dimensions</th>
-                  <th className="py-2.5 whitespace-nowrap">Description</th>
-                  <th className="py-2.5 whitespace-nowrap text-center">Status</th>
-                  <th className="py-2.5 text-right whitespace-nowrap">Actions</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Dropdown Label</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Thickness / Gauge</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Size / Dimensions</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Description</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap text-center">Status</th>
+                  <th className="px-3.5 py-3 text-right whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
@@ -716,7 +716,7 @@ export const OrdersPage: React.FC = () => {
                   })
                   .map((sm) => (
                     <tr key={sm.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                      <td className="py-3 font-bold text-slate-900 dark:text-white">
+                      <td className="px-3.5 py-3.5 font-bold text-slate-900 dark:text-white">
                         <div className="flex items-center gap-2">
                           <span className="w-6 h-6 rounded bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold text-[11px]">
                             {sm.micron}
@@ -724,23 +724,23 @@ export const OrdersPage: React.FC = () => {
                           <span>{sm.label}</span>
                         </div>
                       </td>
-                      <td className="py-3">
+                      <td className="px-3.5 py-3.5">
                         <span className="px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-mono font-bold text-[11px]">
                           {sm.micron} {sm.unit || 'Micron'}
                         </span>
                       </td>
-                      <td className="py-3 text-slate-600 dark:text-slate-300">
+                      <td className="px-3.5 py-3.5 whitespace-nowrap text-slate-600 dark:text-slate-300">
                         {sm.size || 'Standard'}
                       </td>
-                      <td className="py-3 text-slate-500 max-w-xs truncate">
+                      <td className="px-3.5 py-3.5 text-slate-500 max-w-xs truncate">
                         {sm.description || '—'}
                       </td>
-                      <td className="py-3 text-center">
+                      <td className="px-3.5 py-3.5 text-center">
                         <Badge variant={sm.is_active ? 'success' : 'neutral'}>
                           {sm.is_active ? 'Active' : 'Disabled'}
                         </Badge>
                       </td>
-                      <td className="py-3 text-right">
+                      <td className="px-3.5 py-3.5 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1">
                           <button
                             type="button"

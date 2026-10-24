@@ -586,33 +586,33 @@ export const ProductsPage: React.FC = () => {
                   {calculationResult && (
                     <div className="space-y-4">
                       <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs">
+                        <table className="w-full text-left text-xs min-w-[550px]">
                           <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                             <tr>
-                              <th className="py-2">Polymer Material</th>
-                              <th className="py-2">Ratio</th>
-                              <th className="py-2">Required (kg)</th>
-                              <th className="py-2">Available Warehouse Stock</th>
-                              <th className="py-2 text-right">Feasibility</th>
+                              <th className="px-3 py-2.5 whitespace-nowrap">Polymer Material</th>
+                              <th className="px-3 py-2.5 text-right whitespace-nowrap">Ratio</th>
+                              <th className="px-3 py-2.5 text-right whitespace-nowrap">Required</th>
+                              <th className="px-3 py-2.5 text-right whitespace-nowrap">Available Stock</th>
+                              <th className="px-3 py-2.5 text-right whitespace-nowrap">Feasibility</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
                             {(calculationResult.requirements || []).map((req: any, i: number) => (
                               <tr key={i} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                                <td className="py-2.5 text-slate-800 dark:text-slate-200">
+                                <td className="px-3 py-2.5 text-slate-800 dark:text-slate-200">
                                   <span className="font-bold">{req.material_name}</span>
                                   {req.material_code && (
                                     <span className="ml-1 text-[10px] text-slate-400 font-mono">({req.material_code})</span>
                                   )}
                                 </td>
-                                <td className="py-2.5 font-mono">{req.percentage}%</td>
-                                <td className="py-2.5 font-mono font-bold text-slate-900 dark:text-white">
+                                <td className="px-3 py-2.5 text-right font-mono">{req.percentage}%</td>
+                                <td className="px-3 py-2.5 text-right font-mono font-bold text-slate-900 dark:text-white">
                                   {req.required_kg} kg
                                 </td>
-                                <td className="py-2.5 font-mono text-slate-600 dark:text-slate-400">
+                                <td className="px-3 py-2.5 text-right font-mono text-slate-600 dark:text-slate-400">
                                   {req.available_stock_kg} kg
                                 </td>
-                                <td className="py-2.5 text-right">
+                                <td className="px-3 py-2.5 text-right whitespace-nowrap">
                                   {req.sufficient ? (
                                     <Badge variant="success">Available</Badge>
                                   ) : (

@@ -707,24 +707,24 @@ export const MaterialsPage: React.FC = () => {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs min-w-[750px]">
+                <table className="w-full text-left text-xs min-w-[1050px]">
                   <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                     <tr>
-                      <th className="py-2.5 whitespace-nowrap">Batch Number</th>
-                      <th className="py-2.5 whitespace-nowrap">Material</th>
-                      <th className="py-2.5 whitespace-nowrap">Supplier / Lot #</th>
-                      <th className="py-2.5 whitespace-nowrap">Receipt Date</th>
-                      <th className="py-2.5 whitespace-nowrap">Received (kg)</th>
-                      <th className="py-2.5 whitespace-nowrap">Remaining (kg)</th>
-                      <th className="py-2.5 whitespace-nowrap">Buying Price</th>
-                      <th className="py-2.5 whitespace-nowrap">Status</th>
-                      <th className="py-2.5 text-right whitespace-nowrap">Actions</th>
+                      <th className="px-3.5 py-3 whitespace-nowrap">Batch Number</th>
+                      <th className="px-3.5 py-3 whitespace-nowrap">Material</th>
+                      <th className="px-3.5 py-3 whitespace-nowrap">Supplier / Lot #</th>
+                      <th className="px-3.5 py-3 whitespace-nowrap">Receipt Date</th>
+                      <th className="px-3.5 py-3 text-right whitespace-nowrap">Received</th>
+                      <th className="px-3.5 py-3 text-right whitespace-nowrap">Remaining</th>
+                      <th className="px-3.5 py-3 text-right whitespace-nowrap">Buying Price</th>
+                      <th className="px-3.5 py-3 text-center whitespace-nowrap">Status</th>
+                      <th className="px-3.5 py-3 text-right whitespace-nowrap">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
                     {filteredBatches.map((b, index) => (
                       <tr key={b.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                        <td className="py-3 font-mono font-bold text-brand-600 dark:text-brand-400 flex items-center gap-1.5">
+                        <td className="px-3.5 py-3.5 font-mono font-bold text-brand-600 dark:text-brand-400 whitespace-nowrap flex items-center gap-1.5">
                           {b.batch_number}
                           {index === 0 && b.status === 'available' && (
                             <span className="text-[9px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
@@ -732,10 +732,10 @@ export const MaterialsPage: React.FC = () => {
                             </span>
                           )}
                         </td>
-                        <td className="py-3 text-slate-800 dark:text-slate-200">
+                        <td className="px-3.5 py-3.5 font-bold text-slate-800 dark:text-slate-200">
                           {b.materials?.name || b.material_name || 'N/A'}
                         </td>
-                        <td className="py-3 text-slate-600 dark:text-slate-300">
+                        <td className="px-3.5 py-3.5 text-slate-600 dark:text-slate-300">
                           <div className="font-semibold text-slate-800 dark:text-slate-200">
                             {b.suppliers?.name || b.supplier_name || 'Direct'}
                           </div>
@@ -743,32 +743,27 @@ export const MaterialsPage: React.FC = () => {
                             Lot: {b.supplier_lot_number || 'N/A'}
                           </div>
                         </td>
-                        <td className="py-3 text-slate-500">{b.receipt_date}</td>
-                        <td className="py-3 font-mono">{b.received_quantity_kg} kg</td>
-                        <td className="py-3 font-mono font-bold text-slate-900 dark:text-white">
+                        <td className="px-3.5 py-3.5 whitespace-nowrap text-slate-500">{b.receipt_date}</td>
+                        <td className="px-3.5 py-3.5 text-right font-mono">{b.received_quantity_kg} kg</td>
+                        <td className="px-3.5 py-3.5 text-right font-mono font-bold text-slate-900 dark:text-white">
                           {b.remaining_quantity_kg} kg
                         </td>
-                        <td className="py-3 whitespace-nowrap">
+                        <td className="px-3.5 py-3.5 text-right whitespace-nowrap">
                           {Number(b.cost_per_kg) > 0 ? (
                             <div>
                               <span className="font-mono font-bold text-slate-900 dark:text-white text-xs">
                                 ₹{Number(b.cost_per_kg).toFixed(2)}
                                 <span className="text-[10px] text-slate-400 font-sans font-normal ml-0.5">/kg</span>
                               </span>
-                              {/* {Number(b.received_quantity_kg) > 0 && (
-                                <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
-                                  Tot: ₹{(Number(b.cost_per_kg) * Number(b.received_quantity_kg)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                                </p>
-                              )} */}
                             </div>
                           ) : (
                             <span className="text-slate-400 italic text-[11px]">—</span>
                           )}
                         </td>
-                        <td className="py-3">
+                        <td className="px-3.5 py-3.5 text-center">
                           <Badge variant={b.status === 'available' ? 'success' : 'neutral'}>{b.status}</Badge>
                         </td>
-                        <td className="py-3 text-right">
+                        <td className="px-3.5 py-3.5 text-right whitespace-nowrap">
                           <button
                             onClick={() => {
                               setActiveBatchToAdjust(b);
@@ -817,38 +812,38 @@ export const MaterialsPage: React.FC = () => {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs min-w-[700px]">
+              <table className="w-full text-left text-xs min-w-[900px]">
                 <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                   <tr>
-                    <th className="py-2.5 whitespace-nowrap">Polymer Name</th>
-                    <th className="py-2.5 whitespace-nowrap">Description & Properties</th>
-                    <th className="py-2.5 whitespace-nowrap">Min Stock Alert</th>
-                    <th className="py-2.5 whitespace-nowrap">Current Stock</th>
-                    <th className="py-2.5 whitespace-nowrap">Status</th>
-                    <th className="py-2.5 text-right whitespace-nowrap">Actions</th>
+                    <th className="px-3.5 py-3 whitespace-nowrap">Polymer Name</th>
+                    <th className="px-3.5 py-3 whitespace-nowrap">Description & Properties</th>
+                    <th className="px-3.5 py-3 text-right whitespace-nowrap">Min Stock Alert</th>
+                    <th className="px-3.5 py-3 text-right whitespace-nowrap">Current Stock</th>
+                    <th className="px-3.5 py-3 text-center whitespace-nowrap">Status</th>
+                    <th className="px-3.5 py-3 text-right whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
                   {materials.map((mat) => (
                     <tr key={mat.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                      <td className="py-3 font-bold text-slate-800 dark:text-slate-200">
+                      <td className="px-3.5 py-3.5 font-bold text-slate-800 dark:text-slate-200">
                         {mat.name}
                       </td>
-                      <td className="py-3 text-slate-500 max-w-xs truncate" title={mat.description}>
+                      <td className="px-3.5 py-3.5 text-slate-500 max-w-xs truncate" title={mat.description}>
                         {mat.description || '—'}
                       </td>
-                      <td className="py-3 font-mono text-slate-700 dark:text-slate-300">
+                      <td className="px-3.5 py-3.5 text-right font-mono text-slate-700 dark:text-slate-300">
                         {mat.min_stock_level_kg} kg
                       </td>
-                      <td className="py-3 font-mono font-bold text-slate-900 dark:text-white">
+                      <td className="px-3.5 py-3.5 text-right font-mono font-bold text-slate-900 dark:text-white">
                         {mat.total_stock_kg || 0} kg
                       </td>
-                      <td className="py-3">
+                      <td className="px-3.5 py-3.5 text-center">
                         <Badge variant={mat.is_active !== false ? 'success' : 'neutral'}>
                           {mat.is_active !== false ? 'Active' : 'Inactive'}
                         </Badge>
                       </td>
-                      <td className="py-3 text-right">
+                      <td className="px-3.5 py-3.5 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => handleOpenEditMaterial(mat)}
@@ -919,42 +914,42 @@ export const MaterialsPage: React.FC = () => {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs min-w-[700px]">
+              <table className="w-full text-left text-xs min-w-[900px]">
                 <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                   <tr>
-                    <th className="py-2.5 whitespace-nowrap">Vendor / Supplier Name</th>
-                    <th className="py-2.5 whitespace-nowrap">Contact Person</th>
-                    <th className="py-2.5 whitespace-nowrap">Phone & Email</th>
-                    <th className="py-2.5 whitespace-nowrap">Address</th>
-                    <th className="py-2.5 whitespace-nowrap">Status</th>
-                    <th className="py-2.5 text-right whitespace-nowrap">Actions</th>
+                    <th className="px-3.5 py-3 whitespace-nowrap">Vendor / Supplier Name</th>
+                    <th className="px-3.5 py-3 whitespace-nowrap">Contact Person</th>
+                    <th className="px-3.5 py-3 whitespace-nowrap">Phone & Email</th>
+                    <th className="px-3.5 py-3 whitespace-nowrap">Address</th>
+                    <th className="px-3.5 py-3 text-center whitespace-nowrap">Status</th>
+                    <th className="px-3.5 py-3 text-right whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
                   {filteredSuppliers.map((sup) => (
                     <tr key={sup.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                      <td className="py-3 font-bold text-slate-800 dark:text-slate-200">
+                      <td className="px-3.5 py-3.5 font-bold text-slate-800 dark:text-slate-200">
                         {sup.name}
                       </td>
-                      <td className="py-3 text-slate-600 dark:text-slate-300">
+                      <td className="px-3.5 py-3.5 whitespace-nowrap text-slate-600 dark:text-slate-300">
                         {sup.contact_person || '—'}
                       </td>
-                      <td className="py-3 text-slate-500">
+                      <td className="px-3.5 py-3.5 text-slate-500">
                         <div className="flex flex-col gap-0.5">
                           {sup.phone && (
-                            <span className="flex items-center gap-1 font-mono text-[11px] text-slate-700 dark:text-slate-300">
+                            <span className="flex items-center gap-1 font-mono text-[11px] text-slate-700 dark:text-slate-300 whitespace-nowrap">
                               <Phone className="w-3 h-3 text-slate-400" /> {sup.phone}
                             </span>
                           )}
                           {sup.email && (
-                            <span className="flex items-center gap-1 text-[11px] text-slate-500">
+                            <span className="flex items-center gap-1 text-[11px] text-slate-500 whitespace-nowrap">
                               <Mail className="w-3 h-3 text-slate-400" /> {sup.email}
                             </span>
                           )}
                           {!sup.phone && !sup.email && '—'}
                         </div>
                       </td>
-                      <td className="py-3 text-slate-500 max-w-xs truncate" title={sup.address}>
+                      <td className="px-3.5 py-3.5 text-slate-500 max-w-xs truncate" title={sup.address}>
                         {sup.address ? (
                           <span className="flex items-center gap-1">
                             <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
@@ -964,12 +959,12 @@ export const MaterialsPage: React.FC = () => {
                           '—'
                         )}
                       </td>
-                      <td className="py-3">
+                      <td className="px-3.5 py-3.5 text-center">
                         <Badge variant={sup.is_active !== false ? 'success' : 'neutral'}>
                           {sup.is_active !== false ? 'Active' : 'Inactive'}
                         </Badge>
                       </td>
-                      <td className="py-3 text-right">
+                      <td className="px-3.5 py-3.5 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => handleOpenEditSupplier(sup)}

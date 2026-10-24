@@ -314,15 +314,15 @@ export const SizeMicronPage: React.FC = () => {
       ) : (
         <div className="bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse min-w-[850px]">
               <thead>
                 <tr className="border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-factory-950/40 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  <th className="py-3 px-4">Dropdown Label</th>
-                  <th className="py-3 px-4">Thickness / Gauge</th>
-                  <th className="py-3 px-4">Size / Dimension</th>
-                  <th className="py-3 px-4">Application / Notes</th>
-                  <th className="py-3 px-4 text-center">Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-3 px-4 whitespace-nowrap">Dropdown Label</th>
+                  <th className="py-3 px-4 whitespace-nowrap">Thickness / Gauge</th>
+                  <th className="py-3 px-4 whitespace-nowrap">Size / Dimension</th>
+                  <th className="py-3 px-4 whitespace-nowrap">Application / Notes</th>
+                  <th className="py-3 px-4 text-center whitespace-nowrap">Status</th>
+                  <th className="py-3 px-4 text-right whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs">

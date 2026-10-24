@@ -100,36 +100,36 @@ export const FinishedGoodsPage: React.FC = () => {
         </h3>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs min-w-[720px]">
+          <table className="w-full text-left text-xs min-w-[950px]">
             <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
               <tr>
-                <th className="py-2.5 whitespace-nowrap">Product</th>
-                <th className="py-2.5 whitespace-nowrap">Production Date</th>
-                <th className="py-2.5 whitespace-nowrap">Operator</th>
-                <th className="py-2.5 whitespace-nowrap">Produced (kg)</th>
-                <th className="py-2.5 whitespace-nowrap">On-Hand (kg)</th>
-                <th className="py-2.5 whitespace-nowrap">Dispatched (kg)</th>
-                <th className="py-2.5 whitespace-nowrap">Status</th>
-                <th className="py-2.5 text-right whitespace-nowrap">Action</th>
+                <th className="px-3.5 py-3 whitespace-nowrap">Product</th>
+                <th className="px-3.5 py-3 whitespace-nowrap">Production Date</th>
+                <th className="px-3.5 py-3 whitespace-nowrap">Operator</th>
+                <th className="px-3.5 py-3 text-right whitespace-nowrap">Produced</th>
+                <th className="px-3.5 py-3 text-right whitespace-nowrap">On-Hand</th>
+                <th className="px-3.5 py-3 text-right whitespace-nowrap">Dispatched</th>
+                <th className="px-3.5 py-3 text-center whitespace-nowrap">Status</th>
+                <th className="px-3.5 py-3 text-right whitespace-nowrap">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
               {(data.batches || []).length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-400 text-xs">
+                  <td colSpan={8} className="px-3.5 py-8 text-center text-slate-400 text-xs">
                     No finished goods batches in inventory. Complete a production run to generate finished goods lots.
                   </td>
                 </tr>
               ) : (
                 (data.batches || []).map((batch) => (
                   <tr key={batch.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                    <td className="py-3 font-bold text-slate-800 dark:text-slate-200">
+                    <td className="px-3.5 py-3.5 font-bold text-slate-800 dark:text-slate-200">
                       {batch.products?.name || 'Finished Product'}
                     </td>
-                    <td className="py-3 text-slate-600 dark:text-slate-300">
+                    <td className="px-3.5 py-3.5 whitespace-nowrap text-slate-600 dark:text-slate-300">
                       {new Date(batch.created_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}
                     </td>
-                    <td className="py-3 text-slate-700 dark:text-slate-300">
+                    <td className="px-3.5 py-3.5 whitespace-nowrap text-slate-700 dark:text-slate-300">
                       {batch.production_batches?.operator_name || batch.operator_name ? (
                         <span className="inline-flex items-center gap-1 font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-factory-800 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700/60">
                           <User className="w-3 h-3 text-brand-500" />
@@ -139,19 +139,19 @@ export const FinishedGoodsPage: React.FC = () => {
                         <span className="text-slate-400 italic text-[11px]">—</span>
                       )}
                     </td>
-                    <td className="py-3 font-mono">{batch.quantity_produced_kg} kg</td>
-                    <td className="py-3 font-mono font-bold text-slate-900 dark:text-white">
+                    <td className="px-3.5 py-3.5 text-right font-mono">{batch.quantity_produced_kg} kg</td>
+                    <td className="px-3.5 py-3.5 text-right font-mono font-bold text-slate-900 dark:text-white">
                       {batch.quantity_on_hand_kg} kg
                     </td>
-                    <td className="py-3 font-mono text-slate-500">
+                    <td className="px-3.5 py-3.5 text-right font-mono text-slate-500">
                       {batch.quantity_dispatched_kg || 0} kg
                     </td>
-                    <td className="py-3">
+                    <td className="px-3.5 py-3.5 text-center">
                       <Badge variant={batch.status === 'in_stock' ? 'success' : 'neutral'}>
                         {batch.status}
                       </Badge>
                     </td>
-                    <td className="py-3 text-right">
+                    <td className="px-3.5 py-3.5 text-right whitespace-nowrap">
                       <Link
                         to={`/traceability?batchId=${batch.production_batch_id || batch.production_batches?.id || ''}`}
                         className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-brand-600 dark:text-brand-400 bg-brand-500/10 hover:bg-brand-500/20 rounded-lg transition-colors border border-brand-500/20"
