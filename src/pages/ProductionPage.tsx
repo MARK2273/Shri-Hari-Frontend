@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
-import { Factory, Plus, Play, CheckCircle2, AlertCircle, ArrowRight, Layers, User, Edit2 } from 'lucide-react';
+import { Factory, Plus, Play, CheckCircle2, AlertCircle, ArrowRight, Layers, User, Edit2, GitBranch } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import { Button } from '../components/common/Button';
@@ -362,19 +362,29 @@ export const ProductionPage: React.FC = () => {
                       </Badge>
                     </td>
                     <td className="py-3 text-right">
-                      {batch.status !== 'completed' ? (
-                        <button
-                          onClick={() => openConfirmModal(batch)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-lg shadow-sm transition-colors ml-auto"
+                      <div className="flex items-center justify-end gap-2">
+                        <Link
+                          to={`/traceability?batchId=${batch.id}`}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-brand-600 dark:text-brand-400 bg-brand-500/10 hover:bg-brand-500/20 rounded-lg transition-colors border border-brand-500/20"
+                          title="Trace Batch Lineage"
                         >
-                          <Play className="w-3 h-3 fill-current" />
-                          Execute & Stock
-                        </button>
-                      ) : (
-                        <span className="text-[11px] text-slate-400 flex items-center justify-end gap-1 font-semibold">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Stocked
-                        </span>
-                      )}
+                          <GitBranch className="w-3 h-3" />
+                          Trace
+                        </Link>
+                        {batch.status !== 'completed' ? (
+                          <button
+                            onClick={() => openConfirmModal(batch)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-lg shadow-sm transition-colors"
+                          >
+                            <Play className="w-3 h-3 fill-current" />
+                            Execute & Stock
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-slate-400 flex items-center gap-1 font-semibold">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Stocked
+                          </span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))

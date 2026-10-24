@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
 import {
   GitBranch,
@@ -14,7 +15,8 @@ import {
   Calendar,
   MapPin,
   Clock,
-  Boxes
+  Boxes,
+  User
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
@@ -22,22 +24,32 @@ import { PageSkeleton } from '../components/common/Skeleton';
 import { formatNumber } from '../utils/format';
 
 export const TraceabilityPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const urlBatchId = searchParams.get('batchId') || '';
+  const urlBatchNumber = searchParams.get('batchNumber') || '';
+
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedBatchId, setSelectedBatchId] = useState<string>('');
   const [traceData, setTraceData] = useState<any>(null);
-  const [availableBatches, setAvailableBatches] = useState<string[]>([]);
+  const [availableBatches, setAvailableBatches] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchTraceability = async (term: string) => {
+  const fetchTraceability = async (params: { batchId?: string; batchNumber?: string; q?: string } = {}) => {
     setIsLoading(true);
     try {
-      const res = await api.get(`/traceability?batchNumber=${encodeURIComponent(term)}`);
+      const queryParams = new URLSearchParams();
+      if (params.batchId) queryParams.set('batchId', params.batchId);
+      if (params.batchNumber) queryParams.set('batchNumber', params.batchNumber);
+      if (params.q) queryParams.set('q', params.q);
+
+      const res = await api.get(`/traceability?${queryParams.toString()}`);
       const matched = res.data.traceability || res.data.records?.[0] || null;
       setTraceData(matched);
       if (res.data.availableBatches) {
         setAvailableBatches(res.data.availableBatches);
       }
-      if (!term && matched) {
-        setSearchTerm(matched.batch_number);
+      if (matched?.id) {
+        setSelectedBatchId(matched.id);
       }
     } catch (err) {
       console.error('Failed to load traceability:', err);
@@ -47,8 +59,14 @@ export const TraceabilityPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchTraceability('');
-  }, []);
+    if (urlBatchId) {
+      fetchTraceability({ batchId: urlBatchId });
+    } else if (urlBatchNumber) {
+      fetchTraceability({ batchNumber: urlBatchNumber });
+    } else {
+      fetchTraceability({});
+    }
+  }, [urlBatchId, urlBatchNumber]);
 
   const totalRawInputKg =
     traceData?.raw_material_lots_consumed?.reduce(
@@ -73,14 +91,40 @@ export const TraceabilityPage: React.FC = () => {
         </p>
       </div>
 
-      {/* Search Input & Quick Selectors */}
-      <div className="p-4 rounded-2xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+      {/* Select Run Dropdown & Search Bar */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+        {/* Dropdown of Available Runs */}
+        {availableBatches.length > 0 && (
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5">
+              Select Production Run:
+            </label>
+            <select
+              value={selectedBatchId}
+              onChange={(e) => {
+                const bId = e.target.value;
+                setSelectedBatchId(bId);
+                fetchTraceability({ batchId: bId });
+              }}
+              className="w-full text-xs px-3.5 py-2.5 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none"
+            >
+              <option value="" disabled>-- Choose a Production Run --</option>
+              {availableBatches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.product_name} — {b.customer_name} ({new Date(b.created_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}) {b.operator_name ? `• Operator: ${b.operator_name}` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Text Search Alternative */}
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            fetchTraceability(searchTerm);
+            fetchTraceability({ q: searchTerm });
           }}
-          className="flex flex-col sm:flex-row items-center gap-3"
+          className="flex flex-col sm:flex-row items-center gap-3 pt-1 border-t border-slate-100 dark:border-slate-800/80"
         >
           <div className="relative flex-1 w-full">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
@@ -88,8 +132,8 @@ export const TraceabilityPage: React.FC = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by Product Name, Customer, or Run..."
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono font-medium focus:outline-none focus:border-brand-500"
+              placeholder="Search by Product Name, Customer Name, or Operator..."
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-medium focus:outline-none focus:border-brand-500"
             />
           </div>
           <Button
@@ -102,29 +146,6 @@ export const TraceabilityPage: React.FC = () => {
             Trace Supply Chain
           </Button>
         </form>
-
-        {availableBatches.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap pt-1 text-xs">
-            <span className="text-[11px] font-bold text-slate-400">Available Batches:</span>
-            {availableBatches.map((b) => (
-              <button
-                key={b}
-                type="button"
-                onClick={() => {
-                  setSearchTerm(b);
-                  fetchTraceability(b);
-                }}
-                className={`px-2.5 py-1 rounded-lg font-mono text-[11px] font-bold transition-all ${
-                  searchTerm === b
-                    ? 'bg-brand-500 text-white shadow-sm'
-                    : 'bg-slate-100 dark:bg-factory-800 text-slate-700 dark:text-slate-300 hover:bg-brand-50 hover:text-brand-600'
-                }`}
-              >
-                {b}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Traceability Visual Timeline */}

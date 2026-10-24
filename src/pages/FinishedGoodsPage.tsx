@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
-import { PackageCheck, Truck, Layers, CheckCircle2, User } from 'lucide-react';
+import { PackageCheck, Truck, Layers, CheckCircle2, User, GitBranch } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { PageSkeleton } from '../components/common/Skeleton';
 import { Link } from 'react-router-dom';
@@ -110,12 +110,13 @@ export const FinishedGoodsPage: React.FC = () => {
                 <th className="py-2.5 whitespace-nowrap">On-Hand (kg)</th>
                 <th className="py-2.5 whitespace-nowrap">Dispatched (kg)</th>
                 <th className="py-2.5 whitespace-nowrap">Status</th>
+                <th className="py-2.5 text-right whitespace-nowrap">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
               {(data.batches || []).length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-400 text-xs">
+                  <td colSpan={8} className="py-8 text-center text-slate-400 text-xs">
                     No finished goods batches in inventory. Complete a production run to generate finished goods lots.
                   </td>
                 </tr>
@@ -149,6 +150,16 @@ export const FinishedGoodsPage: React.FC = () => {
                       <Badge variant={batch.status === 'in_stock' ? 'success' : 'neutral'}>
                         {batch.status}
                       </Badge>
+                    </td>
+                    <td className="py-3 text-right">
+                      <Link
+                        to={`/traceability?batchId=${batch.production_batch_id || batch.production_batches?.id || ''}`}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-brand-600 dark:text-brand-400 bg-brand-500/10 hover:bg-brand-500/20 rounded-lg transition-colors border border-brand-500/20"
+                        title="Trace Production Lineage"
+                      >
+                        <GitBranch className="w-3 h-3" />
+                        Trace
+                      </Link>
                     </td>
                   </tr>
                 ))
