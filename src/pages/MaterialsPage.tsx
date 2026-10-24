@@ -26,6 +26,24 @@ import { Button } from '../components/common/Button';
 import { PageSkeleton } from '../components/common/Skeleton';
 import { Supplier } from '../types';
 
+interface ReceiveItemRow {
+  id: string;
+  materialId: string;
+  receivedQuantityKg: number;
+  costPerKg: number;
+  supplierLotNumber: string;
+  notes: string;
+}
+
+const createEmptyReceiveItem = (matId = ''): ReceiveItemRow => ({
+  id: Math.random().toString(36).substring(2, 9),
+  materialId: matId,
+  receivedQuantityKg: 1000,
+  costPerKg: 110,
+  supplierLotNumber: '',
+  notes: '',
+});
+
 export const MaterialsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'batches' | 'catalog' | 'suppliers'>('batches');
   const [materials, setMaterials] = useState<any[]>([]);
@@ -58,17 +76,14 @@ export const MaterialsPage: React.FC = () => {
     isActive: true,
   });
 
-  // Form states for Receive Batch (batchNumber is auto-generated)
+  // Form states for Receive Batch (Consignment with multiple materials)
   const [receiveForm, setReceiveForm] = useState({
-    materialId: '',
     supplierName: '',
     supplierId: '',
-    batchNumber: '',
-    supplierLotNumber: '',
+    supplierInvoiceNo: '',
     receiptDate: new Date().toISOString().split('T')[0],
-    receivedQuantityKg: 1000,
-    costPerKg: 110,
     notes: '',
+    items: [createEmptyReceiveItem()] as ReceiveItemRow[],
   });
 
   // Form state for Adjust Stock
@@ -99,8 +114,14 @@ export const MaterialsPage: React.FC = () => {
       setBatches(batchRes.data.batches || []);
       setSuppliers(supRes.data?.suppliers || []);
 
-      if (fetchedMaterials.length > 0 && !receiveForm.materialId) {
-        setReceiveForm((prev) => ({ ...prev, materialId: fetchedMaterials[0].id }));
+      if (fetchedMaterials.length > 0) {
+        setReceiveForm((prev) => ({
+          ...prev,
+          items: prev.items.map((it) => ({
+            ...it,
+            materialId: it.materialId || fetchedMaterials[0].id,
+          })),
+        }));
       }
     } catch (err) {
       console.error('Failed to load materials/batches:', err);
@@ -161,7 +182,14 @@ export const MaterialsPage: React.FC = () => {
           standardUnit: 'kg',
         });
         if (res.data?.material?.id) {
-          setReceiveForm((prev) => ({ ...prev, materialId: res.data.material.id }));
+          setReceiveForm((prev) => ({
+            ...prev,
+            items: prev.items.map((it, idx) =>
+              idx === prev.items.length - 1 && !it.materialId
+                ? { ...it, materialId: res.data.material.id }
+                : it
+            ),
+          }));
         }
       }
       setIsMaterialModalOpen(false);
@@ -279,35 +307,83 @@ export const MaterialsPage: React.FC = () => {
     }
   };
 
+  // Multi-material receive form handlers
+  const handleAddReceiveItem = () => {
+    setReceiveForm((prev) => ({
+      ...prev,
+      items: [...prev.items, createEmptyReceiveItem(materials[0]?.id || '')],
+    }));
+  };
+
+  const handleRemoveReceiveItem = (index: number) => {
+    if (receiveForm.items.length <= 1) return;
+    setReceiveForm((prev) => ({
+      ...prev,
+      items: prev.items.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleUpdateReceiveItem = (index: number, field: keyof ReceiveItemRow, value: any) => {
+    setReceiveForm((prev) => {
+      const updated = [...prev.items];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, items: updated };
+    });
+  };
+
   // Receive Batch
   const handleReceiveBatch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!receiveForm.materialId) {
-      alert('Please select or create a plastic material first.');
+    if (receiveForm.items.length === 0) {
+      alert('Please add at least one material to receive.');
       return;
     }
-    if (!receiveForm.costPerKg || receiveForm.costPerKg <= 0) {
-      alert('Please enter a valid Cost Per KG (₹). It is required for dynamic recipe formulation costing.');
-      return;
+
+    for (let i = 0; i < receiveForm.items.length; i++) {
+      const it = receiveForm.items[i];
+      if (!it.materialId) {
+        alert(`Please select a plastic material for material #${i + 1}.`);
+        return;
+      }
+      if (!it.receivedQuantityKg || it.receivedQuantityKg <= 0) {
+        alert(`Please enter a valid received quantity (kg) for material #${i + 1}.`);
+        return;
+      }
+      if (!it.costPerKg || it.costPerKg <= 0) {
+        alert(`Please enter a valid Cost Per KG (₹) for material #${i + 1}. It is required for dynamic recipe formulation costing.`);
+        return;
+      }
     }
+
     setIsSubmitting(true);
     try {
-      await api.post('/materials/batches/receive', receiveForm);
+      await api.post('/materials/batches/receive', {
+        supplierId: receiveForm.supplierId || null,
+        supplierName: receiveForm.supplierName || null,
+        supplierInvoiceNo: receiveForm.supplierInvoiceNo || null,
+        receiptDate: receiveForm.receiptDate,
+        notes: receiveForm.notes,
+        items: receiveForm.items.map((it) => ({
+          materialId: it.materialId,
+          receivedQuantityKg: it.receivedQuantityKg,
+          costPerKg: it.costPerKg,
+          supplierLotNumber: it.supplierLotNumber || receiveForm.supplierInvoiceNo || null,
+          notes: it.notes,
+        })),
+      });
+
       setIsReceiveModalOpen(false);
       setReceiveForm({
-        materialId: materials[0]?.id || '',
         supplierName: '',
         supplierId: '',
-        batchNumber: '',
-        supplierLotNumber: '',
+        supplierInvoiceNo: '',
         receiptDate: new Date().toISOString().split('T')[0],
-        receivedQuantityKg: 1000,
-        costPerKg: 110,
         notes: '',
+        items: [createEmptyReceiveItem(materials[0]?.id || '')],
       });
       await fetchData();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to receive batch');
+      alert(err.response?.data?.message || 'Failed to receive material batch');
     } finally {
       setIsSubmitting(false);
     }
@@ -386,9 +462,16 @@ export const MaterialsPage: React.FC = () => {
               if (materials.length === 0) {
                 handleOpenCreateMaterial();
               } else {
-                if (!receiveForm.materialId && materials.length > 0) {
-                  setReceiveForm((prev) => ({ ...prev, materialId: materials[0].id }));
-                }
+                setReceiveForm((prev) => ({
+                  ...prev,
+                  items:
+                    prev.items.length > 0
+                      ? prev.items.map((it) => ({
+                          ...it,
+                          materialId: it.materialId || materials[0]?.id || '',
+                        }))
+                      : [createEmptyReceiveItem(materials[0]?.id || '')],
+                }));
                 setIsReceiveModalOpen(true);
               }
             }}
@@ -1034,28 +1117,126 @@ export const MaterialsPage: React.FC = () => {
       </Modal>
 
       {/* Modal: Receive Material Batch */}
+      {/* Modal: Receive Material Batch (Multi-Material Support) */}
       <Modal
         isOpen={isReceiveModalOpen}
         onClose={() => setIsReceiveModalOpen(false)}
-        title="Receive Raw Material Batch (Traceable Lot)"
-        maxWidth="xl"
+        title="Receive Raw Material Delivery (Consignment / Lots)"
+        maxWidth="3xl"
       >
         <form onSubmit={handleReceiveBatch} className="space-y-4">
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Select Plastic Material *
-              </label>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsReceiveModalOpen(false);
-                  handleOpenCreateMaterial();
-                }}
-                className="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1"
-              >
-                <Plus className="w-3 h-3" /> Add New Material
-              </button>
+          {/* Header Delivery Details */}
+          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-factory-800/60 border border-slate-200/80 dark:border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Consignment & Supplier Info
+              </span>
+              <span className="text-[10px] text-slate-400 font-medium">
+                Applies to all materials received in this delivery
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Supplier / Vendor Dropdown */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                    Supplier / Vendor
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenCreateSupplier()}
+                    className="text-[10px] font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-0.5"
+                  >
+                    <Plus className="w-3 h-3" /> Add
+                  </button>
+                </div>
+                <select
+                  value={receiveForm.supplierId}
+                  onChange={(e) => {
+                    const sId = e.target.value;
+                    const matched = suppliers.find((s) => s.id === sId);
+                    setReceiveForm({
+                      ...receiveForm,
+                      supplierId: sId,
+                      supplierName: matched ? matched.name : '',
+                    });
+                  }}
+                  className="w-full text-xs px-2.5 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-500 font-medium text-slate-800 dark:text-slate-200"
+                >
+                  <option value="">-- Direct / Unspecified --</option>
+                  {suppliers.filter((s) => s.is_active !== false).map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} {s.code ? `(${s.code})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Receipt Date */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Receipt Date *
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={receiveForm.receiptDate}
+                  onChange={(e) => setReceiveForm({ ...receiveForm, receiptDate: e.target.value })}
+                  className="w-full text-xs px-2.5 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl"
+                />
+              </div>
+
+              {/* Invoice / DC Number */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Invoice / DC # (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. INV-2026-8812"
+                  value={receiveForm.supplierInvoiceNo}
+                  onChange={(e) => setReceiveForm({ ...receiveForm, supplierInvoiceNo: e.target.value })}
+                  className="w-full text-xs px-2.5 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Repeatable Material Items Section */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Box className="w-4 h-4 text-brand-500" />
+                  Materials in this Consignment ({receiveForm.items.length})
+                </h4>
+                <p className="text-[11px] text-slate-400">
+                  Add multiple polymer grades received in this single delivery invoice.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsReceiveModalOpen(false);
+                    handleOpenCreateMaterial();
+                  }}
+                  className="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3" /> New Plastic Type
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleAddReceiveItem}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800/60 rounded-xl hover:bg-brand-100 transition-colors shadow-sm"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add Material Line
+                </button>
+              </div>
             </div>
 
             {materials.length === 0 ? (
@@ -1076,140 +1257,192 @@ export const MaterialsPage: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <select
-                required
-                value={receiveForm.materialId}
-                onChange={(e) => setReceiveForm({ ...receiveForm, materialId: e.target.value })}
-                className="w-full text-xs px-3 py-2.5 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
-              >
-                <option value="" disabled>-- Select Plastic Material Type --</option>
-                {materials.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.code} — {m.name}
-                  </option>
-                ))}
-              </select>
+              <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+                {receiveForm.items.map((item, index) => {
+                  const subtotal = (Number(item.receivedQuantityKg) || 0) * (Number(item.costPerKg) || 0);
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-factory-900 shadow-sm relative group hover:border-slate-300 dark:hover:border-slate-700 transition-all space-y-2.5"
+                    >
+                      <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono text-[10px] font-bold flex items-center justify-center">
+                            {index + 1}
+                          </span>
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                            Material Item #{index + 1}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          {subtotal > 0 && (
+                            <span className="text-[11px] font-mono text-slate-500">
+                              Subtotal:{' '}
+                              <strong className="text-emerald-600 dark:text-emerald-400 font-bold">
+                                ₹{subtotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                              </strong>
+                            </span>
+                          )}
+
+                          {receiveForm.items.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveReceiveItem(index)}
+                              className="p-1 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                              title="Remove this material line"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end">
+                        {/* Material Select */}
+                        <div className="sm:col-span-5">
+                          <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                            Plastic Polymer *
+                          </label>
+                          <select
+                            required
+                            value={item.materialId}
+                            onChange={(e) => handleUpdateReceiveItem(index, 'materialId', e.target.value)}
+                            className="w-full text-xs px-2.5 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
+                          >
+                            <option value="" disabled>-- Select Polymer Grade --</option>
+                            {materials.map((m) => (
+                              <option key={m.id} value={m.id}>
+                                {m.code} — {m.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Received Weight */}
+                        <div className="sm:col-span-3">
+                          <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                            Weight (kg) *
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              step="0.001"
+                              min="0.001"
+                              required
+                              placeholder="1000"
+                              value={item.receivedQuantityKg || ''}
+                              onChange={(e) =>
+                                handleUpdateReceiveItem(index, 'receivedQuantityKg', parseFloat(e.target.value) || 0)
+                              }
+                              className="w-full text-xs px-2.5 py-2 pr-7 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
+                            />
+                            <span className="absolute right-2 top-2 text-[10px] text-slate-400 font-bold">kg</span>
+                          </div>
+                        </div>
+
+                        {/* Cost per KG */}
+                        <div className="sm:col-span-2">
+                          <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                            Rate (₹/kg) *
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-2.5 top-2 text-[10px] text-slate-400 font-bold">₹</span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0.01"
+                              required
+                              placeholder="110.00"
+                              value={item.costPerKg || ''}
+                              onChange={(e) =>
+                                handleUpdateReceiveItem(index, 'costPerKg', parseFloat(e.target.value) || 0)
+                              }
+                              className="w-full text-xs pl-6 pr-2 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Lot / Batch Remarks */}
+                        <div className="sm:col-span-2">
+                          <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                            Lot # / Grade
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. LOT-A"
+                            value={item.supplierLotNumber}
+                            onChange={(e) => handleUpdateReceiveItem(index, 'supplierLotNumber', e.target.value)}
+                            className="w-full text-xs px-2.5 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
+
+            {/* Total Summary Footer */}
+            {(() => {
+              const totalKg = receiveForm.items.reduce((s, it) => s + (Number(it.receivedQuantityKg) || 0), 0);
+              const totalVal = receiveForm.items.reduce(
+                (s, it) => s + (Number(it.receivedQuantityKg) || 0) * (Number(it.costPerKg) || 0),
+                0
+              );
+              const avgRate = totalKg > 0 ? totalVal / totalKg : 0;
+
+              return (
+                <div className="p-3 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-800/40 flex flex-wrap items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Items</span>
+                      <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                        {receiveForm.items.length} {receiveForm.items.length === 1 ? 'Material' : 'Materials'}
+                      </span>
+                    </div>
+                    <div className="border-l border-emerald-200 dark:border-emerald-800 pl-4">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Weight</span>
+                      <span className="font-mono font-bold text-slate-900 dark:text-white">
+                        {totalKg.toLocaleString('en-IN', { maximumFractionDigits: 3 })} kg
+                      </span>
+                    </div>
+                    {avgRate > 0 && (
+                      <div className="border-l border-emerald-200 dark:border-emerald-800 pl-4">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block">Avg Rate</span>
+                        <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                          ₹{avgRate.toFixed(2)}/kg
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="text-right">
+                    <span className="text-[10px] uppercase font-bold text-emerald-600 dark:text-emerald-400 block">
+                      Total Consignment Valuation
+                    </span>
+                    <span className="font-mono text-base font-black text-emerald-700 dark:text-emerald-300">
+                      ₹{totalVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
-          {/* Supplier & Supplier Lot Number */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                  Supplier / Vendor Name
-                </label>
-                <button
-                  type="button"
-                  onClick={() => handleOpenCreateSupplier()}
-                  className="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1"
-                >
-                  <Plus className="w-3 h-3" /> Add Vendor
-                </button>
-              </div>
-              <select
-                value={receiveForm.supplierId}
-                onChange={(e) => {
-                  const sId = e.target.value;
-                  const matched = suppliers.find((s) => s.id === sId);
-                  setReceiveForm({
-                    ...receiveForm,
-                    supplierId: sId,
-                    supplierName: matched ? matched.name : '',
-                  });
-                }}
-                className="w-full h-10 text-xs px-3 bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-medium text-slate-800 dark:text-slate-200"
-              >
-                <option value="">-- Select Supplier / Vendor (Optional) --</option>
-                {suppliers.filter((s) => s.is_active !== false).map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} {s.code ? `(${s.code})` : ''}
-                  </option>
-                ))}
-              </select>
-              {suppliers.length === 0 && (
-                <span className="text-[10px] text-slate-400 mt-1 block">
-                  No vendors registered yet. Click "+ Add Vendor" to add one.
-                </span>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 whitespace-nowrap">
-                Supplier Lot # (Optional)
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. RIL-HDPE-9920"
-                value={receiveForm.supplierLotNumber}
-                onChange={(e) => setReceiveForm({ ...receiveForm, supplierLotNumber: e.target.value })}
-                className="w-full h-10 text-xs px-3 bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Received Weight (kg) *
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  step="0.001"
-                  min="0.001"
-                  required
-                  value={receiveForm.receivedQuantityKg}
-                  onChange={(e) =>
-                    setReceiveForm({ ...receiveForm, receivedQuantityKg: parseFloat(e.target.value) || 0 })
-                  }
-                  className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
-                />
-                <span className="absolute right-3 top-2 text-xs text-slate-400 font-bold">kg</span>
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Receipt Date *
-              </label>
-              <input
-                type="date"
-                required
-                value={receiveForm.receiptDate}
-                onChange={(e) => setReceiveForm({ ...receiveForm, receiptDate: e.target.value })}
-                className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Cost Per KG (₹) *
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                required
-                placeholder="e.g. 110.00"
-                value={receiveForm.costPerKg || ''}
-                onChange={(e) => setReceiveForm({ ...receiveForm, costPerKg: parseFloat(e.target.value) || 0 })}
-                className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Notes / Quality Remarks
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Certified virgin pellets, COA verified"
-                value={receiveForm.notes}
-                onChange={(e) => setReceiveForm({ ...receiveForm, notes: e.target.value })}
-                className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl"
-              />
-            </div>
+          {/* Delivery Note Remarks */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              General Delivery Notes / Quality Remarks (Optional)
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Vehicle GJ-06-XX-1234, Certificate of Analysis attached, Driver: Ramesh"
+              value={receiveForm.notes}
+              onChange={(e) => setReceiveForm({ ...receiveForm, notes: e.target.value })}
+              className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl"
+            />
           </div>
 
           <div className="pt-2 flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
@@ -1226,7 +1459,7 @@ export const MaterialsPage: React.FC = () => {
               isLoading={isSubmitting}
               loadingText="Confirming Receipt..."
             >
-              Confirm Stock Receipt
+              Confirm Receipt ({receiveForm.items.length} {receiveForm.items.length === 1 ? 'Material' : 'Materials'})
             </Button>
           </div>
         </form>
