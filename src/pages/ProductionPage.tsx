@@ -6,6 +6,7 @@ import { Modal } from '../components/common/Modal';
 import { Button } from '../components/common/Button';
 import { PageSkeleton } from '../components/common/Skeleton';
 import { Link } from 'react-router-dom';
+import { formatNumber } from '../utils/format';
 
 export const ProductionPage: React.FC = () => {
   const [batches, setBatches] = useState<any[]>([]);
@@ -189,7 +190,7 @@ export const ProductionPage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const computedWaste = Number(((Number(confirmForm.trimWasteKg) || 0) + (Number(confirmForm.plantWasteKg) || 0)).toFixed(3));
+      const computedWaste = Number(((Number(confirmForm.trimWasteKg) || 0) + (Number(confirmForm.plantWasteKg) || 0)).toFixed(2));
       await api.post(`/production/${selectedBatchToConfirm.id}/confirm`, {
         consumption: confirmForm.consumption.map((c) => ({
           materialId: c.materialId,
@@ -214,7 +215,7 @@ export const ProductionPage: React.FC = () => {
   };
 
   const totalInputKg = confirmForm.consumption.reduce((s, c) => s + (Number(c.actualQuantityKg) || 0), 0);
-  const totalWasteKg = Number(((Number(confirmForm.trimWasteKg) || 0) + (Number(confirmForm.plantWasteKg) || 0)).toFixed(3));
+  const totalWasteKg = Number(((Number(confirmForm.trimWasteKg) || 0) + (Number(confirmForm.plantWasteKg) || 0)).toFixed(2));
   const totalAccountedOutputKg =
     Number(confirmForm.acceptedOutputKg || 0) +
     totalWasteKg +
@@ -282,16 +283,16 @@ export const ProductionPage: React.FC = () => {
                     <td className="py-3 text-slate-800 dark:text-slate-200">
                       {batch.products?.name || batch.product_name}
                     </td>
-                    <td className="py-3 font-mono">{batch.planned_quantity_kg} kg</td>
-                    <td className="py-3 font-mono">{batch.actual_input_kg || 0} kg</td>
+                    <td className="py-3 font-mono">{formatNumber(batch.planned_quantity_kg)} kg</td>
+                    <td className="py-3 font-mono">{formatNumber(batch.actual_input_kg || 0)} kg</td>
                     <td className="py-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                      {batch.accepted_output_kg || 0} kg
+                      {formatNumber(batch.accepted_output_kg || 0)} kg
                     </td>
                     <td className="py-3 font-mono">
-                      <div className="text-rose-500 font-bold">{batch.waste_kg || 0} kg</div>
+                      <div className="text-rose-500 font-bold">{formatNumber(batch.waste_kg || 0)} kg</div>
                       {(Number(batch.trim_waste_kg) > 0 || Number(batch.plant_waste_kg) > 0) && (
                         <div className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
-                          Trim: {batch.trim_waste_kg || 0} | Plant: {batch.plant_waste_kg || 0}
+                          Trim: {formatNumber(batch.trim_waste_kg || 0)} | Plant: {formatNumber(batch.plant_waste_kg || 0)}
                         </div>
                       )}
                     </td>
@@ -488,7 +489,7 @@ export const ProductionPage: React.FC = () => {
                       ) : (
                         availableLotsForMat.map((lot) => (
                           <option key={lot.id} value={lot.id}>
-                            {lot.batch_number} (Rem: {lot.remaining_quantity_kg} kg)
+                            {lot.batch_number} (Rem: {formatNumber(lot.remaining_quantity_kg)} kg)
                           </option>
                         ))
                       )}
@@ -524,7 +525,7 @@ export const ProductionPage: React.FC = () => {
                 Production Output Reconciliation (PRO-07)
               </h4>
               <span className="text-[11px] font-mono font-semibold px-2.5 py-0.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                Total Waste: {totalWasteKg} kg
+                Total Waste: {formatNumber(totalWasteKg)} kg
               </span>
             </div>
 
@@ -535,7 +536,7 @@ export const ProductionPage: React.FC = () => {
                 </label>
                 <input
                   type="number"
-                  step="0.001"
+                  step="0.01"
                   required
                   value={confirmForm.acceptedOutputKg}
                   onChange={(e) =>
@@ -552,7 +553,7 @@ export const ProductionPage: React.FC = () => {
                 </label>
                 <input
                   type="number"
-                  step="0.001"
+                  step="0.01"
                   required
                   value={confirmForm.trimWasteKg}
                   onChange={(e) => {
@@ -560,11 +561,11 @@ export const ProductionPage: React.FC = () => {
                     setConfirmForm({
                       ...confirmForm,
                       trimWasteKg: val,
-                      wasteKg: Number((val + (confirmForm.plantWasteKg || 0)).toFixed(3)),
+                      wasteKg: Number((val + (confirmForm.plantWasteKg || 0)).toFixed(2)),
                     });
                   }}
                   className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold text-amber-600 dark:text-amber-400"
-                  placeholder="0.000"
+                  placeholder="0.00"
                 />
                 <span className="text-[9px] text-slate-400">Side trim & slitting scrap</span>
               </div>
@@ -575,7 +576,7 @@ export const ProductionPage: React.FC = () => {
                 </label>
                 <input
                   type="number"
-                  step="0.001"
+                  step="0.01"
                   required
                   value={confirmForm.plantWasteKg}
                   onChange={(e) => {
@@ -583,11 +584,11 @@ export const ProductionPage: React.FC = () => {
                     setConfirmForm({
                       ...confirmForm,
                       plantWasteKg: val,
-                      wasteKg: Number(((confirmForm.trimWasteKg || 0) + val).toFixed(3)),
+                      wasteKg: Number(((confirmForm.trimWasteKg || 0) + val).toFixed(2)),
                     });
                   }}
                   className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold text-orange-600 dark:text-orange-400"
-                  placeholder="0.000"
+                  placeholder="0.00"
                 />
                 <span className="text-[9px] text-slate-400">Purging, start-up & floor lumps</span>
               </div>
@@ -598,7 +599,7 @@ export const ProductionPage: React.FC = () => {
                 </label>
                 <input
                   type="number"
-                  step="0.001"
+                  step="0.01"
                   required
                   value={confirmForm.rejectedKg}
                   onChange={(e) =>
@@ -613,16 +614,16 @@ export const ProductionPage: React.FC = () => {
             {/* Mass balance indicator */}
             <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
               <span className="text-slate-500">
-                Total Material Input: <strong className="font-mono text-slate-800 dark:text-slate-200">{totalInputKg} kg</strong>
+                Total Material Input: <strong className="font-mono text-slate-800 dark:text-slate-200">{formatNumber(totalInputKg)} kg</strong>
               </span>
               <span className="text-slate-500">
-                Accounted Output: <strong className="font-mono text-slate-800 dark:text-slate-200">{totalAccountedOutputKg} kg</strong>
+                Accounted Output: <strong className="font-mono text-slate-800 dark:text-slate-200">{formatNumber(totalAccountedOutputKg)} kg</strong>
               </span>
               <span
                 className={`font-bold font-mono ${Math.abs(totalInputKg - totalAccountedOutputKg) < 0.01 ? 'text-emerald-500' : 'text-amber-500'
                   }`}
               >
-                Variance: {(totalAccountedOutputKg - totalInputKg).toFixed(2)} kg
+                Variance: {formatNumber(totalAccountedOutputKg - totalInputKg)} kg
               </span>
             </div>
           </div>

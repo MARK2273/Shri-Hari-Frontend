@@ -19,6 +19,7 @@ import {
 import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
 import { PageSkeleton } from '../components/common/Skeleton';
+import { formatNumber } from '../utils/format';
 
 export const TraceabilityPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -188,19 +189,19 @@ export const TraceabilityPage: React.FC = () => {
                   Product: {traceData.products?.name} ({traceData.products?.code})
                 </p>
                 <p className="text-[10px] text-slate-400 mt-0.5">
-                  Output: {traceData.accepted_output_kg || traceData.planned_quantity_kg} kg accepted
+                  Output: {formatNumber(traceData.accepted_output_kg || traceData.planned_quantity_kg)} kg accepted
                   {Number(traceData.waste_kg) > 0 ? (
                     <span>
-                      {' '}(Waste: {traceData.waste_kg} kg
+                      {' '}(Waste: {formatNumber(traceData.waste_kg)} kg
                       {(Number(traceData.trim_waste_kg) > 0 || Number(traceData.plant_waste_kg) > 0)
-                        ? ` — Trim: ${traceData.trim_waste_kg || 0}kg, Plant: ${traceData.plant_waste_kg || 0}kg`
+                        ? ` — Trim: ${formatNumber(traceData.trim_waste_kg)}kg, Plant: ${formatNumber(traceData.plant_waste_kg)}kg`
                         : ''})
                     </span>
                   ) : ''}
                 </p>
               </div>
               <Badge variant="success" className="mt-4 w-fit">
-                Yield: {traceData.yield_percentage || traceData.production_batch?.yield_pct || '100.0'}%
+                Yield: {formatNumber(traceData.yield_percentage || traceData.production_batch?.yield_pct || 100)}%
               </Badge>
             </div>
 
@@ -273,7 +274,7 @@ export const TraceabilityPage: React.FC = () => {
                           (sum: number, l: any) => sum + (Number(l.consumed_kg) || 0),
                           0
                         ) || 1;
-                      const pct = ((lot.consumed_kg / totalInput) * 100).toFixed(1);
+                      const pct = formatNumber(((lot.consumed_kg / totalInput) * 100));
                       return (
                         <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
                           <td className="py-3 text-slate-800 dark:text-slate-200 font-bold">
@@ -285,7 +286,7 @@ export const TraceabilityPage: React.FC = () => {
                           </td>
                           <td className="py-3 text-slate-500">{lot.supplier}</td>
                           <td className="py-3 font-mono font-bold text-slate-800 dark:text-slate-200">
-                            {lot.consumed_kg} kg
+                            {formatNumber(lot.consumed_kg)} kg
                           </td>
                           <td className="py-3 font-mono font-bold text-right text-emerald-600 dark:text-emerald-400">
                             {pct}%

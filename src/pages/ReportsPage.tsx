@@ -3,6 +3,7 @@ import { api } from '../api/client';
 import { BarChart3, TrendingUp, AlertTriangle, ShieldCheck, History, Trash2, CheckCircle2 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { PageSkeleton } from '../components/common/Skeleton';
+import { formatNumber } from '../utils/format';
 
 export const ReportsPage: React.FC = () => {
   const [varianceReport, setVarianceReport] = useState<any[]>([]);
@@ -114,25 +115,25 @@ export const ReportsPage: React.FC = () => {
                         {row.batch_number}
                       </td>
                       <td className="py-3 text-slate-800 dark:text-slate-200">{row.product_name}</td>
-                      <td className="py-3 font-mono">{row.planned_input_kg ?? 0} kg</td>
-                      <td className="py-3 font-mono">{row.actual_input_kg ?? 0} kg</td>
+                      <td className="py-3 font-mono">{formatNumber(row.planned_input_kg)} kg</td>
+                      <td className="py-3 font-mono">{formatNumber(row.actual_input_kg)} kg</td>
                       <td className="py-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                        {row.accepted_output_kg ?? 0} kg
+                        {formatNumber(row.accepted_output_kg)} kg
                       </td>
                       <td className="py-3 font-mono">
-                        <span className="text-rose-500 font-bold">{row.waste_kg ?? 0} kg</span>
+                        <span className="text-rose-500 font-bold">{formatNumber(row.waste_kg)} kg</span>
                         {(Number(row.trim_waste_kg) > 0 || Number(row.plant_waste_kg) > 0) && (
                           <div className="text-[10px] text-slate-400">
-                            Trim: {row.trim_waste_kg || 0} | Plant: {row.plant_waste_kg || 0}
+                            Trim: {formatNumber(row.trim_waste_kg)} | Plant: {formatNumber(row.plant_waste_kg)}
                           </div>
                         )}
                       </td>
                       <td className="py-3 font-mono font-bold text-slate-900 dark:text-white">
-                        {row.yield_percentage ?? 100}%
+                        {formatNumber(row.yield_percentage ?? 100)}%
                       </td>
                       <td className="py-3 font-mono">
-                        <span className={row.input_variance_kg === 0 ? 'text-emerald-500' : 'text-amber-500'}>
-                          {row.input_variance_kg > 0 ? `+${row.input_variance_kg}` : (row.input_variance_kg ?? 0)} kg
+                        <span className={Number(row.input_variance_kg) === 0 ? 'text-emerald-500' : 'text-amber-500'}>
+                          {Number(row.input_variance_kg) > 0 ? `+${formatNumber(row.input_variance_kg)}` : formatNumber(row.input_variance_kg)} kg
                         </span>
                       </td>
                     </tr>
@@ -151,35 +152,35 @@ export const ReportsPage: React.FC = () => {
             <div className="p-4 rounded-2xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
               <span className="text-[10px] uppercase font-bold text-slate-400">Total Accepted</span>
               <p className="text-xl font-black font-mono text-emerald-600 dark:text-emerald-400 mt-1">
-                {wasteData.summary?.total_accepted_kg ?? 0} kg
+                {formatNumber(wasteData.summary?.total_accepted_kg)} kg
               </p>
               <span className="text-[10px] text-slate-400">Stocked finished product</span>
             </div>
             <div className="p-4 rounded-2xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
               <span className="text-[10px] uppercase font-bold text-slate-400">1. Trim Waste</span>
               <p className="text-xl font-black font-mono text-amber-500 mt-1">
-                {wasteData.summary?.total_trim_waste_kg ?? 0} kg
+                {formatNumber(wasteData.summary?.total_trim_waste_kg)} kg
               </p>
               <span className="text-[10px] text-slate-400">Side trim & slitting scrap</span>
             </div>
             <div className="p-4 rounded-2xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
               <span className="text-[10px] uppercase font-bold text-slate-400">2. Plant Waste</span>
               <p className="text-xl font-black font-mono text-orange-500 mt-1">
-                {wasteData.summary?.total_plant_waste_kg ?? 0} kg
+                {formatNumber(wasteData.summary?.total_plant_waste_kg)} kg
               </p>
               <span className="text-[10px] text-slate-400">Purging, lumps & floor</span>
             </div>
             <div className="p-4 rounded-2xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
               <span className="text-[10px] uppercase font-bold text-slate-400">Total Scrap Loss</span>
               <p className="text-xl font-black font-mono text-rose-500 mt-1">
-                {wasteData.summary?.total_waste_kg ?? 0} kg
+                {formatNumber(wasteData.summary?.total_waste_kg)} kg
               </p>
               <span className="text-[10px] text-slate-400">Trim + Plant combined</span>
             </div>
             <div className="p-4 rounded-2xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
               <span className="text-[10px] uppercase font-bold text-slate-400">Total Rejected</span>
               <p className="text-xl font-black font-mono text-slate-600 dark:text-slate-300 mt-1">
-                {wasteData.summary?.total_rejected_kg ?? 0} kg
+                {formatNumber(wasteData.summary?.total_rejected_kg)} kg
               </p>
               <span className="text-[10px] text-slate-400">Quarantine inspection</span>
             </div>
@@ -218,19 +219,19 @@ export const ReportsPage: React.FC = () => {
                         </td>
                         <td className="py-3 text-slate-800 dark:text-slate-200">{rec.product_name}</td>
                         <td className="py-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                          {rec.accepted_kg ?? 0} kg
+                          {formatNumber(rec.accepted_kg)} kg
                         </td>
                         <td className="py-3 font-mono text-amber-500 font-semibold">
-                          {rec.trim_waste_kg ?? 0} kg
+                          {formatNumber(rec.trim_waste_kg)} kg
                         </td>
                         <td className="py-3 font-mono text-orange-500 font-semibold">
-                          {rec.plant_waste_kg ?? 0} kg
+                          {formatNumber(rec.plant_waste_kg)} kg
                         </td>
                         <td className="py-3 font-mono text-rose-500 font-bold">
-                          {rec.waste_kg ?? 0} kg
+                          {formatNumber(rec.waste_kg)} kg
                         </td>
                         <td className="py-3 font-mono text-slate-500">
-                          {rec.rejected_kg ?? 0} kg
+                          {formatNumber(rec.rejected_kg)} kg
                         </td>
                         <td className="py-3 text-slate-400">
                           {rec.recorded_at ? new Date(rec.recorded_at).toLocaleString() : 'N/A'}

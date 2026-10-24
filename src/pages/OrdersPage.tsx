@@ -1255,7 +1255,7 @@ export const OrdersPage: React.FC = () => {
                             {recipeCost > 0 && (
                               <span className="text-[10px] font-normal ml-1.5 opacity-80">
                                 ({margin >= 0 ? '+' : ''}
-                                {marginPct.toFixed(1)}%)
+                                {marginPct.toFixed(2)}%)
                               </span>
                             )}
                           </p>

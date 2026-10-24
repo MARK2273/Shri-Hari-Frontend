@@ -1513,7 +1513,7 @@ export const MaterialsPage: React.FC = () => {
             <span className="text-[10px] text-slate-400 mt-1 block">
               Resulting remaining weight:{' '}
               <strong className="font-mono">
-                {((activeBatchToAdjust?.remaining_quantity_kg || 0) + (adjustForm.adjustmentQuantityKg || 0)).toFixed(3)} kg
+                {((activeBatchToAdjust?.remaining_quantity_kg || 0) + (adjustForm.adjustmentQuantityKg || 0)).toFixed(2)} kg
               </strong>
             </span>
           </div>
