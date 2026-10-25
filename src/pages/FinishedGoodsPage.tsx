@@ -616,16 +616,28 @@ export const FinishedGoodsPage: React.FC = () => {
 
                       {/* Action */}
                       <td className="px-3.5 py-3.5 text-right whitespace-nowrap">
-                        <Link
-                          to={`/traceability?batchId=${
-                            batch.production_batch_id || batch.production_batches?.id || ''
-                          }`}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-brand-600 dark:text-brand-400 bg-brand-500/10 hover:bg-brand-500/20 rounded-lg transition-colors border border-brand-500/20"
-                          title="Trace Production Lineage"
-                        >
-                          <GitBranch className="w-3 h-3" />
-                          Trace
-                        </Link>
+                        <div className="flex items-center justify-end gap-1.5">
+                          {Number(batch.quantity_on_hand_kg) > 0 && (
+                            <Link
+                              to={`/dispatch?batchId=${batch.id}`}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-lg transition-colors border border-emerald-500/20"
+                              title="Direct Dispatch to Matching Order"
+                            >
+                              <Truck className="w-3 h-3" />
+                              Dispatch
+                            </Link>
+                          )}
+                          <Link
+                            to={`/traceability?batchId=${
+                              batch.production_batch_id || batch.production_batches?.id || ''
+                            }`}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-brand-600 dark:text-brand-400 bg-brand-500/10 hover:bg-brand-500/20 rounded-lg transition-colors border border-brand-500/20"
+                            title="Trace Production Lineage"
+                          >
+                            <GitBranch className="w-3 h-3" />
+                            Trace
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   );

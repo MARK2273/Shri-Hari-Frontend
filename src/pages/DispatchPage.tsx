@@ -1,12 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '../api/client';
-import { Truck, Plus, MapPin, Calendar, CheckCircle2, ShieldCheck } from 'lucide-react';
+import {
+  Truck,
+  Plus,
+  MapPin,
+  Calendar,
+  CheckCircle2,
+  ShieldCheck,
+  Ruler,
+  Building2,
+  Zap,
+  AlertTriangle,
+  Package,
+  Layers,
+  ArrowRight,
+} from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import { Button } from '../components/common/Button';
 import { PageSkeleton } from '../components/common/Skeleton';
 
 export const DispatchPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const urlOrderId = searchParams.get('orderId');
+  const urlBatchId = searchParams.get('batchId');
+
   const [deliveries, setDeliveries] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [fgBatches, setFgBatches] = useState<any[]>([]);
@@ -22,7 +41,7 @@ export const DispatchPage: React.FC = () => {
     notes: '',
     orderItemId: '',
     productId: '',
-    quantityKg: 194,
+    quantityKg: 100,
     finishedGoodsBatchId: '',
   });
 
@@ -35,23 +54,68 @@ export const DispatchPage: React.FC = () => {
         api.get('/finished-goods'),
       ]);
 
-      setDeliveries(delRes.data.deliveries || []);
-      setOrders(ordRes.data.orders || []);
-      setFgBatches(fgRes.data.batches || []);
+      const fetchedDeliveries = delRes.data.deliveries || [];
+      const fetchedOrders = ordRes.data.orders || [];
+      const fetchedFGs = fgRes.data.batches || [];
 
-      if (ordRes.data.orders?.length > 0) {
-        const ord = ordRes.data.orders[0];
-        const item = ord.customer_order_items?.[0] || {};
-        const availableFG = fgRes.data.batches?.find((b: any) => b.product_id === item.product_id);
+      setDeliveries(fetchedDeliveries);
+      setOrders(fetchedOrders);
+      setFgBatches(fetchedFGs);
 
-        setDispatchForm((prev) => ({
-          ...prev,
-          orderId: ord.id,
+      // Determine initial selection
+      let targetOrder = fetchedOrders[0];
+      if (urlOrderId) {
+        const found = fetchedOrders.find((o: any) => o.id === urlOrderId);
+        if (found) targetOrder = found;
+      }
+
+      if (targetOrder) {
+        const item = targetOrder.customer_order_items?.[0] || targetOrder.items?.[0] || {};
+        const orderSpec = (targetOrder.size_micron || targetOrder.sizeMicron || item.size_micron || item.sizeMicron || '').trim().toLowerCase();
+        const requestedKg = Number(item.requested_quantity_kg || targetOrder.total_requested_weight_kg || 0);
+        const dispatchedKg = Number(item.dispatched_quantity_kg || 0);
+        const remainingKg = Math.max(0, requestedKg - dispatchedKg);
+
+        // Find best batch: urlBatchId -> exact match (prod + spec) -> any prod match -> first batch
+        let selectedBatch: any = null;
+        if (urlBatchId) {
+          selectedBatch = fetchedFGs.find((b: any) => b.id === urlBatchId);
+        }
+        if (!selectedBatch) {
+          selectedBatch = fetchedFGs.find(
+            (b: any) =>
+              b.product_id === item.product_id &&
+              (b.size_micron || '').trim().toLowerCase() === orderSpec &&
+              Number(b.quantity_on_hand_kg) > 0
+          );
+        }
+        if (!selectedBatch) {
+          selectedBatch = fetchedFGs.find(
+            (b: any) => b.product_id === item.product_id && Number(b.quantity_on_hand_kg) > 0
+          );
+        }
+        if (!selectedBatch && fetchedFGs.length > 0) {
+          selectedBatch = fetchedFGs[0];
+        }
+
+        const batchOnHand = Number(selectedBatch?.quantity_on_hand_kg || 0);
+        const defaultQty = remainingKg > 0 ? Math.min(remainingKg, batchOnHand || remainingKg) : (batchOnHand || 100);
+
+        setDispatchForm({
+          orderId: targetOrder.id,
           orderItemId: item.id || '',
           productId: item.product_id || '',
-          finishedGoodsBatchId: availableFG?.id || '',
-          quantityKg: Number(availableFG?.quantity_on_hand_kg) || 194,
-        }));
+          finishedGoodsBatchId: selectedBatch?.id || '',
+          destinationAddress: targetOrder.customers?.delivery_address || targetOrder.destinationAddress || 'Factory Gate Dispatch Hub',
+          vehicleNumber: 'GJ-01-AB-1234',
+          notes: '',
+          quantityKg: defaultQty || 100,
+        });
+
+        // If URL requested an order or batch, auto-open the modal
+        if (urlOrderId || urlBatchId) {
+          setIsDispatchModalOpen(true);
+        }
       }
     } catch (err) {
       console.error('Failed to load dispatch data:', err);
@@ -62,7 +126,106 @@ export const DispatchPage: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [urlOrderId, urlBatchId]);
+
+  // Active selected order details
+  const activeOrder = useMemo(() => {
+    return orders.find((o) => o.id === dispatchForm.orderId);
+  }, [orders, dispatchForm.orderId]);
+
+  const activeOrderItem = useMemo(() => {
+    return activeOrder?.customer_order_items?.[0] || activeOrder?.items?.[0] || {};
+  }, [activeOrder]);
+
+  const activeOrderSpec = useMemo(() => {
+    return (activeOrder?.size_micron || activeOrder?.sizeMicron || activeOrderItem?.size_micron || activeOrderItem?.sizeMicron || '').trim();
+  }, [activeOrder, activeOrderItem]);
+
+  // Active selected batch details
+  const activeBatch = useMemo(() => {
+    return fgBatches.find((b) => b.id === dispatchForm.finishedGoodsBatchId);
+  }, [fgBatches, dispatchForm.finishedGoodsBatchId]);
+
+  // Group finished goods batches relative to the active order
+  const { exactMatches, productMatches, otherBatches } = useMemo(() => {
+    const exact: any[] = [];
+    const prod: any[] = [];
+    const other: any[] = [];
+
+    const targetProdId = activeOrderItem?.product_id;
+    const targetSpecLower = activeOrderSpec.toLowerCase();
+
+    fgBatches.forEach((b) => {
+      const bSpecLower = (b.size_micron || '').trim().toLowerCase();
+      const isProdMatch = targetProdId && b.product_id === targetProdId;
+      const isSpecMatch = targetSpecLower && bSpecLower === targetSpecLower;
+      const onHand = Number(b.quantity_on_hand_kg || 0);
+
+      if (isProdMatch && isSpecMatch && onHand > 0) {
+        exact.push(b);
+      } else if (isProdMatch && onHand > 0) {
+        prod.push(b);
+      } else {
+        other.push(b);
+      }
+    });
+
+    return { exactMatches: exact, productMatches: prod, otherBatches: other };
+  }, [fgBatches, activeOrderItem, activeOrderSpec]);
+
+  const isExactMatch = useMemo(() => {
+    if (!activeBatch || !activeOrder) return false;
+    const prodMatch = activeBatch.product_id === activeOrderItem?.product_id;
+    const bSpec = (activeBatch.size_micron || '').trim().toLowerCase();
+    const oSpec = activeOrderSpec.toLowerCase();
+    return prodMatch && bSpec === oSpec && bSpec.length > 0;
+  }, [activeBatch, activeOrder, activeOrderItem, activeOrderSpec]);
+
+  const isSelectedFromJobWork = useMemo(() => {
+    const op = activeBatch?.production_batches?.operator_name || activeBatch?.operator_name || '';
+    return op.toLowerCase().includes('job work') || activeBatch?.batch_number?.startsWith('FG-JW');
+  }, [activeBatch]);
+
+  const jobWorkVendorName = useMemo(() => {
+    return activeBatch?.production_batches?.operator_name || activeBatch?.operator_name || 'Job Work Vendor';
+  }, [activeBatch]);
+
+  // When order changes, re-sync order item, product, and suggest the best batch
+  const handleOrderChange = (orderId: string) => {
+    const ord = orders.find((o) => o.id === orderId);
+    if (!ord) return;
+
+    const item = ord.customer_order_items?.[0] || ord.items?.[0] || {};
+    const orderSpec = (ord.size_micron || ord.sizeMicron || item.size_micron || item.sizeMicron || '').trim().toLowerCase();
+    const reqKg = Number(item.requested_quantity_kg || ord.total_requested_weight_kg || 0);
+    const dispKg = Number(item.dispatched_quantity_kg || 0);
+    const remKg = Math.max(0, reqKg - dispKg);
+
+    // Look for exact match first
+    const exact = fgBatches.find(
+      (b) =>
+        b.product_id === item.product_id &&
+        (b.size_micron || '').trim().toLowerCase() === orderSpec &&
+        Number(b.quantity_on_hand_kg) > 0
+    );
+    const prodOnly = fgBatches.find(
+      (b) => b.product_id === item.product_id && Number(b.quantity_on_hand_kg) > 0
+    );
+    const selected = exact || prodOnly || fgBatches[0];
+
+    const batchOnHand = Number(selected?.quantity_on_hand_kg || 0);
+    const qtyToDispatch = remKg > 0 ? Math.min(remKg, batchOnHand || remKg) : (batchOnHand || 100);
+
+    setDispatchForm({
+      ...dispatchForm,
+      orderId,
+      orderItemId: item.id || '',
+      productId: item.product_id || '',
+      finishedGoodsBatchId: selected?.id || '',
+      destinationAddress: ord.customers?.delivery_address || ord.destinationAddress || dispatchForm.destinationAddress,
+      quantityKg: qtyToDispatch,
+    });
+  };
 
   const handleCreateDispatch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,9 +273,9 @@ export const DispatchPage: React.FC = () => {
             <Truck className="w-6 h-6 text-brand-500" />
             Dispatch & Delivery Management
           </h1>
-          {/* <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Confirmed dispatches deduct finished stock atomically with full lot allocation
-          </p> */}
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Directly dispatch floor inventory &amp; Job Work finished goods to customer orders matching Product &amp; Specification.
+          </p>
         </div>
         <button
           onClick={() => setIsDispatchModalOpen(true)}
@@ -125,52 +288,96 @@ export const DispatchPage: React.FC = () => {
 
       {/* Deliveries Table */}
       <div className="bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
-        <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">
-          Dispatch History ({deliveries.length})
-        </h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+            Dispatch History ({deliveries.length})
+          </h3>
+          <span className="text-xs text-slate-400">All deliveries deduct inventory atomically</span>
+        </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs min-w-[900px]">
+          <table className="w-full text-left text-xs min-w-[950px]">
             <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
               <tr>
-                <th className="px-3.5 py-3 whitespace-nowrap">Customer</th>
+                <th className="px-3.5 py-3 whitespace-nowrap">Customer & Order</th>
+                <th className="px-3.5 py-3 whitespace-nowrap">Product & Specification</th>
+                <th className="px-3.5 py-3 whitespace-nowrap">Dispatched Lot</th>
                 <th className="px-3.5 py-3 whitespace-nowrap">Destination</th>
                 <th className="px-3.5 py-3 whitespace-nowrap">Vehicle #</th>
                 <th className="px-3.5 py-3 text-right whitespace-nowrap">Dispatched Qty</th>
-                <th className="px-3.5 py-3 whitespace-nowrap">Date & Time</th>
+                <th className="px-3.5 py-3 whitespace-nowrap">Date</th>
                 <th className="px-3.5 py-3 text-center whitespace-nowrap">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
               {deliveries.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-3.5 py-8 text-center text-slate-400 text-xs">
+                  <td colSpan={8} className="px-3.5 py-8 text-center text-slate-400 text-xs">
                     No dispatch delivery notes recorded yet.
                   </td>
                 </tr>
               ) : (
-                deliveries.map((del) => (
-                  <tr key={del.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                    <td className="px-3.5 py-3.5 font-bold text-slate-800 dark:text-slate-200">
-                      {del.customers?.name || del.customer_name}
-                    </td>
-                    <td className="px-3.5 py-3.5 text-slate-500 max-w-[220px] truncate" title={del.destination_address}>
-                      {del.destination_address}
-                    </td>
-                    <td className="px-3.5 py-3.5 font-mono text-slate-600 dark:text-slate-400">
-                      {del.vehicle_number || 'N/A'}
-                    </td>
-                    <td className="px-3.5 py-3.5 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                      {del.delivery_items?.[0]?.quantity_kg || del.items?.[0]?.quantity_kg || 0} kg
-                    </td>
-                    <td className="px-3.5 py-3.5 whitespace-nowrap text-slate-500">
-                      {new Date(del.dispatch_date).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}
-                    </td>
-                    <td className="px-3.5 py-3.5 text-center">
-                      <Badge variant="success">Confirmed & Deducted</Badge>
-                    </td>
-                  </tr>
-                ))
+                deliveries.map((del) => {
+                  const delItem = del.delivery_items?.[0] || del.items?.[0] || {};
+                  const alloc = delItem.delivery_batch_allocations?.[0] || {};
+                  const fg = alloc.finished_goods_batches || {};
+                  const batchNum = fg.batch_number || 'Direct Floor Batch';
+                  const spec = fg.size_micron || 'Standard';
+                  const isJobWork = batchNum.startsWith('FG-JW');
+
+                  return (
+                    <tr key={del.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
+                      <td className="px-3.5 py-3.5 font-bold text-slate-800 dark:text-slate-200">
+                        <div>{del.customers?.name || del.customer_name}</div>
+                        <div className="text-[10px] font-mono text-slate-400 font-normal">
+                          {del.customer_orders?.order_number || del.delivery_number}
+                        </div>
+                      </td>
+                      <td className="px-3.5 py-3.5">
+                        <div className="font-semibold text-slate-800 dark:text-slate-200">
+                          {delItem.products?.name || 'Finished Product'}
+                        </div>
+                        {spec && (
+                          <div className="inline-flex items-center gap-1 font-mono text-[10px] text-indigo-600 dark:text-indigo-400">
+                            <Ruler className="w-3 h-3" />
+                            {spec}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-3.5 py-3.5 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
+                            {batchNum}
+                          </span>
+                          {isJobWork && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60">
+                              Job Work
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-3.5 py-3.5 text-slate-500 max-w-[200px] truncate" title={del.destination_address}>
+                        {del.destination_address}
+                      </td>
+                      <td className="px-3.5 py-3.5 font-mono text-slate-600 dark:text-slate-400">
+                        {del.vehicle_number || 'N/A'}
+                      </td>
+                      <td className="px-3.5 py-3.5 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                        {delItem.quantity_kg || 0} kg
+                      </td>
+                      <td className="px-3.5 py-3.5 whitespace-nowrap text-slate-500">
+                        {new Date(del.dispatch_date).toLocaleDateString(undefined, {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </td>
+                      <td className="px-3.5 py-3.5 text-center">
+                        <Badge variant="success">Confirmed & Deducted</Badge>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -181,13 +388,14 @@ export const DispatchPage: React.FC = () => {
       <Modal
         isOpen={isDispatchModalOpen}
         onClose={() => setIsDispatchModalOpen(false)}
-        title="Create & Confirm Dispatch Note"
-        maxWidth="lg"
+        title="Direct Floor Dispatch & Delivery Note"
+        maxWidth="2xl"
       >
         <form onSubmit={handleCreateDispatch} className="space-y-4">
+          {/* Step 1: Select Customer Order */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Select Customer Order
+              Select Customer Order to Fulfill
             </label>
             {orders.length === 0 ? (
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-300">
@@ -197,48 +405,79 @@ export const DispatchPage: React.FC = () => {
               <select
                 required
                 value={dispatchForm.orderId}
-                onChange={(e) => {
-                  const ord = orders.find((o) => o.id === e.target.value);
-                  const item = ord?.customer_order_items?.[0] || {};
-                  const availableFG = fgBatches.find((b) => b.product_id === item.product_id);
-                  setDispatchForm({
-                    ...dispatchForm,
-                    orderId: e.target.value,
-                    orderItemId: item.id || '',
-                    productId: item.product_id || '',
-                    finishedGoodsBatchId: availableFG?.id || '',
-                    destinationAddress: ord?.customers?.delivery_address || dispatchForm.destinationAddress,
-                  });
-                }}
+                onChange={(e) => handleOrderChange(e.target.value)}
                 className="w-full text-xs px-3 py-2.5 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl"
               >
                 <option value="" disabled>-- Select Customer Order --</option>
-                {orders.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.customers?.name || o.customer_name}
-                  </option>
-                ))}
+                {orders.map((o) => {
+                  const itm = o.customer_order_items?.[0] || o.items?.[0] || {};
+                  const pName = itm.products?.name || 'Product';
+                  const spec = o.size_micron || o.sizeMicron || itm.size_micron || itm.sizeMicron || '';
+                  const req = Number(itm.requested_quantity_kg || o.total_requested_weight_kg || 0);
+                  const disp = Number(itm.dispatched_quantity_kg || 0);
+                  const rem = Math.max(0, req - disp);
+
+                  return (
+                    <option key={o.id} value={o.id}>
+                      {o.order_number || 'Order'} • {o.customers?.name || o.customer_name} • {pName} {spec ? `(${spec})` : ''} • Remaining: {rem} kg
+                    </option>
+                  );
+                })}
               </select>
             )}
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Vehicle / Transport Number
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. GJ-01-AB-1234"
-              value={dispatchForm.vehicleNumber}
-              onChange={(e) => setDispatchForm({ ...dispatchForm, vehicleNumber: e.target.value })}
-              className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
-            />
-          </div>
+          {/* Active Order Summary Card */}
+          {activeOrder && (
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-factory-800/60 border border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    {activeOrder.customers?.name || activeOrder.customer_name}
+                  </span>
+                  <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                    {activeOrder.order_number}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-500">
+                  <span>Product: <strong className="text-slate-700 dark:text-slate-200">{activeOrderItem.products?.name || 'Finished Product'}</strong></span>
+                  {activeOrderSpec && (
+                    <span className="inline-flex items-center gap-1 font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-md border border-indigo-200/80 dark:border-indigo-800/60">
+                      <Ruler className="w-3 h-3" />
+                      {activeOrderSpec}
+                    </span>
+                  )}
+                </div>
+              </div>
 
+              <div className="text-right">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Pending Demand</span>
+                <span className="font-mono text-sm font-black text-amber-600 dark:text-amber-400">
+                  {Math.max(
+                    0,
+                    Number(activeOrderItem.requested_quantity_kg || activeOrder.total_requested_weight_kg || 0) -
+                      Number(activeOrderItem.dispatched_quantity_kg || 0)
+                  )}{' '}
+                  kg
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Select Matching Finished Goods Batch */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Allocate From Finished Goods Batch
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Allocate From Finished Goods Batch (Floor / Job Work Stock)
+              </label>
+              {exactMatches.length > 0 && (
+                <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                  <Zap className="w-3 h-3 fill-emerald-500" />
+                  {exactMatches.length} Exact Spec Match Available
+                </span>
+              )}
+            </div>
+
             {fgBatches.length === 0 ? (
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-300">
                 No finished goods batches in inventory to allocate.
@@ -247,19 +486,112 @@ export const DispatchPage: React.FC = () => {
               <select
                 required
                 value={dispatchForm.finishedGoodsBatchId}
-                onChange={(e) => setDispatchForm({ ...dispatchForm, finishedGoodsBatchId: e.target.value })}
-                className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
+                onChange={(e) => {
+                  const b = fgBatches.find((batch) => batch.id === e.target.value);
+                  const bOnHand = Number(b?.quantity_on_hand_kg || 0);
+                  const reqKg = Number(activeOrderItem.requested_quantity_kg || activeOrder?.total_requested_weight_kg || 0);
+                  const dispKg = Number(activeOrderItem.dispatched_quantity_kg || 0);
+                  const remKg = Math.max(0, reqKg - dispKg);
+
+                  setDispatchForm({
+                    ...dispatchForm,
+                    finishedGoodsBatchId: e.target.value,
+                    quantityKg: remKg > 0 ? Math.min(remKg, bOnHand || remKg) : (bOnHand || dispatchForm.quantityKg),
+                  });
+                }}
+                className="w-full text-xs px-3 py-2.5 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
               >
                 <option value="" disabled>-- Select Finished Goods Batch --</option>
-                {fgBatches.map((fg) => (
-                  <option key={fg.id} value={fg.id}>
-                    {fg.products?.name || 'Finished Goods'} (On-Hand: {fg.quantity_on_hand_kg} kg)
-                  </option>
-                ))}
+
+                {exactMatches.length > 0 && (
+                  <optgroup label="⭐ EXACT MATCH (Product + Size & Micron)">
+                    {exactMatches.map((fg) => {
+                      const op = fg.production_batches?.operator_name || fg.operator_name || '';
+                      const isJW = op.toLowerCase().includes('job work') || fg.batch_number?.startsWith('FG-JW');
+                      return (
+                        <option key={fg.id} value={fg.id}>
+                          ⭐ EXACT MATCH • Lot: {fg.batch_number} • 📏 {fg.size_micron} • {isJW ? `🏢 Job Work (${op})` : '🏭 In-House'} • Avail: {fg.quantity_on_hand_kg} kg
+                        </option>
+                      );
+                    })}
+                  </optgroup>
+                )}
+
+                {productMatches.length > 0 && (
+                  <optgroup label="⚠️ Same Product (Different Specification)">
+                    {productMatches.map((fg) => (
+                      <option key={fg.id} value={fg.id}>
+                        Lot: {fg.batch_number} • 📏 {fg.size_micron || 'Standard'} • Avail: {fg.quantity_on_hand_kg} kg
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+
+                {otherBatches.length > 0 && (
+                  <optgroup label="Other Available Inventory">
+                    {otherBatches.map((fg) => (
+                      <option key={fg.id} value={fg.id}>
+                        {fg.products?.name || 'Product'} • Lot: {fg.batch_number} • 📏 {fg.size_micron || 'Standard'} • Avail: {fg.quantity_on_hand_kg} kg
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             )}
           </div>
 
+          {/* Dynamic Match Status Banner */}
+          {activeBatch && (
+            <div
+              className={`p-3.5 rounded-xl border text-xs transition-all ${
+                isExactMatch
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-200'
+                  : 'bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-200'
+              }`}
+            >
+              <div className="flex items-start gap-2.5">
+                {isExactMatch ? (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                )}
+                <div className="space-y-1">
+                  <div className="font-bold flex items-center gap-2">
+                    <span>
+                      {isExactMatch
+                        ? 'Direct Floor Dispatch Match Confirmed!'
+                        : 'Specification Mismatch Alert'}
+                    </span>
+                    {isSelectedFromJobWork && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300">
+                        Outsourced Job Work Output
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] opacity-90 leading-relaxed">
+                    {isExactMatch ? (
+                      <>
+                        Batch <strong>{activeBatch.batch_number}</strong> matches product &amp; specification{' '}
+                        <strong>"{activeBatch.size_micron}"</strong>.{' '}
+                        {isSelectedFromJobWork
+                          ? `Ready from vendor ${jobWorkVendorName}.`
+                          : 'Ready on factory floor.'}{' '}
+                        Dispatching will fulfill this customer order directly with zero extra production wait!
+                      </>
+                    ) : (
+                      <>
+                        Order asked for specification <strong>"{activeOrderSpec || 'Standard'}"</strong>, but batch{' '}
+                        <strong>{activeBatch.batch_number}</strong> has <strong>"{activeBatch.size_micron || 'Standard'}"</strong>.
+                        Confirm client acceptance before finalizing.
+                      </>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Quantities, Destination & Vehicle */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -275,25 +607,45 @@ export const DispatchPage: React.FC = () => {
                 }
                 className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold"
               />
+              {activeBatch && (
+                <span className="text-[10px] text-slate-400 mt-1 block">
+                  Available in Lot {activeBatch.batch_number}: <strong>{activeBatch.quantity_on_hand_kg} kg</strong>
+                </span>
+              )}
             </div>
+
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Destination Address
+                Vehicle / Transport Number
               </label>
               <input
                 type="text"
-                required
-                value={dispatchForm.destinationAddress}
-                onChange={(e) => setDispatchForm({ ...dispatchForm, destinationAddress: e.target.value })}
-                className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl"
+                placeholder="e.g. GJ-01-AB-1234"
+                value={dispatchForm.vehicleNumber}
+                onChange={(e) => setDispatchForm({ ...dispatchForm, vehicleNumber: e.target.value })}
+                className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
               />
             </div>
           </div>
 
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Destination Delivery Address
+            </label>
+            <input
+              type="text"
+              required
+              value={dispatchForm.destinationAddress}
+              onChange={(e) => setDispatchForm({ ...dispatchForm, destinationAddress: e.target.value })}
+              className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl"
+            />
+          </div>
+
           <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-400">
-            ⚠️ <strong>Stock Deduction Notice:</strong> Confirming this dispatch will immediately deduct{' '}
-            <span className="font-mono font-bold">{dispatchForm.quantityKg} kg</span> from the selected finished
-            goods batch and register an irreversible delivery ledger transaction.
+            ⚠️ <strong>Atomic Stock Deduction Notice:</strong> Confirming this dispatch will immediately deduct{' '}
+            <span className="font-mono font-bold">{dispatchForm.quantityKg} kg</span> from batch{' '}
+            <span className="font-mono font-bold">{activeBatch?.batch_number || 'selected lot'}</span>, credit customer
+            order progress, and record irreversible delivery ledger entries.
           </div>
 
           <div className="pt-2 flex justify-end gap-2">

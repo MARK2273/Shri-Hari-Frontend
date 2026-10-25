@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import {
   ShoppingCart,
@@ -19,6 +20,8 @@ import {
   Ruler,
   RefreshCw,
   Search,
+  Truck,
+  Zap,
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
@@ -33,6 +36,7 @@ export const OrdersPage: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
   const [sizeMicrons, setSizeMicrons] = useState<SizeMicron[]>([]);
+  const [fgBatches, setFgBatches] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -116,23 +120,26 @@ export const OrdersPage: React.FC = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [ordRes, custRes, prdRes, matRes, smRes] = await Promise.all([
+      const [ordRes, custRes, prdRes, matRes, smRes, fgRes] = await Promise.all([
         api.get('/orders'),
         api.get('/orders/customers'),
         api.get('/products'),
         api.get('/materials'),
         api.get('/size-microns'),
+        api.get('/finished-goods'),
       ]);
       const fetchedCustomers = custRes.data.customers || [];
       const fetchedProducts = prdRes.data.products || [];
       const fetchedMaterials = matRes.data.materials || [];
       const fetchedSizeMicrons = smRes.data.sizeMicrons || [];
+      const fetchedFGs = fgRes.data.batches || [];
 
       setOrders(ordRes.data.orders || []);
       setCustomers(fetchedCustomers);
       setProducts(fetchedProducts);
       setMaterials(fetchedMaterials);
       setSizeMicrons(fetchedSizeMicrons);
+      setFgBatches(fetchedFGs);
 
       if (fetchedCustomers.length > 0 && !orderForm.customerId) {
         setOrderForm((prev) => ({ ...prev, customerId: fetchedCustomers[0].id }));
@@ -545,6 +552,74 @@ export const OrdersPage: React.FC = () => {
                       </div>
                     </div>
                   </div>
+
+                  {/* Direct Dispatch Match Finder (Job Work & Floor Stock Matching Product + Spec) */}
+                  {(() => {
+                    const targetProdId = item.product_id;
+                    const targetSpecLower = (orderSizeMicron || '').trim().toLowerCase();
+                    const pendingKg = Math.max(0, requested - dispatched);
+
+                    if (pendingKg <= 0 || !targetProdId || !targetSpecLower) return null;
+
+                    const matchedBatches = fgBatches.filter((b: any) => {
+                      const isProdMatch = b.product_id === targetProdId;
+                      const bSpecLower = (b.size_micron || '').trim().toLowerCase();
+                      return isProdMatch && bSpecLower === targetSpecLower && Number(b.quantity_on_hand_kg) > 0;
+                    });
+
+                    if (matchedBatches.length === 0) return null;
+
+                    const totalMatchedStock = matchedBatches.reduce(
+                      (sum: number, b: any) => sum + Number(b.quantity_on_hand_kg || 0),
+                      0
+                    );
+                    const bestBatch = matchedBatches[0];
+                    const isJW =
+                      (bestBatch.production_batches?.operator_name || bestBatch.operator_name || '')
+                        .toLowerCase()
+                        .includes('job work') || bestBatch.batch_number?.startsWith('FG-JW');
+                    const jwVendor =
+                      bestBatch.production_batches?.operator_name || bestBatch.operator_name || 'Job Work Vendor';
+                    const allocatableKg = Math.min(pendingKg, totalMatchedStock);
+
+                    return (
+                      <div className="mt-4 p-3.5 rounded-xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-indigo-500/10 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-start gap-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                            <Zap className="w-4 h-4 fill-white" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                                Ready in Stock for Direct Dispatch!
+                              </span>
+                              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300">
+                                {totalMatchedStock} kg available ({matchedBatches.length}{' '}
+                                {matchedBatches.length === 1 ? 'batch' : 'batches'})
+                              </span>
+                              {isJW && (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300">
+                                  From Job Work ({jwVendor})
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                              Product and exact specification <strong>"{orderSizeMicron}"</strong> are ready in floor inventory (Lot:{' '}
+                              <strong className="font-mono">{bestBatch.batch_number}</strong>). Fulfill this order directly with zero extra production wait!
+                            </p>
+                          </div>
+                        </div>
+
+                        <Link
+                          to={`/dispatch?orderId=${order.id}&batchId=${bestBatch.id}`}
+                          className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all shadow-md shadow-emerald-600/20 whitespace-nowrap self-end sm:self-center"
+                        >
+                          <Truck className="w-3.5 h-3.5" />
+                          <span>Direct Dispatch ({allocatableKg} kg)</span>
+                        </Link>
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })
