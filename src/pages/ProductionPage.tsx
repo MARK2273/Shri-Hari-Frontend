@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
-import { Factory, Plus, Play, CheckCircle2, AlertCircle, ArrowRight, Layers, User, Edit2, GitBranch, Scissors, Check } from 'lucide-react';
+import { Factory, Plus, Play, CheckCircle2, AlertCircle, ArrowRight, Layers, User, Edit2, GitBranch, Scissors, Check, Package, Ruler, Scale, Building2 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import { Button } from '../components/common/Button';
@@ -783,7 +783,7 @@ export const ProductionPage: React.FC = () => {
           ) : (
             <>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Select Customer Order
                 </label>
                 {orders.length === 0 ? (
@@ -812,17 +812,22 @@ export const ProductionPage: React.FC = () => {
                         orderId: e.target.value,
                         orderItemId: item.id || '',
                         recipeId: prod?.active_recipe?.id || '',
-                        plannedQuantityKg: Number(item.requested_quantity_kg) || 200,
+                        plannedQuantityKg: Number(item.requested_quantity_kg) || Number(ord?.total_requested_weight_kg) || 200,
                       });
                     }}
-                    className="w-full text-xs px-3 py-2.5 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
+                    className="w-full text-xs px-3 py-2.5 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium focus:ring-1 focus:ring-brand-500 focus:border-brand-500 outline-none"
                   >
                     <option value="" disabled>-- Select an active customer order --</option>
-                    {orders.map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.customers?.name || o.customer_name} ({o.total_requested_weight_kg} kg)
-                      </option>
-                    ))}
+                    {orders.map((o) => {
+                      const item = o.customer_order_items?.[0] || {};
+                      const spec = o.size_micron || o.sizeMicron || item.size_micron || item.sizeMicron || '';
+                      const weight = Number(item.requested_quantity_kg) || Number(o.total_requested_weight_kg) || 0;
+                      return (
+                        <option key={o.id} value={o.id}>
+                          {o.order_number ? `${o.order_number} • ` : ''}{o.customers?.name || o.customer_name} • {spec ? `${spec} • ` : ''}{weight} kg
+                        </option>
+                      );
+                    })}
                   </select>
                 )}
               </div>
@@ -831,18 +836,57 @@ export const ProductionPage: React.FC = () => {
                 const ord = orders.find((o) => o.id === draftForm.orderId);
                 const item = ord?.customer_order_items?.[0] || {};
                 const prod = products.find((p) => p.id === item.product_id);
+                const spec = (ord?.size_micron || ord?.sizeMicron || item.size_micron || item.sizeMicron || '').trim();
+                const requestedKg = Number(item.requested_quantity_kg) || Number(ord?.total_requested_weight_kg) || 0;
+
                 return (
-                  <div className="p-3 bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700/60 rounded-xl space-y-1.5 text-xs">
-                    <div className="flex justify-between font-bold text-slate-800 dark:text-white">
-                      <span>Product: {prod?.name || 'Selected Product'}</span>
+                  <div className="p-3.5 bg-slate-50/80 dark:bg-factory-800/60 border border-slate-200/90 dark:border-slate-700/60 rounded-xl space-y-2.5 shadow-sm">
+                    {/* Header: Product & Spec */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
+                          <Package className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-xs font-bold text-slate-900 dark:text-white block truncate">
+                            {prod?.name || 'Selected Product'}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {prod?.code || 'FINISHED-GOOD'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {spec && (
+                        <span className="inline-flex items-center gap-1 font-mono text-[11px] font-bold px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/50 shrink-0">
+                          <Ruler className="w-3.5 h-3.5" />
+                          {spec}
+                        </span>
+                      )}
                     </div>
-                    <div className="text-[11px] text-slate-500 flex justify-between">
-                      <span>Customer: {ord?.customers?.name || ord?.customer_name}</span>
-                      <span>Order Quantity: {ord?.total_requested_weight_kg || item.requested_quantity_kg || 0} kg</span>
+
+                    {/* Metadata Row */}
+                    <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/50 grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-medium">Customer</span>
+                        <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate block" title={ord?.customers?.name || ord?.customer_name}>
+                          {ord?.customers?.name || ord?.customer_name}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] text-slate-400 block font-medium">Order Demand</span>
+                        <span className="text-xs font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                          {requestedKg} kg
+                        </span>
+                      </div>
                     </div>
+
                     {prod?.active_recipe && (
-                      <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
-                        Active Formula: V{prod.active_recipe.version || 1}
+                      <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-200/40 dark:border-slate-700/40">
+                        <span className="text-slate-500 dark:text-slate-400">Resin Formulation</span>
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200/60 dark:border-emerald-800/40">
+                          Active Recipe V{prod.active_recipe.version || 1}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -851,9 +895,11 @@ export const ProductionPage: React.FC = () => {
             </>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Planned Output and Machine Operator - Perfectly Aligned */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
+                <Scale className="w-3.5 h-3.5 text-brand-500" />
                 Planned Output (kg)
               </label>
               <input
@@ -864,23 +910,24 @@ export const ProductionPage: React.FC = () => {
                 onChange={(e) =>
                   setDraftForm({ ...draftForm, plannedQuantityKg: parseFloat(e.target.value) || 0 })
                 }
-                className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
+                className="w-full h-10 text-xs px-3 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold text-slate-900 dark:text-white focus:ring-1 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all"
               />
+              <span className="text-[10px] text-slate-400 mt-1 block">Target extrusion batch weight</span>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
                 <User className="w-3.5 h-3.5 text-brand-500" />
-                Operator Name (Machine In-Charge)
+                Machine Operator
               </label>
               <input
                 type="text"
                 value={draftForm.operatorName}
                 onChange={(e) => setDraftForm({ ...draftForm, operatorName: e.target.value })}
-                placeholder="e.g. Ramesh Kumar, Operator 1"
-                className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
+                placeholder="e.g. Ramesh Kumar, Line 1"
+                className="w-full h-10 text-xs px-3 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium text-slate-900 dark:text-white focus:ring-1 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all"
               />
-              <span className="text-[10px] text-slate-400 mt-1 block">Specify who is operating or handling this run</span>
+              <span className="text-[10px] text-slate-400 mt-1 block">Operator in-charge of this run</span>
             </div>
           </div>
 
