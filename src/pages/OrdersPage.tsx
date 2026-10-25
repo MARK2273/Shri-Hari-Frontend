@@ -1464,33 +1464,33 @@ export const OrdersPage: React.FC = () => {
             const hasEnteredPrices = orderForm.items.some((it) => Number(it.sellingPricePerKg) > 0);
 
             return (
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-factory-900 to-slate-950 text-white shadow-xl border border-slate-800 space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2.5 border-b border-slate-800">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center shrink-0 border border-brand-500/30">
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500/5 via-teal-500/5 to-slate-50 dark:from-factory-800/80 dark:to-factory-800/40 border border-emerald-500/20 dark:border-emerald-500/30 space-y-3 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2.5 border-b border-slate-200/80 dark:border-slate-800">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0 border border-brand-500/20 shadow-sm">
                       <ShoppingCart className="w-4 h-4" />
                     </div>
                     <div>
-                      <span className="text-xs font-bold text-white block">
+                      <span className="text-xs font-bold text-slate-900 dark:text-white block">
                         Combined Order Summary
                       </span>
-                      <span className="text-[11px] text-slate-400">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">
                         {orderForm.items.length} {orderForm.items.length === 1 ? 'Recipe Item' : 'Recipe Items'} under this Purchase Order
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <div className="px-3 py-1 rounded-xl bg-slate-800/80 border border-slate-700/80 text-right">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Weight</span>
-                      <span className="font-mono text-xs font-black text-brand-400">
+                  <div className="flex items-center gap-2.5">
+                    <div className="px-3 py-1.5 rounded-xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-700/80 text-right shadow-xs">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 block">Total Weight</span>
+                      <span className="font-mono text-xs font-black text-slate-800 dark:text-slate-100">
                         {totalWeight.toLocaleString('en-IN')} kg
                       </span>
                     </div>
 
-                    <div className="px-3 py-1 rounded-xl bg-slate-800/80 border border-slate-700/80 text-right">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Est. Material Cost</span>
-                      <span className="font-mono text-xs font-semibold text-slate-300">
+                    <div className="px-3 py-1.5 rounded-xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-700/80 text-right shadow-xs">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 block">Est. Material Cost</span>
+                      <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-300">
                         ₹{totalCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
@@ -1499,27 +1499,27 @@ export const OrdersPage: React.FC = () => {
 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-0.5">
                   <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Est. Gross Margin</span>
+                    <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-0.5">Est. Gross Margin</span>
                     {hasEnteredPrices ? (
                       <span
                         className={`text-sm font-mono font-bold ${
-                          totalMargin >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                          totalMargin >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
                         }`}
                       >
                         {totalMargin >= 0 ? '+' : ''}₹{totalMargin.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         {totalCost > 0 && ` (${totalMargin >= 0 ? '+' : ''}${marginPct.toFixed(1)}%)`}
                       </span>
                     ) : (
-                      <span className="text-xs font-semibold text-amber-300/90 flex items-center gap-1.5 mt-0.5">
-                        <Clock className="w-3.5 h-3.5" />
+                      <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-900/50 px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5 shadow-xs">
+                        <Clock className="w-3.5 h-3.5 text-amber-500" />
                         Awaiting Selling Price Inputs
                       </span>
                     )}
                   </div>
 
                   <div className="text-left sm:text-right">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Order Value</span>
-                    <span className="font-mono text-xl font-black text-white">
+                    <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-0.5">Total Order Value</span>
+                    <span className="font-mono text-xl font-black text-slate-900 dark:text-white">
                       ₹{totalVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
