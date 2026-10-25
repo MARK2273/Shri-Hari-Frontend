@@ -9,6 +9,7 @@ import {
   CheckCircle,
   Clock,
   AlertTriangle,
+  AlertCircle,
   Search,
   RefreshCw,
   ArrowRight,
@@ -26,6 +27,7 @@ import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import { Button } from '../components/common/Button';
 import { PageSkeleton } from '../components/common/Skeleton';
+import { useToast } from '../context/ToastContext';
 import {
   JobWorker,
   JobWorkOutward,
@@ -36,11 +38,18 @@ import {
 } from '../types';
 
 export const JobWorkPage: React.FC = () => {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'orders' | 'vendors' | 'receipts' | 'outward'>('orders');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'in_progress' | 'completed'>('all');
+
+  // Inline Modal Error State
+  const [outwardError, setOutwardError] = useState<string | null>(null);
+  const [orderError, setOrderError] = useState<string | null>(null);
+  const [receiveError, setReceiveError] = useState<string | null>(null);
+  const [workerError, setWorkerError] = useState<string | null>(null);
 
   // Backend Data State
   const [workers, setWorkers] = useState<JobWorker[]>([]);
@@ -203,6 +212,7 @@ export const JobWorkPage: React.FC = () => {
   const handleOpenReceive = (order: JobWorkOrder) => {
     setSelectedOrderForReceive(order);
     const remainingToReceive = Math.max(0, order.planned_quantity_kg - order.received_quantity_kg);
+    setReceiveError(null);
     setReceiveForm({
       jobWorkOrderId: order.id,
       acceptedQuantityKg: remainingToReceive > 0 ? String(remainingToReceive) : String(order.planned_quantity_kg),
@@ -219,6 +229,7 @@ export const JobWorkPage: React.FC = () => {
   // Open Outward with pre-selected vendor
   const handleOpenOutwardForVendor = (vendorId: string) => {
     setSelectedVendorForOutward(vendorId);
+    setOutwardError(null);
     setOutwardForm((prev) => ({
       ...prev,
       vendorId: vendorId,
@@ -229,25 +240,33 @@ export const JobWorkPage: React.FC = () => {
   // 1. Submit Outward Material Challan
   const handleSubmitOutward = async (e: React.FormEvent) => {
     e.preventDefault();
+    setOutwardError(null);
+
     if (!outwardForm.vendorId || !outwardForm.materialId || !outwardForm.quantityKg) {
-      alert('Please fill all mandatory fields (Vendor, Material, Quantity).');
+      const msg = 'Please select both Vendor, Raw Material, and specify Quantity (kg).';
+      setOutwardError(msg);
+      toast.error(msg, 'Validation Error');
       return;
     }
 
     const qty = parseFloat(outwardForm.quantityKg);
     if (isNaN(qty) || qty <= 0) {
-      alert('Please enter a valid outward quantity greater than 0.');
+      const msg = 'Please enter a valid outward quantity greater than 0 kg.';
+      setOutwardError(msg);
+      toast.error(msg, 'Invalid Quantity');
       return;
     }
 
     if (outwardForm.sourceBatchId && qty > selectedBatchRemainingKg) {
-      alert(`Entered quantity (${qty} kg) exceeds remaining lot stock (${selectedBatchRemainingKg} kg).`);
+      const msg = `Entered quantity (${qty} kg) exceeds remaining lot stock (${selectedBatchRemainingKg} kg).`;
+      setOutwardError(msg);
+      toast.error(msg, 'Stock Exceeded');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await api.post('/job-work/outward', {
+      const res = await api.post('/job-work/outward', {
         vendorId: outwardForm.vendorId,
         materialId: outwardForm.materialId,
         sourceBatchId: outwardForm.sourceBatchId || undefined,
@@ -256,6 +275,12 @@ export const JobWorkPage: React.FC = () => {
         vehicleNumber: outwardForm.vehicleNumber,
         notes: outwardForm.notes,
       });
+
+      const challanNum = res.data?.outward?.challan_number || 'Challan';
+      toast.success(
+        `Dispatched ${qty.toLocaleString()} kg of raw material via ${challanNum}. Warehouse stock deducted.`,
+        'Material Dispatched Successfully'
+      );
 
       setIsOutwardModalOpen(false);
       setOutwardForm({
@@ -270,7 +295,12 @@ export const JobWorkPage: React.FC = () => {
       await fetchData();
     } catch (err: any) {
       console.error('Failed to create outward challan:', err);
-      alert(err.response?.data?.error || 'Failed to dispatch raw material to vendor.');
+      const errMsg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        'Failed to dispatch raw material to vendor.';
+      setOutwardError(errMsg);
+      toast.error(errMsg, 'Outward Dispatch Error');
     } finally {
       setIsSubmitting(false);
     }
@@ -279,20 +309,26 @@ export const JobWorkPage: React.FC = () => {
   // 2. Submit Job Work Order
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
+    setOrderError(null);
+
     if (!orderForm.vendorId || !orderForm.productId || !orderForm.plannedQuantityKg) {
-      alert('Please select Vendor, Target Product, and Planned Quantity.');
+      const msg = 'Please select Vendor, Target Product, and Planned Quantity.';
+      setOrderError(msg);
+      toast.error(msg, 'Validation Error');
       return;
     }
 
     const plannedKg = parseFloat(orderForm.plannedQuantityKg);
     if (isNaN(plannedKg) || plannedKg <= 0) {
-      alert('Planned quantity must be greater than 0 kg.');
+      const msg = 'Planned quantity must be greater than 0 kg.';
+      setOrderError(msg);
+      toast.error(msg, 'Invalid Quantity');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await api.post('/job-work/orders', {
+      const res = await api.post('/job-work/orders', {
         vendorId: orderForm.vendorId,
         productId: orderForm.productId,
         recipeId: orderForm.recipeId || undefined,
@@ -303,6 +339,12 @@ export const JobWorkPage: React.FC = () => {
         expectedDeliveryDate: orderForm.expectedDeliveryDate || undefined,
         instructions: orderForm.instructions || undefined,
       });
+
+      const orderNum = res.data?.order?.order_number || 'Order';
+      toast.success(
+        `Job work order ${orderNum} issued for ${plannedKg.toLocaleString()} kg!`,
+        'Order Placed Successfully'
+      );
 
       setIsOrderModalOpen(false);
       setOrderForm({
@@ -319,7 +361,12 @@ export const JobWorkPage: React.FC = () => {
       await fetchData();
     } catch (err: any) {
       console.error('Failed to issue job work order:', err);
-      alert(err.response?.data?.error || 'Failed to create job work order.');
+      const errMsg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        'Failed to create job work order.';
+      setOrderError(errMsg);
+      toast.error(errMsg, 'Job Work Order Error');
     } finally {
       setIsSubmitting(false);
     }
@@ -328,8 +375,12 @@ export const JobWorkPage: React.FC = () => {
   // 3. Submit Inward Finished Goods Receipt
   const handleSubmitReceive = async (e: React.FormEvent) => {
     e.preventDefault();
+    setReceiveError(null);
+
     if (!receiveForm.jobWorkOrderId || !receiveForm.acceptedQuantityKg) {
-      alert('Please enter accepted quantity.');
+      const msg = 'Please enter accepted finished goods quantity.';
+      setReceiveError(msg);
+      toast.error(msg, 'Validation Error');
       return;
     }
 
@@ -337,18 +388,22 @@ export const JobWorkPage: React.FC = () => {
     const scrapKg = parseFloat(receiveForm.scrapQuantityKg || '0');
 
     if (isNaN(acceptedKg) || acceptedKg <= 0) {
-      alert('Accepted quantity must be greater than 0 kg.');
+      const msg = 'Accepted quantity must be greater than 0 kg.';
+      setReceiveError(msg);
+      toast.error(msg, 'Invalid Quantity');
       return;
     }
 
     if (receiveForm.deliveryDestination === 'direct_customer' && !receiveForm.customerId) {
-      alert('Please select the destination customer for direct delivery.');
+      const msg = 'Please select the destination customer for direct delivery.';
+      setReceiveError(msg);
+      toast.error(msg, 'Customer Required');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await api.post('/job-work/receipts', {
+      const res = await api.post('/job-work/receipts', {
         jobWorkOrderId: receiveForm.jobWorkOrderId,
         acceptedQuantityKg: acceptedKg,
         scrapQuantityKg: isNaN(scrapKg) ? 0 : scrapKg,
@@ -359,12 +414,23 @@ export const JobWorkPage: React.FC = () => {
         notes: receiveForm.notes || undefined,
       });
 
+      const receiptNum = res.data?.receipt?.receipt_number || 'Receipt';
+      toast.success(
+        `Received ${acceptedKg.toLocaleString()} kg finished goods via ${receiptNum}. Vendor raw materials deducted!`,
+        'Goods Inward Confirmed'
+      );
+
       setIsReceiveModalOpen(false);
       setSelectedOrderForReceive(null);
       await fetchData();
     } catch (err: any) {
       console.error('Failed to receive goods:', err);
-      alert(err.response?.data?.error || 'Failed to record inward receipt.');
+      const errMsg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        'Failed to record inward receipt.';
+      setReceiveError(errMsg);
+      toast.error(errMsg, 'Inward Receipt Error');
     } finally {
       setIsSubmitting(false);
     }
@@ -373,8 +439,12 @@ export const JobWorkPage: React.FC = () => {
   // 4. Submit Job Worker
   const handleSubmitWorker = async (e: React.FormEvent) => {
     e.preventDefault();
+    setWorkerError(null);
+
     if (!workerForm.name.trim()) {
-      alert('Please enter vendor / processor company name.');
+      const msg = 'Please enter vendor / processor company name.';
+      setWorkerError(msg);
+      toast.error(msg, 'Name Required');
       return;
     }
 
@@ -388,6 +458,11 @@ export const JobWorkPage: React.FC = () => {
         address: workerForm.address,
       });
 
+      toast.success(
+        `Processor "${workerForm.name}" registered successfully!`,
+        'Job Worker Added'
+      );
+
       setIsWorkerModalOpen(false);
       setWorkerForm({
         name: '',
@@ -399,7 +474,12 @@ export const JobWorkPage: React.FC = () => {
       await fetchData();
     } catch (err: any) {
       console.error('Failed to register worker:', err);
-      alert(err.response?.data?.error || 'Failed to register job worker.');
+      const errMsg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        'Failed to register job worker.';
+      setWorkerError(errMsg);
+      toast.error(errMsg, 'Registration Error');
     } finally {
       setIsSubmitting(false);
     }
@@ -1138,7 +1218,10 @@ export const JobWorkPage: React.FC = () => {
       {/* MODAL 1: SEND MATERIAL OUTWARD CHALLAN */}
       <Modal
         isOpen={isOutwardModalOpen}
-        onClose={() => setIsOutwardModalOpen(false)}
+        onClose={() => {
+          setIsOutwardModalOpen(false);
+          setOutwardError(null);
+        }}
         title="Send Raw Material to Vendor (Outward Challan)"
         maxWidth="lg"
       >
@@ -1149,7 +1232,10 @@ export const JobWorkPage: React.FC = () => {
             </label>
             <select
               value={outwardForm.vendorId}
-              onChange={(e) => setOutwardForm({ ...outwardForm, vendorId: e.target.value })}
+              onChange={(e) => {
+                setOutwardError(null);
+                setOutwardForm({ ...outwardForm, vendorId: e.target.value });
+              }}
               required
               className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
@@ -1170,10 +1256,15 @@ export const JobWorkPage: React.FC = () => {
               <select
                 value={outwardForm.materialId}
                 onChange={(e) => {
+                  const selectedMatId = e.target.value;
+                  const available = materialBatches.filter(
+                    (b) => b.material_id === selectedMatId && (b.remaining_quantity_kg || 0) > 0
+                  );
+                  setOutwardError(null);
                   setOutwardForm({
                     ...outwardForm,
-                    materialId: e.target.value,
-                    sourceBatchId: '',
+                    materialId: selectedMatId,
+                    sourceBatchId: available[0]?.id || '',
                   });
                 }}
                 required
@@ -1194,11 +1285,18 @@ export const JobWorkPage: React.FC = () => {
               </label>
               <select
                 value={outwardForm.sourceBatchId}
-                onChange={(e) => setOutwardForm({ ...outwardForm, sourceBatchId: e.target.value })}
+                onChange={(e) => {
+                  setOutwardError(null);
+                  setOutwardForm({ ...outwardForm, sourceBatchId: e.target.value });
+                }}
                 disabled={!outwardForm.materialId}
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
               >
-                <option value="">-- Optional: Specific Lot --</option>
+                <option value="">
+                  {availableBatchesForSelectedMat.length > 0
+                    ? '-- Auto-select lot from warehouse --'
+                    : '-- No lots with stock in warehouse --'}
+                </option>
                 {availableBatchesForSelectedMat.map((b) => (
                   <option key={b.id} value={b.id}>
                     Lot {b.batch_number} ({b.remaining_quantity_kg} kg left)
@@ -1218,7 +1316,10 @@ export const JobWorkPage: React.FC = () => {
                 min="1"
                 step="any"
                 value={outwardForm.quantityKg}
-                onChange={(e) => setOutwardForm({ ...outwardForm, quantityKg: e.target.value })}
+                onChange={(e) => {
+                  setOutwardError(null);
+                  setOutwardForm({ ...outwardForm, quantityKg: e.target.value });
+                }}
                 placeholder="e.g. 1000"
                 required
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -1271,8 +1372,22 @@ export const JobWorkPage: React.FC = () => {
             </div>
           </div>
 
+          {outwardError && (
+            <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2.5 animate-fade-in">
+              <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+              <span className="font-semibold leading-relaxed">{outwardError}</span>
+            </div>
+          )}
+
           <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
-            <Button variant="outline" type="button" onClick={() => setIsOutwardModalOpen(false)}>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => {
+                setIsOutwardModalOpen(false);
+                setOutwardError(null);
+              }}
+            >
               Cancel
             </Button>
             <Button variant="primary" type="submit" disabled={isSubmitting}>
@@ -1473,8 +1588,22 @@ export const JobWorkPage: React.FC = () => {
             />
           </div>
 
+          {orderError && (
+            <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2.5 animate-fade-in">
+              <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+              <span className="font-semibold leading-relaxed">{orderError}</span>
+            </div>
+          )}
+
           <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
-            <Button variant="outline" type="button" onClick={() => setIsOrderModalOpen(false)}>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => {
+                setIsOrderModalOpen(false);
+                setOrderError(null);
+              }}
+            >
               Cancel
             </Button>
             <Button variant="primary" type="submit" disabled={isSubmitting}>
@@ -1690,6 +1819,13 @@ export const JobWorkPage: React.FC = () => {
             </div>
           </div>
 
+          {receiveError && (
+            <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2.5 animate-fade-in">
+              <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+              <span className="font-semibold leading-relaxed">{receiveError}</span>
+            </div>
+          )}
+
           <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
             <Button
               variant="outline"
@@ -1697,6 +1833,7 @@ export const JobWorkPage: React.FC = () => {
               onClick={() => {
                 setIsReceiveModalOpen(false);
                 setSelectedOrderForReceive(null);
+                setReceiveError(null);
               }}
             >
               Cancel
@@ -1711,7 +1848,10 @@ export const JobWorkPage: React.FC = () => {
       {/* MODAL 4: REGISTER JOB WORKER (PROCESSOR) */}
       <Modal
         isOpen={isWorkerModalOpen}
-        onClose={() => setIsWorkerModalOpen(false)}
+        onClose={() => {
+          setIsWorkerModalOpen(false);
+          setWorkerError(null);
+        }}
         title="Register Job Worker / Processor"
         maxWidth="md"
       >
@@ -1784,8 +1924,22 @@ export const JobWorkPage: React.FC = () => {
             />
           </div>
 
+          {workerError && (
+            <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2.5 animate-fade-in">
+              <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+              <span className="font-semibold leading-relaxed">{workerError}</span>
+            </div>
+          )}
+
           <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
-            <Button variant="outline" type="button" onClick={() => setIsWorkerModalOpen(false)}>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => {
+                setIsWorkerModalOpen(false);
+                setWorkerError(null);
+              }}
+            >
               Cancel
             </Button>
             <Button variant="primary" type="submit" disabled={isSubmitting}>
