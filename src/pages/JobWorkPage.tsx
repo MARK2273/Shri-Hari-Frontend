@@ -212,14 +212,63 @@ export const JobWorkPage: React.FC = () => {
   const selectedProductRecipes = useMemo(() => {
     if (!orderForm.productId) return [];
     const prod = products.find((p) => p.id === orderForm.productId);
-    return prod?.recipes || [];
+    return prod?.product_recipes || prod?.recipes || [];
   }, [products, orderForm.productId]);
 
   // Selected recipe formulation details
   const selectedRecipe = useMemo(() => {
-    if (!orderForm.recipeId) return null;
-    return selectedProductRecipes.find((r: any) => r.id === orderForm.recipeId) || null;
-  }, [selectedProductRecipes, orderForm.recipeId]);
+    if (!orderForm.productId) return null;
+    if (orderForm.recipeId) {
+      return selectedProductRecipes.find((r: any) => r.id === orderForm.recipeId) || null;
+    }
+    return selectedProductRecipes.find((r: any) => r.is_active) || selectedProductRecipes[0] || null;
+  }, [selectedProductRecipes, orderForm.recipeId, orderForm.productId]);
+
+  // Real-time recipe material stock validation for selected vendor
+  const materialValidation = useMemo(() => {
+    if (!orderForm.vendorId || !selectedRecipe) {
+      return { items: [], hasShortage: false, isReady: false };
+    }
+
+    const plannedKg = parseFloat(orderForm.plannedQuantityKg) || 0;
+    const vendorBal = vendorBalances.find((v) => v.vendor_id === orderForm.vendorId);
+    const vendorMaterials = vendorBal?.materials || [];
+
+    const recipeItems = selectedRecipe.product_recipe_items || selectedRecipe.recipe_items || [];
+    if (recipeItems.length === 0) {
+      return { items: [], hasShortage: false, isReady: plannedKg > 0 };
+    }
+
+    const items = recipeItems.map((item: any) => {
+      const mat = materials.find((m) => m.id === item.material_id);
+      const matName = mat?.name || item.materials?.name || item.material_name || 'Raw Material';
+      const percentage = Number(item.percentage) || 100;
+      const requiredKg = Number(((percentage / 100) * (plannedKg > 0 ? plannedKg : 0)).toFixed(2));
+
+      // What the vendor currently holds in hand
+      const vendorMat = vendorMaterials.find((vm) => vm.material_id === item.material_id);
+      const inHandKg = Number((vendorMat?.balance_kg || 0).toFixed(2));
+      const hasEnough = inHandKg > 0 && (plannedKg > 0 ? inHandKg >= requiredKg : true);
+      const deficitKg = Number(Math.max(0, requiredKg - inHandKg).toFixed(2));
+
+      return {
+        materialId: item.material_id,
+        materialName: matName,
+        percentage,
+        requiredKg,
+        inHandKg,
+        deficitKg,
+        hasEnough,
+      };
+    });
+
+    const hasShortage = items.some((it: any) => !it.hasEnough);
+    return {
+      items,
+      hasShortage,
+      isReady: plannedKg > 0,
+    };
+  }, [orderForm.vendorId, selectedRecipe, orderForm.plannedQuantityKg, vendorBalances, materials]);
 
   // Handle open receive modal
   const handleOpenReceive = (order: JobWorkOrder) => {
@@ -336,6 +385,17 @@ export const JobWorkPage: React.FC = () => {
       const msg = 'Planned quantity must be greater than 0 kg.';
       setOrderError(msg);
       toast.error(msg, 'Invalid Quantity');
+      return;
+    }
+
+    if (materialValidation.hasShortage) {
+      const shortageDetails = materialValidation.items
+        .filter((it: any) => !it.hasEnough)
+        .map((it: any) => `${it.materialName} (Need: ${it.requiredKg} kg, In Hand: ${it.inHandKg} kg)`)
+        .join(', ');
+      const msg = `Cannot assign order: Selected job worker does not hold the required materials in hand (${shortageDetails}). Please dispatch material outward first.`;
+      setOrderError(msg);
+      toast.error(msg, 'Material Stock Shortage');
       return;
     }
 
@@ -1501,25 +1561,127 @@ export const JobWorkPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Recipe Breakdown Banner */}
-          {selectedRecipe && selectedRecipe.recipe_items?.length > 0 && (
-            <div className="p-3 bg-brand-50/50 dark:bg-brand-950/20 border border-brand-100 dark:border-brand-900/40 rounded-xl">
-              <span className="text-xs font-bold text-brand-800 dark:text-brand-300 flex items-center gap-1.5 mb-1.5">
-                <Percent className="w-3.5 h-3.5" />
-                Recipe Formulation Composition:
-              </span>
-              <div className="flex flex-wrap gap-2 text-xs">
-                {selectedRecipe.recipe_items.map((it: any, idx: number) => {
-                  const mName = materials.find((m) => m.id === it.material_id)?.name || 'Polymer';
-                  return (
-                    <span
-                      key={idx}
-                      className="px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
-                    >
-                      {mName}: <strong>{it.percentage}%</strong>
-                    </span>
-                  );
-                })}
+          {/* Recipe Formulation & Real-Time Vendor Stock Availability Check */}
+          {selectedRecipe && (
+            <div
+              className={`p-4 rounded-2xl border transition-all ${
+                orderForm.vendorId && materialValidation.hasShortage
+                  ? 'bg-rose-50/90 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/60'
+                  : orderForm.vendorId && materialValidation.items.length > 0
+                  ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900/60'
+                  : 'bg-brand-50/50 dark:bg-brand-950/20 border-brand-100 dark:border-brand-900/40'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span
+                  className={`text-xs font-black uppercase tracking-wider flex items-center gap-1.5 ${
+                    orderForm.vendorId && materialValidation.hasShortage
+                      ? 'text-rose-700 dark:text-rose-300'
+                      : orderForm.vendorId && materialValidation.items.length > 0
+                      ? 'text-emerald-700 dark:text-emerald-300'
+                      : 'text-brand-800 dark:text-brand-300'
+                  }`}
+                >
+                  {orderForm.vendorId && materialValidation.hasShortage ? (
+                    <>
+                      <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+                      <span>Material Shortage: Cannot Assign Job Work</span>
+                    </>
+                  ) : orderForm.vendorId && materialValidation.items.length > 0 ? (
+                    <>
+                      <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+                      <span>Vendor Stock Verified: Ready to Produce</span>
+                    </>
+                  ) : (
+                    <>
+                      <Percent className="w-3.5 h-3.5" />
+                      <span>Recipe Formulation Composition</span>
+                    </>
+                  )}
+                </span>
+
+                {orderForm.vendorId && materialValidation.hasShortage && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOrderModalOpen(false);
+                      handleOpenOutwardForVendor(orderForm.vendorId);
+                    }}
+                    className="text-[11px] font-bold text-rose-700 dark:text-rose-300 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Send className="w-3 h-3" /> Send Materials Outward
+                  </button>
+                )}
+              </div>
+
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 mb-2.5">
+                {orderForm.vendorId && materialValidation.hasShortage
+                  ? 'This job worker does not hold the raw material stock required for this recipe. Job work cannot be assigned to them until material is dispatched.'
+                  : orderForm.vendorId && materialValidation.items.length > 0
+                  ? 'This vendor holds all required recipe ingredients in hand to produce the requested batch quantity.'
+                  : 'Select a vendor and enter planned quantity to verify if the vendor holds sufficient material stock.'}
+              </p>
+
+              {/* Breakdown per ingredient */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {materialValidation.items.map((it: any) => (
+                  <div
+                    key={it.materialId}
+                    className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${
+                      !orderForm.vendorId
+                        ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                        : it.hasEnough
+                        ? 'bg-white/80 dark:bg-slate-800/80 border-emerald-200/80 dark:border-emerald-800/60'
+                        : 'bg-white/80 dark:bg-slate-800/80 border-rose-200/80 dark:border-rose-800/60'
+                    }`}
+                  >
+                    <div>
+                      <span className="font-bold text-slate-900 dark:text-white block">
+                        {it.materialName} ({it.percentage}%)
+                      </span>
+                      <span className="text-[11px] text-slate-500">
+                        {orderForm.plannedQuantityKg && Number(orderForm.plannedQuantityKg) > 0 ? (
+                          <>
+                            Required: <strong className="font-mono">{it.requiredKg} kg</strong>
+                          </>
+                        ) : (
+                          <span className="italic text-slate-400">Enter planned kg</span>
+                        )}
+                      </span>
+                    </div>
+
+                    <div className="text-right">
+                      {orderForm.vendorId ? (
+                        <>
+                          <span
+                            className={`text-[11px] font-bold block font-mono ${
+                              it.hasEnough
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : 'text-rose-600 dark:text-rose-400'
+                            }`}
+                          >
+                            In Hand: {it.inHandKg} kg
+                          </span>
+                          {it.inHandKg === 0 ? (
+                            <span className="text-[10px] font-extrabold text-rose-500 uppercase">
+                              Zero Stock ✗
+                            </span>
+                          ) : it.deficitKg > 0 ? (
+                            <span className="text-[10px] font-extrabold text-rose-500 uppercase">
+                              Deficit: -{it.deficitKg} kg
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">
+                              In Hand ✓
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-[11px] text-slate-400">Select Vendor</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -1702,8 +1864,17 @@ export const JobWorkPage: React.FC = () => {
             >
               Cancel
             </Button>
-            <Button variant="primary" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Placing Order...' : 'Issue Job Work Order'}
+            <Button
+              variant="primary"
+              type="submit"
+              disabled={isSubmitting || (materialValidation.isReady && materialValidation.hasShortage)}
+              className={materialValidation.isReady && materialValidation.hasShortage ? 'opacity-60 cursor-not-allowed bg-rose-600 hover:bg-rose-600' : ''}
+            >
+              {materialValidation.isReady && materialValidation.hasShortage
+                ? 'Cannot Issue (Material Shortage)'
+                : isSubmitting
+                ? 'Placing Order...'
+                : 'Issue Job Work Order'}
             </Button>
           </div>
         </form>
