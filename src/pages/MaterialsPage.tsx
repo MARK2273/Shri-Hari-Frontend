@@ -588,23 +588,23 @@ export const MaterialsPage: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <button
+          {/* <button
             onClick={handleOpenCreateMaterial}
             className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-factory-800 transition-colors shadow-sm"
           >
             <Plus className="w-4 h-4 text-brand-500" />
             Configure Plastic Type
-          </button>
+          </button> */}
 
-          <button
+          {/* <button
             onClick={handleOpenCreateSupplier}
             className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-factory-800 transition-colors shadow-sm"
           >
             <Truck className="w-4 h-4 text-brand-500" />
             Add Vendor
-          </button>
+          </button> */}
 
-          <button
+          {/* <button
             onClick={() => {
               setActiveTab('sizes');
               handleOpenCreateSize();
@@ -613,7 +613,7 @@ export const MaterialsPage: React.FC = () => {
           >
             <Ruler className="w-4 h-4 text-brand-500" />
             Add Size & Micron
-          </button>
+          </button> */}
 
           <button
             onClick={() => {
@@ -1164,11 +1164,10 @@ export const MaterialsPage: React.FC = () => {
                   key={mode}
                   type="button"
                   onClick={() => setSizeStatusFilter(mode)}
-                  className={`px-3 py-1 text-[11px] font-bold rounded-lg capitalize transition-colors ${
-                    sizeStatusFilter === mode
-                      ? 'bg-white dark:bg-factory-900 text-brand-600 dark:text-brand-400 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                  }`}
+                  className={`px-3 py-1 text-[11px] font-bold rounded-lg capitalize transition-colors ${sizeStatusFilter === mode
+                    ? 'bg-white dark:bg-factory-900 text-brand-600 dark:text-brand-400 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                    }`}
                 >
                   {mode}
                 </button>
