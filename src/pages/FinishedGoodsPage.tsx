@@ -39,9 +39,9 @@ export const FinishedGoodsPage: React.FC = () => {
             <PackageCheck className="w-6 h-6 text-brand-500" />
             Finished Goods Inventory
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          {/* <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Maintained separately from raw plastic. Decreases when dispatches are confirmed.
-          </p>
+          </p> */}
         </div>
         <Link
           to="/dispatch"

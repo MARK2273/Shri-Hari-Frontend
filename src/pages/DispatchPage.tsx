@@ -110,9 +110,9 @@ export const DispatchPage: React.FC = () => {
             <Truck className="w-6 h-6 text-brand-500" />
             Dispatch & Delivery Management
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          {/* <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Confirmed dispatches deduct finished stock atomically with full lot allocation
-          </p>
+          </p> */}
         </div>
         <button
           onClick={() => setIsDispatchModalOpen(true)}

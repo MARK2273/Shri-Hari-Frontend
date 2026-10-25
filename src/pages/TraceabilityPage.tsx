@@ -86,9 +86,9 @@ export const TraceabilityPage: React.FC = () => {
           <GitBranch className="w-6 h-6 text-brand-500" />
           End-to-End Batch Traceability
         </h1>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+        {/* <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
           Full 360° audit trail connecting customer order demand, raw plastic supplier lots, production run yields, and finished goods inventory.
-        </p>
+        </p> */}
       </div>
 
       {/* Select Run Dropdown & Search Bar */}
@@ -260,9 +260,9 @@ export const TraceabilityPage: React.FC = () => {
                   <ShieldCheck className="w-4 h-4 text-emerald-500" />
                   Raw Material Lot Lineage & Batch Contribution
                 </h3>
-                <p className="text-[11px] text-slate-400 mt-0.5">
+                {/* <p className="text-[11px] text-slate-400 mt-0.5">
                   Detailed breakdown of raw material lots consumed into this production run
-                </p>
+                </p> */}
               </div>
               <div className="text-xs font-mono text-slate-500 dark:text-slate-400">
                 Formula: V{traceData.product_recipes?.version || 1}

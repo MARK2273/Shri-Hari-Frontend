@@ -45,40 +45,37 @@ export const ReportsPage: React.FC = () => {
           <BarChart3 className="w-6 h-6 text-brand-500" />
           Factory Analytics & Audit Ledger
         </h1>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+        {/* <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
           Production variance (planned vs actual), scrap loss metrics, and tamper-proof user audit trails
-        </p>
+        </p> */}
       </div>
 
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto whitespace-nowrap">
         <button
           onClick={() => setActiveTab('variance')}
-          className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors ${
-            activeTab === 'variance'
+          className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors ${activeTab === 'variance'
               ? 'bg-brand-500 text-white shadow-sm shadow-brand-500/25'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-factory-800'
-          }`}
+            }`}
         >
           Production Variance
         </button>
         <button
           onClick={() => setActiveTab('waste')}
-          className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors ${
-            activeTab === 'waste'
+          className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors ${activeTab === 'waste'
               ? 'bg-brand-500 text-white shadow-sm shadow-brand-500/25'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-factory-800'
-          }`}
+            }`}
         >
           Waste & Scrap Metrics
         </button>
         <button
           onClick={() => setActiveTab('audit')}
-          className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors ${
-            activeTab === 'audit'
+          className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors ${activeTab === 'audit'
               ? 'bg-brand-500 text-white shadow-sm shadow-brand-500/25'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-factory-800'
-          }`}
+            }`}
         >
           Audit Ledger
         </button>

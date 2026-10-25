@@ -273,9 +273,6 @@ export const ProductionPage: React.FC = () => {
             <Factory className="w-6 h-6 text-brand-500" />
             Production Batches & Recipe Execution
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Order-linked batch manufacturing with lot-by-lot raw plastic consumption & finished goods generation
-          </p>
         </div>
         <button
           onClick={openDraftModal}

@@ -14,7 +14,6 @@ import {
   Building2,
   Compass,
   X,
-  Ruler,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTour } from '../../context/TourContext';
@@ -32,7 +31,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Raw Materials & Batches', href: '/materials', icon: Layers },
     { name: 'Products & Recipes', href: '/products', icon: FlaskConical },
-    { name: 'Size & Micron', href: '/size-microns', icon: Ruler },
     { name: 'Customer Orders', href: '/orders', icon: ShoppingCart },
     { name: 'Production Runs', href: '/production', icon: Factory },
     { name: 'Finished Goods', href: '/finished-goods', icon: PackageCheck },
@@ -110,7 +108,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
       </nav>
 
       {/* Guided Tour Launcher in Sidebar */}
-      <div className="px-3 pb-3 shrink-0">
+      {/* <div className="px-3 pb-3 shrink-0">
         <button
           onClick={() => {
             openTour(0);
@@ -123,16 +121,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
           <Compass className="w-4 h-4 text-brand-500" />
           <span className="truncate">Factory Workflow Tour</span>
         </button>
-      </div>
+      </div> */}
 
       {/* User Card & Logout */}
       <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-factory-950/30 shrink-0">
-        <div className="flex items-center justify-between mb-3">
+        {/* <div className="flex items-center justify-between mb-3">
           <div className="truncate">
             <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{user?.full_name}</p>
             <p className="text-[10px] text-slate-500 dark:text-slate-400 capitalize">{user?.role?.replace('_', ' ')}</p>
           </div>
-        </div>
+        </div> */}
         <button
           onClick={logout}
           className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 rounded-xl transition-colors"

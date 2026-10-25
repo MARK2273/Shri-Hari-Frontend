@@ -19,12 +19,13 @@ import {
   Mail,
   MapPin,
   Search,
+  Ruler,
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import { Button } from '../components/common/Button';
 import { PageSkeleton } from '../components/common/Skeleton';
-import { Supplier } from '../types';
+import { Supplier, SizeMicron } from '../types';
 
 interface ReceiveItemRow {
   id: string;
@@ -45,7 +46,7 @@ const createEmptyReceiveItem = (matId = ''): ReceiveItemRow => ({
 });
 
 export const MaterialsPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'batches' | 'catalog' | 'suppliers'>('batches');
+  const [activeTab, setActiveTab] = useState<'batches' | 'catalog' | 'suppliers' | 'sizes'>('batches');
   const [materials, setMaterials] = useState<any[]>([]);
   const [batches, setBatches] = useState<any[]>([]);
   const [selectedMaterial, setSelectedMaterial] = useState<string>('all');
@@ -65,6 +66,22 @@ export const MaterialsPage: React.FC = () => {
   const [supplierToEdit, setSupplierToEdit] = useState<Supplier | null>(null);
   const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
   const [supplierSearchQuery, setSupplierSearchQuery] = useState('');
+
+  // Size & Micron Master states
+  const [sizeMicrons, setSizeMicrons] = useState<SizeMicron[]>([]);
+  const [isSizeModalOpen, setIsSizeModalOpen] = useState(false);
+  const [sizeToEdit, setSizeToEdit] = useState<SizeMicron | null>(null);
+  const [sizeToDelete, setSizeToDelete] = useState<SizeMicron | null>(null);
+  const [sizeSearchQuery, setSizeSearchQuery] = useState('');
+  const [sizeStatusFilter, setSizeStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [sizeForm, setSizeForm] = useState({
+    size: '',
+    micron: 50,
+    unit: 'Micron',
+    label: '50 Micron',
+    description: '',
+    isActive: true,
+  });
 
   // Form state for Supplier / Vendor (Create/Edit - code is auto-generated)
   const [supplierForm, setSupplierForm] = useState({
@@ -104,15 +121,17 @@ export const MaterialsPage: React.FC = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [matRes, batchRes, supRes] = await Promise.all([
+      const [matRes, batchRes, supRes, smRes] = await Promise.all([
         api.get('/materials'),
         api.get('/materials/batches'),
         api.get('/materials/suppliers').catch(() => ({ data: { suppliers: [] } })),
+        api.get('/size-microns').catch(() => ({ data: { sizeMicrons: [] } })),
       ]);
       const fetchedMaterials = matRes.data.materials || [];
       setMaterials(fetchedMaterials);
       setBatches(batchRes.data.batches || []);
       setSuppliers(supRes.data?.suppliers || []);
+      setSizeMicrons(smRes.data?.sizeMicrons || []);
 
       if (fetchedMaterials.length > 0) {
         setReceiveForm((prev) => ({
@@ -130,9 +149,127 @@ export const MaterialsPage: React.FC = () => {
     }
   };
 
+  const fetchSizeMicrons = async () => {
+    try {
+      const res = await api.get('/size-microns');
+      setSizeMicrons(res.data?.sizeMicrons || []);
+    } catch (err) {
+      console.error('Failed to load size microns:', err);
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Size & Micron Handlers
+  const handleOpenCreateSize = () => {
+    setSizeToEdit(null);
+    setSizeForm({
+      size: '',
+      micron: 50,
+      unit: 'Micron',
+      label: '50 Micron',
+      description: '',
+      isActive: true,
+    });
+    setIsSizeModalOpen(true);
+  };
+
+  const handleOpenEditSize = (item: SizeMicron) => {
+    setSizeToEdit(item);
+    setSizeForm({
+      size: item.size || '',
+      micron: Number(item.micron) || 50,
+      unit: item.unit || 'Micron',
+      label: item.label,
+      description: item.description || '',
+      isActive: item.is_active !== false,
+    });
+    setIsSizeModalOpen(true);
+  };
+
+  const handleUpdateSizeField = (field: string, value: any) => {
+    setSizeForm((prev) => {
+      const updated = { ...prev, [field]: value };
+      if (field === 'size' || field === 'micron' || field === 'unit') {
+        const sizePart = (field === 'size' ? value : updated.size)?.trim();
+        const micronPart = field === 'micron' ? value : updated.micron;
+        const unitPart = (field === 'unit' ? value : updated.unit)?.trim() || 'Micron';
+        if (sizePart && sizePart !== 'Standard' && sizePart !== 'Standard Roll') {
+          updated.label = `${sizePart} - ${micronPart} ${unitPart}`;
+        } else {
+          updated.label = `${micronPart} ${unitPart}`;
+        }
+      }
+      return updated;
+    });
+  };
+
+  const handleSaveSize = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sizeForm.micron || Number(sizeForm.micron) <= 0) {
+      alert('Please enter a valid positive micron thickness.');
+      return;
+    }
+    const finalLabel =
+      sizeForm.label.trim() ||
+      (sizeForm.size.trim() ? `${sizeForm.size.trim()} - ${sizeForm.micron} ${sizeForm.unit}` : `${sizeForm.micron} ${sizeForm.unit}`);
+
+    setIsSubmitting(true);
+    try {
+      if (sizeToEdit) {
+        await api.put(`/size-microns/${sizeToEdit.id}`, {
+          label: finalLabel,
+          size: sizeForm.size.trim() || 'Standard',
+          micron: Number(sizeForm.micron),
+          unit: sizeForm.unit.trim() || 'Micron',
+          description: sizeForm.description.trim(),
+          isActive: sizeForm.isActive,
+        });
+      } else {
+        await api.post('/size-microns', {
+          label: finalLabel,
+          size: sizeForm.size.trim() || 'Standard',
+          micron: Number(sizeForm.micron),
+          unit: sizeForm.unit.trim() || 'Micron',
+          description: sizeForm.description.trim(),
+          isActive: sizeForm.isActive,
+        });
+      }
+      setIsSizeModalOpen(false);
+      await fetchSizeMicrons();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to save size / micron specification');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleToggleSizeActive = async (item: SizeMicron) => {
+    try {
+      await api.put(`/size-microns/${item.id}`, {
+        isActive: !item.is_active,
+      });
+      await fetchSizeMicrons();
+    } catch (err) {
+      alert('Failed to update status.');
+    }
+  };
+
+  const confirmDeleteSize = async () => {
+    if (!sizeToDelete) return;
+    setIsSubmitting(true);
+    try {
+      await api.delete(`/size-microns/${sizeToDelete.id}`);
+      setSizeToDelete(null);
+      await fetchSizeMicrons();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to delete specification');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // Open modal to create a new plastic type
   const handleOpenCreateMaterial = () => {
@@ -422,6 +559,19 @@ export const MaterialsPage: React.FC = () => {
     );
   });
 
+  const filteredSizeMicrons = sizeMicrons.filter((item) => {
+    if (sizeStatusFilter === 'active' && !item.is_active) return false;
+    if (sizeStatusFilter === 'inactive' && item.is_active) return false;
+    if (!sizeSearchQuery.trim()) return true;
+    const q = sizeSearchQuery.toLowerCase().trim();
+    return (
+      item.label.toLowerCase().includes(q) ||
+      (item.size && item.size.toLowerCase().includes(q)) ||
+      (item.description && item.description.toLowerCase().includes(q)) ||
+      String(item.micron).includes(q)
+    );
+  });
+
   if (isLoading) {
     return <PageSkeleton type="table" />;
   }
@@ -456,6 +606,17 @@ export const MaterialsPage: React.FC = () => {
 
           <button
             onClick={() => {
+              setActiveTab('sizes');
+              handleOpenCreateSize();
+            }}
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-factory-800 transition-colors shadow-sm"
+          >
+            <Ruler className="w-4 h-4 text-brand-500" />
+            Add Size & Micron
+          </button>
+
+          <button
+            onClick={() => {
               if (materials.length === 0) {
                 handleOpenCreateMaterial();
               } else {
@@ -480,7 +641,7 @@ export const MaterialsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabs Switcher: Batches vs Plastic Types vs Vendors */}
+      {/* Tabs Switcher: Batches vs Plastic Types vs Vendors vs Size & Micron */}
       <div className="flex border-b border-slate-200 dark:border-slate-800 gap-3 sm:gap-6 overflow-x-auto whitespace-nowrap">
         <button
           onClick={() => setActiveTab('batches')}
@@ -513,6 +674,17 @@ export const MaterialsPage: React.FC = () => {
         >
           <Truck className="w-4 h-4" />
           <span>Vendors / Suppliers ({suppliers.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('sizes')}
+          className={`pb-3 text-xs font-bold transition-all relative flex items-center gap-2 ${activeTab === 'sizes'
+            ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-500'
+            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+        >
+          <Ruler className="w-4 h-4" />
+          <span>Size & Micron ({sizeMicrons.length})</span>
         </button>
       </div>
 
@@ -936,6 +1108,140 @@ export const MaterialsPage: React.FC = () => {
                             onClick={() => handleDeleteSupplier(sup)}
                             className="p-1.5 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-factory-800 rounded-lg transition-colors"
                             title="Delete Supplier"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab 4: Size & Micron Dimensions Master */}
+      {activeTab === 'sizes' && (
+        <div className="bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Ruler className="w-4 h-4 text-brand-500" />
+                Film Gauge & Pouch Dimensions Catalog ({filteredSizeMicrons.length})
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Standard thickness (Micron) and dimension specifications used in product recipes & customer orders
+              </p>
+            </div>
+
+            <button
+              onClick={handleOpenCreateSize}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl shadow-sm transition-colors shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add Size & Micron
+            </button>
+          </div>
+
+          {/* Search & Filter Bar */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
+            <div className="relative w-full sm:w-72">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                placeholder="Search by size, micron, label..."
+                value={sizeSearchQuery}
+                onChange={(e) => setSizeSearchQuery(e.target.value)}
+                className="w-full text-xs pl-9 pr-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+              />
+            </div>
+
+            <div className="flex items-center gap-1 self-end sm:self-auto bg-slate-100 dark:bg-factory-800 p-1 rounded-xl">
+              {(['all', 'active', 'inactive'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setSizeStatusFilter(mode)}
+                  className={`px-3 py-1 text-[11px] font-bold rounded-lg capitalize transition-colors ${
+                    sizeStatusFilter === mode
+                      ? 'bg-white dark:bg-factory-900 text-brand-600 dark:text-brand-400 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {filteredSizeMicrons.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 text-xs">
+              <Ruler className="w-10 h-10 text-slate-300 dark:text-slate-700 mx-auto mb-2" />
+              <p className="font-semibold text-slate-700 dark:text-slate-300">No size / micron specifications found</p>
+              <p className="text-[11px] mt-1 text-slate-400">Click "Add Size & Micron" above to register film gauges and dimensions.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs min-w-[850px]">
+                <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
+                  <tr>
+                    <th className="px-3.5 py-3 whitespace-nowrap">Dropdown Label</th>
+                    <th className="px-3.5 py-3 whitespace-nowrap">Thickness / Gauge</th>
+                    <th className="px-3.5 py-3 whitespace-nowrap">Size / Dimensions</th>
+                    <th className="px-3.5 py-3 whitespace-nowrap">Description</th>
+                    <th className="px-3.5 py-3 text-center whitespace-nowrap">Status</th>
+                    <th className="px-3.5 py-3 text-right whitespace-nowrap">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
+                  {filteredSizeMicrons.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
+                      <td className="px-3.5 py-3.5 font-bold text-slate-900 dark:text-white">
+                        <div className="flex items-center gap-2">
+                          <span className="w-7 h-7 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold text-xs shrink-0">
+                            {item.micron}
+                          </span>
+                          <span>{item.label}</span>
+                        </div>
+                      </td>
+                      <td className="px-3.5 py-3.5">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/60 font-mono font-bold text-xs">
+                          {item.micron} {item.unit || 'Micron'}
+                        </span>
+                      </td>
+                      <td className="px-3.5 py-3.5 whitespace-nowrap text-slate-600 dark:text-slate-300">
+                        {item.size || 'Standard'}
+                      </td>
+                      <td className="px-3.5 py-3.5 text-slate-500 max-w-xs truncate" title={item.description}>
+                        {item.description || '—'}
+                      </td>
+                      <td className="px-3.5 py-3.5 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleSizeActive(item)}
+                          className="cursor-pointer"
+                          title="Click to toggle status"
+                        >
+                          <Badge variant={item.is_active ? 'success' : 'neutral'}>
+                            {item.is_active ? 'Active' : 'Disabled'}
+                          </Badge>
+                        </button>
+                      </td>
+                      <td className="px-3.5 py-3.5 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => handleOpenEditSize(item)}
+                            className="p-1.5 text-slate-500 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-factory-800 rounded-lg transition-colors"
+                            title="Edit Size / Micron"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => setSizeToDelete(item)}
+                            className="p-1.5 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-factory-800 rounded-lg transition-colors"
+                            title="Delete Size / Micron"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -1678,6 +1984,162 @@ export const MaterialsPage: React.FC = () => {
               icon={Trash2}
             >
               Yes, Delete Vendor
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal: Create or Edit Size / Micron */}
+      <Modal
+        isOpen={isSizeModalOpen}
+        onClose={() => setIsSizeModalOpen(false)}
+        title={sizeToEdit ? `Edit Size & Micron: ${sizeToEdit.label}` : 'Add New Size & Micron Specification'}
+        maxWidth="md"
+      >
+        <form onSubmit={handleSaveSize} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Thickness / Gauge (Micron) *
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="1"
+                  min="5"
+                  max="1000"
+                  required
+                  placeholder="e.g. 50"
+                  value={sizeForm.micron}
+                  onChange={(e) => handleUpdateSizeField('micron', Number(e.target.value) || 0)}
+                  className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold"
+                />
+                <span className="absolute right-3 top-2 text-xs font-bold text-slate-400">μm</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Measurement Unit
+              </label>
+              <input
+                type="text"
+                value={sizeForm.unit}
+                onChange={(e) => handleUpdateSizeField('unit', e.target.value)}
+                placeholder="Micron, Gauge, etc."
+                className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Size / Dimensions
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. 10x12 inches, 500mm Roll, 6 KG Bag"
+              value={sizeForm.size}
+              onChange={(e) => handleUpdateSizeField('size', e.target.value)}
+              className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Display Label (Appears in Order Dropdowns)
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. 10x12 - 50 Micron"
+              value={sizeForm.label}
+              onChange={(e) => setSizeForm({ ...sizeForm, label: e.target.value })}
+              className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-semibold"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Description / Notes
+            </label>
+            <textarea
+              rows={2}
+              placeholder="e.g. Standard milk pouch gauge, heavy-duty grocery liner"
+              value={sizeForm.description}
+              onChange={(e) => setSizeForm({ ...sizeForm, description: e.target.value })}
+              className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl resize-none"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 pt-1">
+            <input
+              type="checkbox"
+              id="isSizeActiveToggle"
+              checked={sizeForm.isActive}
+              onChange={(e) => setSizeForm({ ...sizeForm, isActive: e.target.checked })}
+              className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+            />
+            <label htmlFor="isSizeActiveToggle" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+              Active (Visible in order placement & recipe selection)
+            </label>
+          </div>
+
+          <div className="pt-2 flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setIsSizeModalOpen(false)}
+              className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-factory-800 rounded-xl transition-colors"
+            >
+              Cancel
+            </button>
+            <Button
+              type="submit"
+              isLoading={isSubmitting}
+              loadingText="Saving..."
+            >
+              {sizeToEdit ? 'Save Changes' : 'Create Size & Micron'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal: Delete Size Confirmation */}
+      <Modal
+        isOpen={!!sizeToDelete}
+        onClose={() => setSizeToDelete(null)}
+        title="Delete Size & Micron Specification"
+        maxWidth="sm"
+      >
+        <div className="space-y-4">
+          <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+            <div className="text-xs text-rose-900 dark:text-rose-200">
+              <p className="font-bold">Are you sure you want to delete this specification?</p>
+              <p className="mt-1">
+                <strong>{sizeToDelete?.label}</strong> will be permanently removed.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => setSizeToDelete(null)}
+              className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-factory-800 rounded-xl transition-colors"
+            >
+              Cancel
+            </button>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={confirmDeleteSize}
+              isLoading={isSubmitting}
+              loadingText="Deleting..."
+              icon={Trash2}
+            >
+              Yes, Delete
             </Button>
           </div>
         </div>
