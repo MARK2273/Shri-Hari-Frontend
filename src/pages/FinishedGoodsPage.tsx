@@ -114,17 +114,28 @@ export const FinishedGoodsPage: React.FC = () => {
     fetchInventory();
   }, []);
 
-  // Unique list of size_microns
+  // Unique list of size_microns with active stock > 0 kg
   const uniqueSpecs = useMemo(() => {
     const specsSet = new Set<string>();
     (data.batches || []).forEach((b) => {
-      if (b.size_micron) specsSet.add(b.size_micron);
+      if (b.size_micron && Number(b.quantity_on_hand_kg || 0) > 0) {
+        specsSet.add(b.size_micron);
+      }
     });
     (data.sizeMicronSummary || []).forEach((s) => {
-      if (s.size_micron) specsSet.add(s.size_micron);
+      if (s.size_micron && Number(s.available_kg || s.total_on_hand_kg || 0) > 0) {
+        specsSet.add(s.size_micron);
+      }
     });
     return Array.from(specsSet).sort();
   }, [data.batches, data.sizeMicronSummary]);
+
+  // Active size micron summaries with stock > 0 kg
+  const activeSpecsSummary = useMemo(() => {
+    return (data.sizeMicronSummary || []).filter(
+      (spec) => Number(spec.available_kg || spec.total_on_hand_kg || 0) > 0
+    );
+  }, [data.sizeMicronSummary]);
 
   // Filtered batches
   const filteredBatches = useMemo(() => {
@@ -228,7 +239,7 @@ export const FinishedGoodsPage: React.FC = () => {
             }`}
           >
             <Ruler className="w-3.5 h-3.5" />
-            Group by Size & Micron ({data.sizeMicronSummary?.length || 0})
+            Group by Size & Micron ({activeSpecsSummary.length})
           </button>
         </div>
 
@@ -298,52 +309,62 @@ export const FinishedGoodsPage: React.FC = () => {
                 </div>
 
                 {/* Size & Micron Breakdown Section */}
-                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                      <Ruler className="w-3 h-3 text-indigo-500" />
-                      Size & Micron Variations ({prod.specs?.length || 0})
-                    </span>
-                    <span className="text-[10px] text-slate-400 italic">click to filter</span>
-                  </div>
+                {(() => {
+                  const availableSpecs = (prod.specs || []).filter(
+                    (spec) => Number(spec.available_kg || spec.on_hand_kg || 0) > 0
+                  );
 
-                  <div className="flex flex-wrap gap-1.5">
-                    {(prod.specs || []).map((spec) => {
-                      const isSpecActive =
-                        selectedSpec === spec.size_micron && selectedProduct === prod.product_id;
-                      return (
-                        <button
-                          key={spec.size_micron}
-                          onClick={() => {
-                            if (isSpecActive) {
-                              setSelectedSpec('all');
-                              setSelectedProduct('all');
-                            } else {
-                              setSelectedSpec(spec.size_micron);
-                              setSelectedProduct(prod.product_id);
-                            }
-                          }}
-                          className={`group inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all border ${
-                            isSpecActive
-                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                              : 'bg-indigo-50/70 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200/80 dark:border-indigo-800/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
-                          }`}
-                        >
-                          <span className="font-bold">{spec.size_micron}</span>
-                          <span
-                            className={`font-mono text-[10px] px-1.5 py-0.2 rounded ${
-                              isSpecActive
-                                ? 'bg-indigo-700 text-white'
-                                : 'bg-white/80 dark:bg-indigo-900/80 text-indigo-900 dark:text-indigo-200'
-                            }`}
-                          >
-                            {spec.available_kg} kg
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                  if (availableSpecs.length === 0) return null;
+
+                  return (
+                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                          <Ruler className="w-3 h-3 text-indigo-500" />
+                          Size & Micron Variations ({availableSpecs.length})
+                        </span>
+                        <span className="text-[10px] text-slate-400 italic">click to filter</span>
+                      </div>
+
+                      <div className="flex flex-wrap gap-1.5">
+                        {availableSpecs.map((spec) => {
+                          const isSpecActive =
+                            selectedSpec === spec.size_micron && selectedProduct === prod.product_id;
+                          return (
+                            <button
+                              key={spec.size_micron}
+                              onClick={() => {
+                                if (isSpecActive) {
+                                  setSelectedSpec('all');
+                                  setSelectedProduct('all');
+                                } else {
+                                  setSelectedSpec(spec.size_micron);
+                                  setSelectedProduct(prod.product_id);
+                                }
+                              }}
+                              className={`group inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all border ${
+                                isSpecActive
+                                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                                  : 'bg-indigo-50/70 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200/80 dark:border-indigo-800/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
+                              }`}
+                            >
+                              <span className="font-bold">{spec.size_micron}</span>
+                              <span
+                                className={`font-mono text-[10px] px-1.5 py-0.2 rounded ${
+                                  isSpecActive
+                                    ? 'bg-indigo-700 text-white'
+                                    : 'bg-white/80 dark:bg-indigo-900/80 text-indigo-900 dark:text-indigo-200'
+                                }`}
+                              >
+                                {spec.available_kg} kg
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}
@@ -353,7 +374,7 @@ export const FinishedGoodsPage: React.FC = () => {
       {/* CARDS DISPLAY: Grouped by Size & Micron */}
       {viewMode === 'bySpec' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {(data.sizeMicronSummary || []).map((spec) => {
+          {activeSpecsSummary.map((spec) => {
             const isSelected = selectedSpec === spec.size_micron;
             return (
               <div
