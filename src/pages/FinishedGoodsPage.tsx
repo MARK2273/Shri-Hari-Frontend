@@ -64,6 +64,9 @@ interface FinishedBatch {
   status: string;
   created_at: string;
   operator_name?: string;
+  customer_name?: string;
+  order_number?: string;
+  order_id?: string;
   products?: { id: string; code: string; name: string; unit?: string };
   production_batches?: {
     id: string;
@@ -574,6 +577,19 @@ export const FinishedGoodsPage: React.FC = () => {
                         <div className="font-mono text-[11px] text-slate-400 font-normal mt-0.5 whitespace-nowrap select-all">
                           Lot: {batch.batch_number}
                         </div>
+                        {batch.customer_name ? (
+                          <div className="mt-1">
+                            <span className="inline-flex items-center gap-1 font-semibold text-[10px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-200/70 dark:border-amber-900/50 max-w-[260px] truncate" title={`Reserved for ${batch.customer_name} (${batch.order_number || 'Order'})`}>
+                              🎯 For: {batch.customer_name} {batch.order_number ? `(${batch.order_number})` : ''}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="mt-0.5">
+                            <span className="text-[10px] text-slate-400 font-medium">
+                              📦 Floor Stock (Unreserved)
+                            </span>
+                          </div>
+                        )}
                       </td>
 
                       {/* Size & Micron */}
@@ -642,9 +658,9 @@ export const FinishedGoodsPage: React.FC = () => {
                         <div className="flex items-center justify-end gap-1.5">
                           {Number(batch.quantity_on_hand_kg) > 0 && (
                             <Link
-                              to={`/dispatch?batchId=${batch.id}`}
+                              to={batch.order_id ? `/dispatch?orderId=${batch.order_id}&batchId=${batch.id}` : `/dispatch?batchId=${batch.id}`}
                               className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-lg transition-colors border border-emerald-300 dark:border-emerald-800/60 shrink-0 whitespace-nowrap shadow-2xs"
-                              title="Direct Dispatch to Matching Order"
+                              title={batch.customer_name ? `Dispatch to ${batch.customer_name}` : "Direct Dispatch to Matching Order"}
                             >
                               <Truck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                               <span>Dispatch</span>

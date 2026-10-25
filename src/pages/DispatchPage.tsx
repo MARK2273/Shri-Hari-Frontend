@@ -35,6 +35,7 @@ export const DispatchPage: React.FC = () => {
   // Modal State
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
   const [showAllBatches, setShowAllBatches] = useState(false);
+  const [confirmCrossCustomer, setConfirmCrossCustomer] = useState(false);
   const [dispatchForm, setDispatchForm] = useState({
     orderId: '',
     destinationAddress: 'Amul Packaging Hub, Kheda, Gujarat',
@@ -77,23 +78,39 @@ export const DispatchPage: React.FC = () => {
         const dispatchedKg = Number(item.dispatched_quantity_kg || 0);
         const remainingKg = Math.max(0, requestedKg - dispatchedKg);
 
-        // Find best batch: urlBatchId -> exact match (prod + spec) -> any prod match -> first batch
+        // Find best batch: urlBatchId -> dedicated to this order -> unreserved exact spec -> unreserved prod -> unreserved any -> fallback
         let selectedBatch: any = null;
         if (urlBatchId) {
           selectedBatch = fetchedFGs.find((b: any) => b.id === urlBatchId);
         }
         if (!selectedBatch) {
+          // Dedicated to this specific customer order
+          selectedBatch = fetchedFGs.find(
+            (b: any) => b.order_id === targetOrder.id && Number(b.quantity_on_hand_kg) > 0
+          );
+        }
+        if (!selectedBatch) {
+          // Unreserved exact match
           selectedBatch = fetchedFGs.find(
             (b: any) =>
+              !b.order_id &&
               b.product_id === item.product_id &&
               (b.size_micron || '').trim().toLowerCase() === orderSpec &&
               Number(b.quantity_on_hand_kg) > 0
           );
         }
         if (!selectedBatch) {
+          // Unreserved product match
           selectedBatch = fetchedFGs.find(
-            (b: any) => b.product_id === item.product_id && Number(b.quantity_on_hand_kg) > 0
+            (b: any) =>
+              !b.order_id &&
+              b.product_id === item.product_id &&
+              Number(b.quantity_on_hand_kg) > 0
           );
+        }
+        if (!selectedBatch) {
+          // Any unreserved lot
+          selectedBatch = fetchedFGs.find((b: any) => !b.order_id && Number(b.quantity_on_hand_kg) > 0);
         }
         if (!selectedBatch && fetchedFGs.length > 0) {
           selectedBatch = fetchedFGs[0];
@@ -102,6 +119,7 @@ export const DispatchPage: React.FC = () => {
         const batchOnHand = Number(selectedBatch?.quantity_on_hand_kg || 0);
         const defaultQty = remainingKg > 0 ? Math.min(remainingKg, batchOnHand || remainingKg) : (batchOnHand || 100);
 
+        setConfirmCrossCustomer(false);
         setDispatchForm({
           orderId: targetOrder.id,
           orderItemId: item.id || '',
@@ -147,43 +165,33 @@ export const DispatchPage: React.FC = () => {
     return fgBatches.find((b) => b.id === dispatchForm.finishedGoodsBatchId);
   }, [fgBatches, dispatchForm.finishedGoodsBatchId]);
 
-  // Group finished goods batches relative to the active order
-  const { exactMatches, productMatches, otherBatches } = useMemo(() => {
-    const exact: any[] = [];
-    const prod: any[] = [];
-    const other: any[] = [];
+  // Check if selected batch is reserved for another customer
+  const isCrossCustomerBatch = useMemo(() => {
+    if (!activeBatch || !activeOrder) return false;
+    return Boolean(activeBatch.order_id && activeBatch.order_id !== activeOrder.id);
+  }, [activeBatch, activeOrder]);
 
-    const targetProdId = activeOrderItem?.product_id;
-    const targetSpecLower = activeOrderSpec.toLowerCase();
+  // Group finished goods batches relative to the active order
+  const { dedicatedBatches, unreservedMatches, otherBatches } = useMemo(() => {
+    const dedicated: any[] = [];
+    const unreserved: any[] = [];
+    const others: any[] = [];
 
     fgBatches.forEach((b) => {
-      const bSpecLower = (b.size_micron || '').trim().toLowerCase();
-      const isProdMatch = targetProdId && b.product_id === targetProdId;
-      const isSpecMatch = targetSpecLower && bSpecLower === targetSpecLower;
       const onHand = Number(b.quantity_on_hand_kg || 0);
+      if (onHand <= 0) return;
 
-      if (isProdMatch && isSpecMatch && onHand > 0) {
-        exact.push(b);
-      } else if (isProdMatch && onHand > 0) {
-        prod.push(b);
-      } else if (onHand > 0) {
-        other.push(b);
+      if (b.order_id && activeOrder && b.order_id === activeOrder.id) {
+        dedicated.push(b);
+      } else if (!b.order_id) {
+        unreserved.push(b);
+      } else {
+        others.push(b);
       }
     });
 
-    return { exactMatches: exact, productMatches: prod, otherBatches: other };
-  }, [fgBatches, activeOrderItem, activeOrderSpec]);
-
-  // When exact matches exist, show ONLY exact matches without clutter
-  const displayBatches = useMemo(() => {
-    if (exactMatches.length > 0 && !showAllBatches) {
-      return exactMatches;
-    }
-    if (productMatches.length > 0 && !showAllBatches) {
-      return productMatches;
-    }
-    return fgBatches.filter((b) => Number(b.quantity_on_hand_kg || 0) > 0);
-  }, [exactMatches, productMatches, fgBatches, showAllBatches]);
+    return { dedicatedBatches: dedicated, unreservedMatches: unreserved, otherBatches: others };
+  }, [fgBatches, activeOrder]);
 
   const isExactMatch = useMemo(() => {
     if (!activeBatch || !activeOrder) return false;
@@ -213,21 +221,33 @@ export const DispatchPage: React.FC = () => {
     const dispKg = Number(item.dispatched_quantity_kg || 0);
     const remKg = Math.max(0, reqKg - dispKg);
 
-    // Look for exact match first
-    const exact = fgBatches.find(
+    // Look for dedicated batch for this order first
+    const dedicated = fgBatches.find(
+      (b) => b.order_id === orderId && Number(b.quantity_on_hand_kg) > 0
+    );
+    // Next: unreserved exact match
+    const unreservedExact = fgBatches.find(
       (b) =>
+        !b.order_id &&
         b.product_id === item.product_id &&
         (b.size_micron || '').trim().toLowerCase() === orderSpec &&
         Number(b.quantity_on_hand_kg) > 0
     );
-    const prodOnly = fgBatches.find(
-      (b) => b.product_id === item.product_id && Number(b.quantity_on_hand_kg) > 0
+    // Next: unreserved product match
+    const unreservedProd = fgBatches.find(
+      (b) =>
+        !b.order_id &&
+        b.product_id === item.product_id &&
+        Number(b.quantity_on_hand_kg) > 0
     );
-    const selected = exact || prodOnly || fgBatches[0];
+    // Next: any unreserved
+    const anyUnreserved = fgBatches.find((b) => !b.order_id && Number(b.quantity_on_hand_kg) > 0);
+    const selected = dedicated || unreservedExact || unreservedProd || anyUnreserved || fgBatches[0];
 
     const batchOnHand = Number(selected?.quantity_on_hand_kg || 0);
     const qtyToDispatch = remKg > 0 ? Math.min(remKg, batchOnHand || remKg) : (batchOnHand || 100);
 
+    setConfirmCrossCustomer(false);
     setDispatchForm({
       ...dispatchForm,
       orderId,
@@ -241,6 +261,11 @@ export const DispatchPage: React.FC = () => {
 
   const handleCreateDispatch = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isCrossCustomerBatch && !confirmCrossCustomer) {
+      alert(`Cross-Customer Protection: This batch is reserved for ${activeBatch?.customer_name || 'another customer'}. Please check the confirmation checkbox to authorize borrowing this stock.`);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await api.post('/dispatch/confirm', {
@@ -248,6 +273,7 @@ export const DispatchPage: React.FC = () => {
         destinationAddress: dispatchForm.destinationAddress,
         vehicleNumber: dispatchForm.vehicleNumber,
         notes: dispatchForm.notes,
+        allowCrossCustomerReallocation: confirmCrossCustomer,
         items: [
           {
             orderItemId: dispatchForm.orderItemId,
@@ -264,6 +290,7 @@ export const DispatchPage: React.FC = () => {
       });
 
       setIsDispatchModalOpen(false);
+      setConfirmCrossCustomer(false);
       await fetchData();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to confirm dispatch');
@@ -442,23 +469,20 @@ export const DispatchPage: React.FC = () => {
           </div>
 
           {/* Select Finished Goods Batch */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Allocate Finished Goods Batch
               </label>
-              {exactMatches.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setShowAllBatches(!showAllBatches)}
-                  className="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 underline"
-                >
-                  {showAllBatches ? 'Show only matches' : 'Other batches'}
-                </button>
+              {dedicatedBatches.length > 0 && (
+                <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Dedicated lot available
+                </span>
               )}
             </div>
 
-            {displayBatches.length === 0 ? (
+            {fgBatches.filter((b) => Number(b.quantity_on_hand_kg || 0) > 0).length === 0 ? (
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-300">
                 No matching in-stock finished goods batches found.
               </div>
@@ -473,28 +497,92 @@ export const DispatchPage: React.FC = () => {
                   const dispKg = Number(activeOrderItem.dispatched_quantity_kg || 0);
                   const remKg = Math.max(0, reqKg - dispKg);
 
+                  setConfirmCrossCustomer(false);
                   setDispatchForm({
                     ...dispatchForm,
                     finishedGoodsBatchId: e.target.value,
                     quantityKg: remKg > 0 ? Math.min(remKg, bOnHand || remKg) : (bOnHand || dispatchForm.quantityKg),
                   });
                 }}
-                className="w-full text-xs px-3 py-2.5 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium focus:outline-none focus:ring-1 focus:ring-brand-500"
+                className={`w-full text-xs px-3 py-2.5 bg-slate-50 dark:bg-factory-800 border rounded-xl font-medium focus:outline-none focus:ring-1 focus:ring-brand-500 ${
+                  isCrossCustomerBatch
+                    ? 'border-amber-400 dark:border-amber-600 ring-1 ring-amber-400/50'
+                    : 'border-slate-300 dark:border-slate-700'
+                }`}
               >
                 <option value="" disabled>-- Select Finished Goods Batch --</option>
-                {displayBatches.map((fg) => {
-                  const op = fg.production_batches?.operator_name || fg.operator_name || '';
-                  const isJW = op.toLowerCase().includes('job work') || fg.batch_number?.startsWith('FG-JW');
-                  const vendorClean = op ? op.replace(/job work[:\s]*/i, '').trim() : '';
-                  const source = isJW ? (vendorClean ? `Job Work: ${vendorClean}` : 'Job Work') : 'Factory Floor';
+                
+                {dedicatedBatches.length > 0 && (
+                  <optgroup label={`🎯 Dedicated for ${activeOrder?.customers?.name || activeOrder?.customer_name || 'Selected Customer'}`}>
+                    {dedicatedBatches.map((fg) => (
+                      <option key={fg.id} value={fg.id}>
+                        Lot {fg.batch_number} • {fg.size_micron || 'Standard'} • ({fg.quantity_on_hand_kg} kg on-hand) [Dedicated]
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
 
-                  return (
-                    <option key={fg.id} value={fg.id}>
-                      Lot {fg.batch_number} • {fg.size_micron || 'Standard'} • {source} ({fg.quantity_on_hand_kg} kg available)
-                    </option>
-                  );
-                })}
+                {unreservedMatches.length > 0 && (
+                  <optgroup label="📦 Floor Stock (Unreserved / Job Work)">
+                    {unreservedMatches.map((fg) => {
+                      const op = fg.production_batches?.operator_name || fg.operator_name || '';
+                      const isJW = op.toLowerCase().includes('job work') || fg.batch_number?.startsWith('FG-JW');
+                      const vendorClean = op ? op.replace(/job work[:\s]*/i, '').trim() : '';
+                      const source = isJW ? (vendorClean ? `Job Work: ${vendorClean}` : 'Job Work') : 'Floor Stock';
+                      return (
+                        <option key={fg.id} value={fg.id}>
+                          Lot {fg.batch_number} • {fg.size_micron || 'Standard'} • {source} ({fg.quantity_on_hand_kg} kg available)
+                        </option>
+                      );
+                    })}
+                  </optgroup>
+                )}
+
+                {otherBatches.length > 0 && (
+                  <optgroup label="⚠️ Reserved for Other Customers (Cross-Customer Reallocation)">
+                    {otherBatches.map((fg) => (
+                      <option key={fg.id} value={fg.id}>
+                        Lot {fg.batch_number} • {fg.size_micron || 'Standard'} • [Reserved for: {fg.customer_name || 'Other Customer'}] ({fg.quantity_on_hand_kg} kg available)
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
+            )}
+
+            {/* Perfect match badge */}
+            {activeBatch && !isCrossCustomerBatch && activeBatch.order_id === activeOrder?.id && (
+              <div className="flex items-center gap-1.5 text-[11px] text-emerald-700 dark:text-emerald-300 font-semibold px-2.5 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200/80 dark:border-emerald-800/40">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>Dedicated Production Lot: Specifically produced for {activeOrder?.customers?.name || activeOrder?.customer_name}.</span>
+              </div>
+            )}
+
+            {/* Cross-Customer Warning Banner */}
+            {isCrossCustomerBatch && (
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs space-y-2.5">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold">Cross-Customer Allocation Warning</div>
+                    <p className="mt-0.5 text-[11px] leading-relaxed">
+                      This batch (<strong>{activeBatch?.batch_number}</strong>) was produced specifically for{' '}
+                      <span className="font-bold underline">{activeBatch?.customer_name || 'another customer'}</span>{' '}
+                      {activeBatch?.order_number ? `(${activeBatch.order_number})` : ''}.
+                      Dispatching this lot will borrow inventory from their production order!
+                    </p>
+                  </div>
+                </div>
+                <label className="flex items-center gap-2 pt-1 font-semibold text-xs cursor-pointer select-none border-t border-amber-500/20">
+                  <input
+                    type="checkbox"
+                    checked={confirmCrossCustomer}
+                    onChange={(e) => setConfirmCrossCustomer(e.target.checked)}
+                    className="rounded border-amber-400 text-amber-600 focus:ring-amber-500 w-4 h-4"
+                  />
+                  <span>I authorize borrowing / reallocating this stock for {activeOrder?.customers?.name || activeOrder?.customer_name}</span>
+                </label>
+              </div>
             )}
           </div>
 
@@ -554,7 +642,7 @@ export const DispatchPage: React.FC = () => {
             </button>
             <Button
               type="submit"
-              disabled={orders.length === 0 || fgBatches.length === 0}
+              disabled={orders.length === 0 || fgBatches.length === 0 || (isCrossCustomerBatch && !confirmCrossCustomer)}
               isLoading={isSubmitting}
               loadingText="Confirming Dispatch & Deducting Stock..."
             >
