@@ -295,24 +295,24 @@ export const DispatchPage: React.FC = () => {
           <span className="text-xs text-slate-400">All deliveries deduct inventory atomically</span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs min-w-[950px]">
-            <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
+        <div className="overflow-x-auto -mx-5 px-5 pb-2">
+          <table className="w-full text-left text-xs min-w-[1080px] border-collapse">
+            <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2 bg-white dark:bg-factory-900">
               <tr>
-                <th className="px-3.5 py-3 whitespace-nowrap">Customer & Order</th>
-                <th className="px-3.5 py-3 whitespace-nowrap">Product & Specification</th>
-                <th className="px-3.5 py-3 whitespace-nowrap">Dispatched Lot</th>
-                <th className="px-3.5 py-3 whitespace-nowrap">Destination</th>
-                <th className="px-3.5 py-3 whitespace-nowrap">Vehicle #</th>
-                <th className="px-3.5 py-3 text-right whitespace-nowrap">Dispatched Qty</th>
-                <th className="px-3.5 py-3 whitespace-nowrap">Date</th>
-                <th className="px-3.5 py-3 text-center whitespace-nowrap">Status</th>
+                <th className="px-4 py-3 whitespace-nowrap min-w-[180px]">Customer & Order</th>
+                <th className="px-4 py-3 whitespace-nowrap min-w-[180px]">Product & Specification</th>
+                <th className="px-4 py-3 whitespace-nowrap min-w-[170px]">Dispatched Lot</th>
+                <th className="px-4 py-3 whitespace-nowrap min-w-[200px]">Destination</th>
+                <th className="px-4 py-3 whitespace-nowrap min-w-[120px]">Vehicle #</th>
+                <th className="px-4 py-3 text-right whitespace-nowrap min-w-[110px]">Dispatched Qty</th>
+                <th className="px-4 py-3 whitespace-nowrap min-w-[110px]">Date</th>
+                <th className="px-4 py-3 text-center whitespace-nowrap min-w-[140px]">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
               {deliveries.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-3.5 py-8 text-center text-slate-400 text-xs">
+                  <td colSpan={8} className="px-4 py-8 text-center text-slate-400 text-xs">
                     No dispatch delivery notes recorded yet.
                   </td>
                 </tr>
@@ -327,52 +327,54 @@ export const DispatchPage: React.FC = () => {
 
                   return (
                     <tr key={del.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                      <td className="px-3.5 py-3.5 font-bold text-slate-800 dark:text-slate-200">
-                        <div>{del.customers?.name || del.customer_name}</div>
-                        <div className="text-[10px] font-mono text-slate-400 font-normal">
+                      <td className="px-4 py-3.5 whitespace-nowrap min-w-[180px]">
+                        <div className="font-bold text-slate-800 dark:text-slate-200 text-xs whitespace-nowrap">
+                          {del.customers?.name || del.customer_name}
+                        </div>
+                        <div className="text-[10px] font-mono text-slate-400 font-normal mt-0.5 whitespace-nowrap">
                           {del.customer_orders?.order_number || del.delivery_number}
                         </div>
                       </td>
-                      <td className="px-3.5 py-3.5">
-                        <div className="font-semibold text-slate-800 dark:text-slate-200">
+                      <td className="px-4 py-3.5 whitespace-nowrap min-w-[180px]">
+                        <div className="font-semibold text-slate-800 dark:text-slate-200 text-xs whitespace-nowrap">
                           {delItem.products?.name || 'Finished Product'}
                         </div>
                         {spec && (
-                          <div className="inline-flex items-center gap-1 font-mono text-[10px] text-indigo-600 dark:text-indigo-400">
-                            <Ruler className="w-3 h-3" />
-                            {spec}
+                          <div className="inline-flex items-center gap-1 font-mono text-[10px] text-indigo-600 dark:text-indigo-400 mt-0.5 whitespace-nowrap">
+                            <Ruler className="w-3 h-3 shrink-0" />
+                            <span>{spec}</span>
                           </div>
                         )}
                       </td>
-                      <td className="px-3.5 py-3.5 whitespace-nowrap">
+                      <td className="px-4 py-3.5 whitespace-nowrap min-w-[170px]">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
+                          <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">
                             {batchNum}
                           </span>
                           {isJobWork && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60 shrink-0 whitespace-nowrap">
                               Job Work
                             </span>
                           )}
                         </div>
                       </td>
-                      <td className="px-3.5 py-3.5 text-slate-500 max-w-[200px] truncate" title={del.destination_address}>
+                      <td className="px-4 py-3.5 text-slate-500 min-w-[200px] truncate max-w-[240px]" title={del.destination_address}>
                         {del.destination_address}
                       </td>
-                      <td className="px-3.5 py-3.5 font-mono text-slate-600 dark:text-slate-400">
+                      <td className="px-4 py-3.5 font-mono text-slate-600 dark:text-slate-400 min-w-[120px] whitespace-nowrap">
                         {del.vehicle_number || 'N/A'}
                       </td>
-                      <td className="px-3.5 py-3.5 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                      <td className="px-4 py-3.5 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 min-w-[110px] whitespace-nowrap">
                         {delItem.quantity_kg || 0} kg
                       </td>
-                      <td className="px-3.5 py-3.5 whitespace-nowrap text-slate-500">
+                      <td className="px-4 py-3.5 whitespace-nowrap text-slate-500 min-w-[110px]">
                         {new Date(del.dispatch_date).toLocaleDateString(undefined, {
                           day: '2-digit',
                           month: 'short',
                           year: 'numeric',
                         })}
                       </td>
-                      <td className="px-3.5 py-3.5 text-center">
+                      <td className="px-4 py-3.5 text-center min-w-[140px] whitespace-nowrap">
                         <Badge variant="success">Confirmed & Deducted</Badge>
                       </td>
                     </tr>
