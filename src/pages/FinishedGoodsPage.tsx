@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
-import { PackageCheck, Truck, Layers, CheckCircle2, User, GitBranch } from 'lucide-react';
+import { PackageCheck, Truck, Layers, CheckCircle2, User, GitBranch, Building2 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { PageSkeleton } from '../components/common/Skeleton';
 import { Link } from 'react-router-dom';
@@ -121,24 +121,48 @@ export const FinishedGoodsPage: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                (data.batches || []).map((batch) => (
-                  <tr key={batch.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                    <td className="px-3.5 py-3.5 font-bold text-slate-800 dark:text-slate-200">
-                      {batch.products?.name || 'Finished Product'}
-                    </td>
-                    <td className="px-3.5 py-3.5 whitespace-nowrap text-slate-600 dark:text-slate-300">
-                      {new Date(batch.created_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}
-                    </td>
-                    <td className="px-3.5 py-3.5 whitespace-nowrap text-slate-700 dark:text-slate-300">
-                      {batch.production_batches?.operator_name || batch.operator_name ? (
-                        <span className="inline-flex items-center gap-1 font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-factory-800 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700/60">
-                          <User className="w-3 h-3 text-brand-500" />
-                          {batch.production_batches?.operator_name || batch.operator_name}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400 italic text-[11px]">—</span>
-                      )}
-                    </td>
+                (data.batches || []).map((batch) => {
+                  const operatorName = batch.production_batches?.operator_name || batch.operator_name || '';
+                  const isJobWork = operatorName.toLowerCase().includes('job work') || batch.batch_number?.startsWith('FG-JW');
+
+                  return (
+                    <tr key={batch.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
+                      <td className="px-3.5 py-3.5 font-bold text-slate-800 dark:text-slate-200">
+                        <div className="flex items-center gap-2">
+                          <span>{batch.products?.name || 'Finished Product'}</span>
+                          {isJobWork && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60">
+                              Job Work
+                            </span>
+                          )}
+                        </div>
+                        <div className="font-mono text-[10px] text-slate-400 font-normal mt-0.5">
+                          Lot: {batch.batch_number}
+                        </div>
+                      </td>
+                      <td className="px-3.5 py-3.5 whitespace-nowrap text-slate-600 dark:text-slate-300">
+                        {new Date(batch.created_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </td>
+                      <td className="px-3.5 py-3.5 whitespace-nowrap text-slate-700 dark:text-slate-300">
+                        {isJobWork ? (
+                          <div className="flex flex-col items-start gap-0.5">
+                            <span className="inline-flex items-center gap-1.5 font-bold px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/60 shadow-2xs">
+                              <Building2 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                              <span>{operatorName || 'Job Work Vendor'}</span>
+                            </span>
+                            <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-400 pl-1">
+                              Outsourced Processing
+                            </span>
+                          </div>
+                        ) : operatorName ? (
+                          <span className="inline-flex items-center gap-1 font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-factory-800 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700/60">
+                            <User className="w-3 h-3 text-brand-500" />
+                            {operatorName}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 italic text-[11px]">—</span>
+                        )}
+                      </td>
                     <td className="px-3.5 py-3.5 text-right font-mono">{batch.quantity_produced_kg} kg</td>
                     <td className="px-3.5 py-3.5 text-right font-mono font-bold text-slate-900 dark:text-white">
                       {batch.quantity_on_hand_kg} kg
@@ -162,8 +186,9 @@ export const FinishedGoodsPage: React.FC = () => {
                       </Link>
                     </td>
                   </tr>
-                ))
-              )}
+                );
+              })
+            )}
             </tbody>
           </table>
         </div>
