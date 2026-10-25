@@ -615,21 +615,15 @@ export const JobWorkPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header with Title and Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-gradient-to-tr from-brand-600 to-indigo-600 text-white rounded-2xl shadow-md shadow-brand-500/20">
-              <Workflow className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                Job Work & Outsource Processing
-              </h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Track external processors, custody material balances, recipe orders, and finished goods
-              </p>
-            </div>
-          </div>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-start sm:items-center gap-2.5">
+            <Workflow className="w-6 h-6 text-brand-500 shrink-0 mt-0.5 sm:mt-0" />
+            <span>Job Work & Outsource Processing</span>
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Track external processors, custody material balances, recipe orders, and finished goods
+          </p>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">

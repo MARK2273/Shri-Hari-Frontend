@@ -30,7 +30,7 @@ import { PageSkeleton } from '../components/common/Skeleton';
 import { SizeMicron } from '../types';
 
 export const OrdersPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'orders' | 'customers' | 'sizeMicrons'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'customers'>('orders');
   const [orders, setOrders] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -310,9 +310,9 @@ export const OrdersPage: React.FC = () => {
       {/* Top Header & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-            <ShoppingCart className="w-6 h-6 text-brand-500" />
-            Customer Orders & Production Demand
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-start sm:items-center gap-2.5">
+            <ShoppingCart className="w-6 h-6 text-brand-500 shrink-0 mt-0.5 sm:mt-0" />
+            <span>Customer Orders & Production Demand</span>
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Order-driven manufacturing workflow. All production batches link back to confirmed orders.
@@ -344,7 +344,7 @@ export const OrdersPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabs Switcher: Orders vs Customer Directory vs Size & Micron Master */}
+      {/* Tabs Switcher: Orders vs Customer Directory */}
       <div className="flex border-b border-slate-200 dark:border-slate-800 gap-3 sm:gap-6 overflow-x-auto whitespace-nowrap">
         <button
           onClick={() => setActiveTab('orders')}
@@ -366,17 +366,6 @@ export const OrdersPage: React.FC = () => {
         >
           <Users className="w-4 h-4" />
           <span>Customer Directory & Accounts ({customers.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('sizeMicrons')}
-          className={`pb-3 text-xs font-bold transition-all relative flex items-center gap-2 ${activeTab === 'sizeMicrons'
-            ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-500'
-            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-        >
-          <Ruler className="w-4 h-4 text-brand-500" />
-          <span>Size & Micron Master ({sizeMicrons.length})</span>
         </button>
       </div>
 
@@ -625,7 +614,7 @@ export const OrdersPage: React.FC = () => {
             })
           )}
         </div>
-      ) : activeTab === 'customers' ? (
+      ) : (
         /* Tab 2: Customer Directory & Accounts */
         <div className="bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -721,135 +710,6 @@ export const OrdersPage: React.FC = () => {
               </table>
             </div>
           )}
-        </div>
-      ) : (
-        /* Tab 3: Size & Micron Master Management */
-        <div className="bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <Ruler className="w-5 h-5 text-brand-500" />
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Size & Micron Specification Master ({sizeMicrons.length})
-                </h3>
-              </div>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                Manage standard film gauges (microns), dimensions, and packaging sizes populated in order dropdowns.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setSizeToEdit(null);
-                  setQuickSizeForm({ size: '', micron: 50, unit: 'Micron', label: '50 Micron', description: '' });
-                  setIsQuickSizeModalOpen(true);
-                }}
-                className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl transition-colors shadow-md shadow-brand-500/20"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Specification</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Search bar inside Tab 3 */}
-          <div className="relative max-w-sm">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-            <input
-              type="text"
-              placeholder="Filter by label, size, micron..."
-              value={sizeMicronSearch}
-              onChange={(e) => setSizeMicronSearch(e.target.value)}
-              className="w-full text-xs pl-9 pr-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700 rounded-xl"
-            />
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs min-w-[850px]">
-              <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
-                <tr>
-                  <th className="px-3.5 py-3 whitespace-nowrap">Dropdown Label</th>
-                  <th className="px-3.5 py-3 whitespace-nowrap">Thickness / Gauge</th>
-                  <th className="px-3.5 py-3 whitespace-nowrap">Size / Dimensions</th>
-                  <th className="px-3.5 py-3 whitespace-nowrap">Description</th>
-                  <th className="px-3.5 py-3 whitespace-nowrap text-center">Status</th>
-                  <th className="px-3.5 py-3 text-right whitespace-nowrap">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
-                {sizeMicrons
-                  .filter((sm) => {
-                    if (!sizeMicronSearch.trim()) return true;
-                    const q = sizeMicronSearch.toLowerCase();
-                    return (
-                      sm.label.toLowerCase().includes(q) ||
-                      (sm.size && sm.size.toLowerCase().includes(q)) ||
-                      String(sm.micron).includes(q)
-                    );
-                  })
-                  .map((sm) => (
-                    <tr key={sm.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                      <td className="px-3.5 py-3.5 font-bold text-slate-900 dark:text-white">
-                        <div className="flex items-center gap-2">
-                          <span className="w-6 h-6 rounded bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold text-[11px]">
-                            {sm.micron}
-                          </span>
-                          <span>{sm.label}</span>
-                        </div>
-                      </td>
-                      <td className="px-3.5 py-3.5">
-                        <span className="px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-mono font-bold text-[11px]">
-                          {sm.micron} {sm.unit || 'Micron'}
-                        </span>
-                      </td>
-                      <td className="px-3.5 py-3.5 whitespace-nowrap text-slate-600 dark:text-slate-300">
-                        {sm.size || 'Standard'}
-                      </td>
-                      <td className="px-3.5 py-3.5 text-slate-500 max-w-xs truncate">
-                        {sm.description || '—'}
-                      </td>
-                      <td className="px-3.5 py-3.5 text-center">
-                        <Badge variant={sm.is_active ? 'success' : 'neutral'}>
-                          {sm.is_active ? 'Active' : 'Disabled'}
-                        </Badge>
-                      </td>
-                      <td className="px-3.5 py-3.5 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSizeToEdit(sm);
-                              setQuickSizeForm({
-                                size: sm.size || '',
-                                micron: Number(sm.micron) || 50,
-                                unit: sm.unit || 'Micron',
-                                label: sm.label,
-                                description: sm.description || '',
-                              });
-                              setIsQuickSizeModalOpen(true);
-                            }}
-                            className="p-1 rounded-md text-slate-400 hover:text-brand-600 hover:bg-slate-100 dark:hover:bg-factory-800"
-                            title="Edit specification"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setSizeToDelete(sm)}
-                            className="p-1 rounded-md text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                            title="Delete specification"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
         </div>
       )}
 
