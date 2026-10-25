@@ -34,6 +34,7 @@ export const DispatchPage: React.FC = () => {
 
   // Modal State
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
+  const [showAllBatches, setShowAllBatches] = useState(false);
   const [dispatchForm, setDispatchForm] = useState({
     orderId: '',
     destinationAddress: 'Amul Packaging Hub, Kheda, Gujarat',
@@ -165,13 +166,24 @@ export const DispatchPage: React.FC = () => {
         exact.push(b);
       } else if (isProdMatch && onHand > 0) {
         prod.push(b);
-      } else {
+      } else if (onHand > 0) {
         other.push(b);
       }
     });
 
     return { exactMatches: exact, productMatches: prod, otherBatches: other };
   }, [fgBatches, activeOrderItem, activeOrderSpec]);
+
+  // When exact matches exist, show ONLY exact matches without clutter
+  const displayBatches = useMemo(() => {
+    if (exactMatches.length > 0 && !showAllBatches) {
+      return exactMatches;
+    }
+    if (productMatches.length > 0 && !showAllBatches) {
+      return productMatches;
+    }
+    return fgBatches.filter((b) => Number(b.quantity_on_hand_kg || 0) > 0);
+  }, [exactMatches, productMatches, fgBatches, showAllBatches]);
 
   const isExactMatch = useMemo(() => {
     if (!activeBatch || !activeOrder) return false;
@@ -468,21 +480,30 @@ export const DispatchPage: React.FC = () => {
 
           {/* Step 2: Select Matching Finished Goods Batch */}
           <div>
-            <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center justify-between mb-1.5">
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Allocate From Finished Goods Batch (Floor / Job Work Stock)
+                Allocate Finished Goods Batch
               </label>
               {exactMatches.length > 0 && (
-                <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                  <Zap className="w-3 h-3 fill-emerald-500" />
-                  {exactMatches.length} Exact Spec Match Available
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200/80 dark:border-emerald-800/40">
+                    <Zap className="w-3 h-3 fill-emerald-500" />
+                    Perfect Match ({exactMatches.length})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowAllBatches(!showAllBatches)}
+                    className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 underline"
+                  >
+                    {showAllBatches ? 'Show only matches' : 'Other batches'}
+                  </button>
+                </div>
               )}
             </div>
 
-            {fgBatches.length === 0 ? (
+            {displayBatches.length === 0 ? (
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-300">
-                No finished goods batches in inventory to allocate.
+                No matching in-stock finished goods batches found.
               </div>
             ) : (
               <select
@@ -501,95 +522,51 @@ export const DispatchPage: React.FC = () => {
                     quantityKg: remKg > 0 ? Math.min(remKg, bOnHand || remKg) : (bOnHand || dispatchForm.quantityKg),
                   });
                 }}
-                className="w-full text-xs px-3 py-2.5 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
+                className="w-full text-xs px-3 py-2.5 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium focus:outline-none focus:ring-1 focus:ring-brand-500"
               >
                 <option value="" disabled>-- Select Finished Goods Batch --</option>
+                {displayBatches.map((fg) => {
+                  const op = fg.production_batches?.operator_name || fg.operator_name || '';
+                  const isJW = op.toLowerCase().includes('job work') || fg.batch_number?.startsWith('FG-JW');
+                  const vendorClean = op ? op.replace(/job work[:\s]*/i, '').trim() : '';
+                  const source = isJW ? (vendorClean ? `Job Work: ${vendorClean}` : 'Job Work') : 'Factory Floor';
 
-                {exactMatches.length > 0 && (
-                  <optgroup label="⭐ EXACT MATCH (Product + Size & Micron)">
-                    {exactMatches.map((fg) => {
-                      const op = fg.production_batches?.operator_name || fg.operator_name || '';
-                      const isJW = op.toLowerCase().includes('job work') || fg.batch_number?.startsWith('FG-JW');
-                      return (
-                        <option key={fg.id} value={fg.id}>
-                          ⭐ EXACT MATCH • Lot: {fg.batch_number} • 📏 {fg.size_micron} • {isJW ? `🏢 Job Work (${op})` : '🏭 In-House'} • Avail: {fg.quantity_on_hand_kg} kg
-                        </option>
-                      );
-                    })}
-                  </optgroup>
-                )}
-
-                {productMatches.length > 0 && (
-                  <optgroup label="⚠️ Same Product (Different Specification)">
-                    {productMatches.map((fg) => (
-                      <option key={fg.id} value={fg.id}>
-                        Lot: {fg.batch_number} • 📏 {fg.size_micron || 'Standard'} • Avail: {fg.quantity_on_hand_kg} kg
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-
-                {otherBatches.length > 0 && (
-                  <optgroup label="Other Available Inventory">
-                    {otherBatches.map((fg) => (
-                      <option key={fg.id} value={fg.id}>
-                        {fg.products?.name || 'Product'} • Lot: {fg.batch_number} • 📏 {fg.size_micron || 'Standard'} • Avail: {fg.quantity_on_hand_kg} kg
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
+                  return (
+                    <option key={fg.id} value={fg.id}>
+                      Lot {fg.batch_number} • {fg.size_micron || 'Standard'} • {source} ({fg.quantity_on_hand_kg} kg available)
+                    </option>
+                  );
+                })}
               </select>
             )}
           </div>
 
-          {/* Dynamic Match Status Banner */}
+          {/* Clean, Non-Cluttered Match Banner */}
           {activeBatch && (
             <div
-              className={`p-3.5 rounded-xl border text-xs transition-all ${
+              className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2 ${
                 isExactMatch
-                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-200'
-                  : 'bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-200'
+                  ? 'bg-emerald-50/80 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-200'
+                  : 'bg-amber-50/80 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-200'
               }`}
             >
-              <div className="flex items-start gap-2.5">
+              <div className="flex items-center gap-2">
                 {isExactMatch ? (
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 ) : (
-                  <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                 )}
-                <div className="space-y-1">
-                  <div className="font-bold flex items-center gap-2">
-                    <span>
-                      {isExactMatch
-                        ? 'Direct Floor Dispatch Match Confirmed!'
-                        : 'Specification Mismatch Alert'}
-                    </span>
-                    {isSelectedFromJobWork && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300">
-                        Outsourced Job Work Output
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[11px] opacity-90 leading-relaxed">
-                    {isExactMatch ? (
-                      <>
-                        Batch <strong>{activeBatch.batch_number}</strong> matches product &amp; specification{' '}
-                        <strong>"{activeBatch.size_micron}"</strong>.{' '}
-                        {isSelectedFromJobWork
-                          ? `Ready from vendor ${jobWorkVendorName}.`
-                          : 'Ready on factory floor.'}{' '}
-                        Dispatching will fulfill this customer order directly with zero extra production wait!
-                      </>
-                    ) : (
-                      <>
-                        Order asked for specification <strong>"{activeOrderSpec || 'Standard'}"</strong>, but batch{' '}
-                        <strong>{activeBatch.batch_number}</strong> has <strong>"{activeBatch.size_micron || 'Standard'}"</strong>.
-                        Confirm client acceptance before finalizing.
-                      </>
-                    )}
-                  </p>
-                </div>
+                <span className="font-semibold">
+                  {isExactMatch
+                    ? `Perfect Specification Match: Lot ${activeBatch.batch_number} (${activeBatch.size_micron}) from ${isSelectedFromJobWork ? jobWorkVendorName : 'Factory Floor'}`
+                    : `Alternate Specification: Order requested "${activeOrderSpec || 'Standard'}", batch is "${activeBatch.size_micron || 'Standard'}"`}
+                </span>
               </div>
+              {isSelectedFromJobWork && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 shrink-0">
+                  Job Work
+                </span>
+              )}
             </div>
           )}
 
