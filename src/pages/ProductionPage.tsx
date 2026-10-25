@@ -162,12 +162,14 @@ export const ProductionPage: React.FC = () => {
       if (['completed', 'delivered', 'dispatched', 'produced', 'cancelled'].includes(status)) {
         return false;
       }
-      const item = o.customer_order_items?.[0] || o.items?.[0] || {};
-      const req = Number(item.requested_quantity_kg || o.total_requested_weight_kg || 0);
-      const prod = Number(item.produced_quantity_kg || 0);
-      const disp = Number(item.dispatched_quantity_kg || 0);
-      const remainingProductionKg = req - Math.max(prod, disp);
-      return remainingProductionKg > 0;
+      const items = o.customer_order_items?.length ? o.customer_order_items : (o.items?.length ? o.items : [{}]);
+      const hasUnfulfilledItem = items.some((item: any) => {
+        const req = Number(item.requested_quantity_kg || o.total_requested_weight_kg || 0);
+        const prod = Number(item.produced_quantity_kg || 0);
+        const disp = Number(item.dispatched_quantity_kg || 0);
+        return (req - Math.max(prod, disp)) > 0;
+      });
+      return hasUnfulfilledItem;
     });
   }, [orders]);
 
@@ -178,16 +180,23 @@ export const ProductionPage: React.FC = () => {
 
     if (pendingOrders.length > 0) {
       const selectedOrd = pendingOrders.find((o: any) => o.id === draftForm.orderId) || pendingOrders[0];
-      const item = selectedOrd?.customer_order_items?.[0] || {};
-      const prod = products.find((p) => p.id === item.product_id);
-      const req = Number(item.requested_quantity_kg) || Number(selectedOrd.total_requested_weight_kg) || 200;
-      const prodKg = Number(item.produced_quantity_kg || 0);
-      const dispKg = Number(item.dispatched_quantity_kg || 0);
+      const items = selectedOrd?.customer_order_items?.length ? selectedOrd.customer_order_items : [{}];
+      const activeItem = items.find((it: any) => {
+        const req = Number(it.requested_quantity_kg || selectedOrd.total_requested_weight_kg || 0);
+        const prod = Number(it.produced_quantity_kg || 0);
+        const disp = Number(it.dispatched_quantity_kg || 0);
+        return (req - Math.max(prod, disp)) > 0;
+      }) || items[0] || {};
+
+      const prod = products.find((p) => p.id === activeItem.product_id);
+      const req = Number(activeItem.requested_quantity_kg) || Number(selectedOrd.total_requested_weight_kg) || 200;
+      const prodKg = Number(activeItem.produced_quantity_kg || 0);
+      const dispKg = Number(activeItem.dispatched_quantity_kg || 0);
       const remaining = Math.max(0, req - Math.max(prodKg, dispKg)) || req;
 
       setDraftForm({
         orderId: selectedOrd.id,
-        orderItemId: item.id || '',
+        orderItemId: activeItem.id || '',
         recipeId: prod?.active_recipe?.id || prod?.product_recipes?.[0]?.id || '',
         plannedQuantityKg: remaining,
         operatorName: '',
@@ -856,18 +865,25 @@ export const ProductionPage: React.FC = () => {
                     value={draftForm.orderId}
                     onChange={(e) => {
                       const ord = pendingOrders.find((o: any) => o.id === e.target.value);
-                      const item = ord?.customer_order_items?.[0] || {};
-                      const prod = products.find((p) => p.id === item.product_id);
-                      const req = Number(item.requested_quantity_kg) || Number(ord?.total_requested_weight_kg) || 200;
-                      const prodKg = Number(item.produced_quantity_kg || 0);
-                      const dispKg = Number(item.dispatched_quantity_kg || 0);
+                      const items = ord?.customer_order_items?.length ? ord.customer_order_items : (ord?.items?.length ? ord.items : [{}]);
+                      const activeItem = items.find((it: any) => {
+                        const r = Number(it.requested_quantity_kg || ord?.total_requested_weight_kg || 0);
+                        const p = Number(it.produced_quantity_kg || 0);
+                        const d = Number(it.dispatched_quantity_kg || 0);
+                        return (r - Math.max(p, d)) > 0;
+                      }) || items[0] || {};
+
+                      const prod = products.find((p) => p.id === activeItem.product_id);
+                      const req = Number(activeItem.requested_quantity_kg) || Number(ord?.total_requested_weight_kg) || 200;
+                      const prodKg = Number(activeItem.produced_quantity_kg || 0);
+                      const dispKg = Number(activeItem.dispatched_quantity_kg || 0);
                       const remaining = Math.max(0, req - Math.max(prodKg, dispKg)) || req;
 
                       setDraftForm({
                         ...draftForm,
                         orderId: e.target.value,
-                        orderItemId: item.id || '',
-                        recipeId: prod?.active_recipe?.id || '',
+                        orderItemId: activeItem.id || '',
+                        recipeId: prod?.active_recipe?.id || prod?.product_recipes?.[0]?.id || '',
                         plannedQuantityKg: remaining,
                       });
                     }}
@@ -875,16 +891,16 @@ export const ProductionPage: React.FC = () => {
                   >
                     <option value="" disabled>-- Select an active customer order --</option>
                     {pendingOrders.map((o: any) => {
-                      const item = o.customer_order_items?.[0] || {};
-                      const spec = o.size_micron || o.sizeMicron || item.size_micron || item.sizeMicron || '';
-                      const req = Number(item.requested_quantity_kg) || Number(o.total_requested_weight_kg) || 0;
-                      const prodKg = Number(item.produced_quantity_kg || 0);
-                      const dispKg = Number(item.dispatched_quantity_kg || 0);
-                      const rem = Math.max(0, req - Math.max(prodKg, dispKg));
+                      const items = o.customer_order_items?.length ? o.customer_order_items : [{}];
+                      const totalReq = Number(o.total_requested_weight_kg) || items.reduce((s: number, it: any) => s + (Number(it.requested_quantity_kg) || 0), 0);
+                      const totalProd = items.reduce((s: number, it: any) => s + (Number(it.produced_quantity_kg) || 0), 0);
+                      const totalDisp = items.reduce((s: number, it: any) => s + (Number(it.dispatched_quantity_kg) || 0), 0);
+                      const totalRem = Math.max(0, totalReq - Math.max(totalProd, totalDisp));
+                      const isMulti = items.length > 1;
 
                       return (
                         <option key={o.id} value={o.id}>
-                          {o.order_number ? `${o.order_number} • ` : ''}{o.customers?.name || o.customer_name} • {spec ? `${spec} • ` : ''}Remaining Demand: {rem} kg
+                          {o.order_number ? `${o.order_number} • ` : ''}{o.customers?.name || o.customer_name} • {isMulti ? `(${items.length} Recipes) • ` : ''}Remaining Demand: {totalRem} kg
                         </option>
                       );
                     })}
@@ -892,11 +908,69 @@ export const ProductionPage: React.FC = () => {
                 )}
               </div>
 
+              {/* Multi-Item Order: Sub-selector for exact Recipe Line Item */}
               {draftForm.orderId && (() => {
                 const ord = orders.find((o: any) => o.id === draftForm.orderId);
-                const item = ord?.customer_order_items?.[0] || {};
+                const items = ord?.customer_order_items || [];
+                if (items.length <= 1) return null;
+
+                return (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <Layers className="w-3.5 h-3.5 text-indigo-500" />
+                        Select Ordered Recipe / Line Item to Produce
+                      </span>
+                      <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-800/40">
+                        {items.length} Recipes in Order
+                      </span>
+                    </label>
+                    <select
+                      value={draftForm.orderItemId}
+                      onChange={(e) => {
+                        const chosenItemId = e.target.value;
+                        const itm = items.find((i: any) => i.id === chosenItemId) || {};
+                        const prod = products.find((p) => p.id === itm.product_id);
+                        const req = Number(itm.requested_quantity_kg || 0);
+                        const prodKg = Number(itm.produced_quantity_kg || 0);
+                        const dispKg = Number(itm.dispatched_quantity_kg || 0);
+                        const remaining = Math.max(0, req - Math.max(prodKg, dispKg)) || req;
+
+                        setDraftForm({
+                          ...draftForm,
+                          orderItemId: chosenItemId,
+                          recipeId: prod?.active_recipe?.id || prod?.product_recipes?.[0]?.id || '',
+                          plannedQuantityKg: remaining,
+                        });
+                      }}
+                      className="w-full text-xs px-3 py-2.5 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium focus:ring-1 focus:ring-brand-500 outline-none"
+                    >
+                      {items.map((it: any, idx: number) => {
+                        const prod = products.find((p: any) => p.id === it.product_id);
+                        const spec = it.size_micron || 'Standard';
+                        const req = Number(it.requested_quantity_kg || 0);
+                        const prodKg = Number(it.produced_quantity_kg || 0);
+                        const dispKg = Number(it.dispatched_quantity_kg || 0);
+                        const rem = Math.max(0, req - Math.max(prodKg, dispKg));
+                        const isDone = rem <= 0;
+
+                        return (
+                          <option key={it.id || idx} value={it.id}>
+                            Recipe #{idx + 1}: {prod?.name || 'Product'} • {spec} {it.grade ? `[${it.grade}]` : ''} • Remaining: {rem} kg {isDone ? '(Fully Produced)' : ''}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                );
+              })()}
+
+              {draftForm.orderId && (() => {
+                const ord = orders.find((o: any) => o.id === draftForm.orderId);
+                const items = ord?.customer_order_items || [];
+                const item = items.find((it: any) => it.id === draftForm.orderItemId) || items[0] || {};
                 const prod = products.find((p) => p.id === item.product_id);
-                const spec = (ord?.size_micron || ord?.sizeMicron || item.size_micron || item.sizeMicron || '').trim();
+                const spec = (item.size_micron || ord?.size_micron || ord?.sizeMicron || '').trim();
                 const requestedKg = Number(item.requested_quantity_kg) || Number(ord?.total_requested_weight_kg) || 0;
 
                 return (

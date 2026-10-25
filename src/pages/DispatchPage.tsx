@@ -153,11 +153,22 @@ export const DispatchPage: React.FC = () => {
   }, [orders, dispatchForm.orderId]);
 
   const activeOrderItem = useMemo(() => {
-    return activeOrder?.customer_order_items?.[0] || activeOrder?.items?.[0] || {};
-  }, [activeOrder]);
+    return (
+      activeOrder?.customer_order_items?.find((i: any) => i.id === dispatchForm.orderItemId) ||
+      activeOrder?.customer_order_items?.[0] ||
+      activeOrder?.items?.[0] ||
+      {}
+    );
+  }, [activeOrder, dispatchForm.orderItemId]);
 
   const activeOrderSpec = useMemo(() => {
-    return (activeOrder?.size_micron || activeOrder?.sizeMicron || activeOrderItem?.size_micron || activeOrderItem?.sizeMicron || '').trim();
+    return (
+      activeOrderItem?.size_micron ||
+      activeOrderItem?.sizeMicron ||
+      activeOrder?.size_micron ||
+      activeOrder?.sizeMicron ||
+      ''
+    ).trim();
   }, [activeOrder, activeOrderItem]);
 
   // Active selected batch details
@@ -211,12 +222,22 @@ export const DispatchPage: React.FC = () => {
   }, [activeBatch]);
 
   // When order changes, re-sync order item, product, and suggest the best batch
-  const handleOrderChange = (orderId: string) => {
+  const handleOrderChange = (orderId: string, specificItemId?: string) => {
     const ord = orders.find((o) => o.id === orderId);
     if (!ord) return;
 
-    const item = ord.customer_order_items?.[0] || ord.items?.[0] || {};
-    const orderSpec = (ord.size_micron || ord.sizeMicron || item.size_micron || item.sizeMicron || '').trim().toLowerCase();
+    const items = ord.customer_order_items?.length ? ord.customer_order_items : (ord.items?.length ? ord.items : [{}]);
+    const item =
+      (specificItemId ? items.find((i: any) => i.id === specificItemId) : null) ||
+      items.find((i: any) => {
+        const req = Number(i.requested_quantity_kg || ord.total_requested_weight_kg || 0);
+        const disp = Number(i.dispatched_quantity_kg || 0);
+        return (req - disp) > 0;
+      }) ||
+      items[0] ||
+      {};
+
+    const orderSpec = (item.size_micron || item.sizeMicron || ord.size_micron || ord.sizeMicron || '').trim().toLowerCase();
     const reqKg = Number(item.requested_quantity_kg || ord.total_requested_weight_kg || 0);
     const dispKg = Number(item.dispatched_quantity_kg || 0);
     const remKg = Math.max(0, reqKg - dispKg);
@@ -451,22 +472,58 @@ export const DispatchPage: React.FC = () => {
               >
                 <option value="" disabled>-- Select Customer Order --</option>
                 {orders.map((o) => {
-                  const itm = o.customer_order_items?.[0] || o.items?.[0] || {};
+                  const items = o.customer_order_items?.length ? o.customer_order_items : (o.items?.length ? o.items : [{}]);
+                  const itm = items[0] || {};
                   const pName = itm.products?.name || 'Product';
                   const spec = o.size_micron || o.sizeMicron || itm.size_micron || itm.sizeMicron || '';
-                  const req = Number(itm.requested_quantity_kg || o.total_requested_weight_kg || 0);
-                  const disp = Number(itm.dispatched_quantity_kg || 0);
-                  const rem = Math.max(0, req - disp);
+                  const totalReq = Number(o.total_requested_weight_kg) || items.reduce((s: number, i: any) => s + (Number(i.requested_quantity_kg) || 0), 0);
+                  const totalDisp = items.reduce((s: number, i: any) => s + (Number(i.dispatched_quantity_kg) || 0), 0);
+                  const rem = Math.max(0, totalReq - totalDisp);
+                  const isMulti = items.length > 1;
 
                   return (
                     <option key={o.id} value={o.id}>
-                      {o.order_number || 'Order'} • {o.customers?.name || o.customer_name} • {pName} {spec ? `(${spec})` : ''} • Remaining: {rem} kg
+                      {o.order_number || 'Order'} • {o.customers?.name || o.customer_name} • {isMulti ? `(${items.length} Recipes) • ` : `${pName} ${spec ? `(${spec}) ` : ''}• `}Remaining: {rem} kg
                     </option>
                   );
                 })}
               </select>
             )}
           </div>
+
+          {/* If the active order has multiple recipes, allow choosing which line item to dispatch */}
+          {activeOrder && activeOrder.customer_order_items && activeOrder.customer_order_items.length > 1 && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-indigo-500" />
+                  Select Recipe / Line Item to Dispatch *
+                </span>
+                <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-800/40">
+                  {activeOrder.customer_order_items.length} Recipes in Order
+                </span>
+              </label>
+              <select
+                value={dispatchForm.orderItemId}
+                onChange={(e) => handleOrderChange(dispatchForm.orderId, e.target.value)}
+                className="w-full text-xs px-3 py-2.5 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium focus:ring-1 focus:ring-brand-500 outline-none"
+              >
+                {activeOrder.customer_order_items.map((it: any, idx: number) => {
+                  const pName = it.products?.name || 'Product';
+                  const spec = it.size_micron || 'Standard';
+                  const req = Number(it.requested_quantity_kg || 0);
+                  const disp = Number(it.dispatched_quantity_kg || 0);
+                  const rem = Math.max(0, req - disp);
+
+                  return (
+                    <option key={it.id || idx} value={it.id}>
+                      Recipe #{idx + 1}: {pName} • {spec} {it.grade ? `[${it.grade}]` : ''} • Remaining: {rem} kg (Demanded: {req} kg)
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          )}
 
           {/* Select Finished Goods Batch */}
           <div className="space-y-2">

@@ -22,12 +22,24 @@ import {
   Search,
   Truck,
   Zap,
+  Layers,
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import { Button } from '../components/common/Button';
 import { PageSkeleton } from '../components/common/Skeleton';
 import { SizeMicron } from '../types';
+
+export interface OrderLineItem {
+  id: string;
+  productId: string;
+  requestedQuantityKg: number | '';
+  sizeMicron: string;
+  grade: string;
+  sellingPricePerKg: number | '';
+  notes?: string;
+  isCustomSize?: boolean;
+}
 
 export const OrdersPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'orders' | 'customers'>('orders');
@@ -48,7 +60,7 @@ export const OrdersPage: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Quick Size/Micron Master states
-  const [isCustomSize, setIsCustomSize] = useState(false);
+  const [activeQuickSizeItemId, setActiveQuickSizeItemId] = useState<string | null>(null);
   const [isQuickSizeModalOpen, setIsQuickSizeModalOpen] = useState(false);
   const [quickSizeForm, setQuickSizeForm] = useState({
     size: '',
@@ -62,27 +74,30 @@ export const OrdersPage: React.FC = () => {
   const [sizeToEdit, setSizeToEdit] = useState<SizeMicron | null>(null);
   const [sizeToDelete, setSizeToDelete] = useState<SizeMicron | null>(null);
 
-  // Form state: Order
+  // Form state: Order with multiple recipe line items
   const [orderForm, setOrderForm] = useState<{
     customerId: string;
     orderNumber: string;
     requiredDeliveryDate: string;
-    grade: string;
-    sizeMicron: string;
-    sellingPricePerKg: number | '';
     notes: string;
-    productId: string;
-    requestedQuantityKg: number;
+    items: OrderLineItem[];
   }>({
     customerId: '',
     orderNumber: `ORD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-00${Math.floor(Math.random() * 90 + 10)}`,
     requiredDeliveryDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
-    grade: '',
-    sizeMicron: '',
-    sellingPricePerKg: '',
     notes: '',
-    productId: '',
-    requestedQuantityKg: 500,
+    items: [
+      {
+        id: 'item-1',
+        productId: '',
+        requestedQuantityKg: 500,
+        sizeMicron: '',
+        grade: '',
+        sellingPricePerKg: '',
+        notes: '',
+        isCustomSize: false,
+      },
+    ],
   });
 
   // Calculate product formulation BOM cost per kg dynamically
@@ -144,8 +159,19 @@ export const OrdersPage: React.FC = () => {
       if (fetchedCustomers.length > 0 && !orderForm.customerId) {
         setOrderForm((prev) => ({ ...prev, customerId: fetchedCustomers[0].id }));
       }
-      if (fetchedProducts.length > 0 && !orderForm.productId) {
-        setOrderForm((prev) => ({ ...prev, productId: fetchedProducts[0].id }));
+      if (fetchedProducts.length > 0) {
+        setOrderForm((prev) => ({
+          ...prev,
+          items: prev.items.map((it, idx) =>
+            idx === 0 && !it.productId
+              ? {
+                  ...it,
+                  productId: fetchedProducts[0].id,
+                  sizeMicron: it.sizeMicron || fetchedProducts[0].size_micron || '',
+                }
+              : it
+          ),
+        }));
       }
     } catch (err) {
       console.error('Failed to load orders data:', err);
@@ -242,57 +268,129 @@ export const OrdersPage: React.FC = () => {
     }
   };
 
-  // Create Order
+  // Line Item Management
+  const handleAddItem = () => {
+    const defaultProd = products[0];
+    setOrderForm((prev) => ({
+      ...prev,
+      items: [
+        ...prev.items,
+        {
+          id: `item-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          productId: defaultProd?.id || '',
+          requestedQuantityKg: 100,
+          sizeMicron: defaultProd?.size_micron || '',
+          grade: '',
+          sellingPricePerKg: '',
+          notes: '',
+          isCustomSize: false,
+        },
+      ],
+    }));
+  };
+
+  const handleRemoveItem = (id: string) => {
+    if (orderForm.items.length <= 1) return;
+    setOrderForm((prev) => ({
+      ...prev,
+      items: prev.items.filter((it) => it.id !== id),
+    }));
+  };
+
+  const handleItemChange = (id: string, field: keyof OrderLineItem, value: any) => {
+    setOrderForm((prev) => ({
+      ...prev,
+      items: prev.items.map((it) => {
+        if (it.id !== id) return it;
+        if (field === 'productId') {
+          const prod = products.find((p) => p.id === value);
+          return {
+            ...it,
+            productId: value,
+            sizeMicron: prod?.size_micron || it.sizeMicron,
+          };
+        }
+        return { ...it, [field]: value };
+      }),
+    }));
+  };
+
+  // Create Order with Multiple Recipes / Line Items
   const handleCreateOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!orderForm.customerId) {
       alert('Please select or add a customer first.');
       return;
     }
-    if (!orderForm.productId) {
-      alert('Please select a product. If none exist, configure a product first.');
-      return;
-    }
-    const sellPrice = parseFloat(String(orderForm.sellingPricePerKg));
-    if (!sellPrice || sellPrice <= 0) {
-      alert('Please enter a valid Selling Price Per KG greater than 0.');
+    if (orderForm.items.length === 0) {
+      alert('Please add at least one recipe / product line item.');
       return;
     }
 
-    const selectedProduct = products.find((p) => p.id === orderForm.productId);
-    const recipeCost = getProductRecipeCost(selectedProduct);
+    for (let i = 0; i < orderForm.items.length; i++) {
+      const it = orderForm.items[i];
+      if (!it.productId) {
+        alert(`Please select a product/recipe for Recipe Item #${i + 1}.`);
+        return;
+      }
+      const qty = Number(it.requestedQuantityKg);
+      if (!qty || qty <= 0) {
+        alert(`Please enter a valid requested quantity (> 0 kg) for Recipe Item #${i + 1}.`);
+        return;
+      }
+      const sellPrice = parseFloat(String(it.sellingPricePerKg));
+      if (!sellPrice || sellPrice <= 0) {
+        alert(`Please enter a valid selling price (> ₹0/kg) for Recipe Item #${i + 1}.`);
+        return;
+      }
+    }
+
+    const payloadItems = orderForm.items.map((it) => {
+      const selectedProduct = products.find((p) => p.id === it.productId);
+      const recipeCost = getProductRecipeCost(selectedProduct);
+      const sellPrice = parseFloat(String(it.sellingPricePerKg)) || 0;
+      return {
+        productId: it.productId,
+        requestedQuantityKg: Number(it.requestedQuantityKg),
+        sellingPricePerKg: sellPrice,
+        recipeCostPerKg: recipeCost,
+        grade: it.grade?.trim() || undefined,
+        sizeMicron: it.sizeMicron?.trim() || undefined,
+        notes: it.notes?.trim() || undefined,
+      };
+    });
 
     setIsSubmitting(true);
     try {
       await api.post('/orders', {
         customerId: orderForm.customerId,
         requiredDeliveryDate: orderForm.requiredDeliveryDate,
-        grade: orderForm.grade,
-        sizeMicron: orderForm.sizeMicron,
-        sellingPricePerKg: sellPrice,
-        recipeCostPerKg: recipeCost,
+        grade: payloadItems[0]?.grade,
+        sizeMicron: payloadItems[0]?.sizeMicron,
+        sellingPricePerKg: payloadItems[0]?.sellingPricePerKg,
+        recipeCostPerKg: payloadItems[0]?.recipeCostPerKg,
         notes: orderForm.notes,
+        items: payloadItems,
+      });
+      setIsOrderModalOpen(false);
+      setOrderForm({
+        customerId: customers[0]?.id || '',
+        orderNumber: `ORD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-00${Math.floor(Math.random() * 90 + 10)}`,
+        requiredDeliveryDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+        notes: '',
         items: [
           {
-            productId: orderForm.productId,
-            requestedQuantityKg: orderForm.requestedQuantityKg,
-            sellingPricePerKg: sellPrice,
-            recipeCostPerKg: recipeCost,
-            grade: orderForm.grade,
-            sizeMicron: orderForm.sizeMicron,
-            notes: orderForm.notes,
+            id: `item-${Date.now()}`,
+            productId: products[0]?.id || '',
+            requestedQuantityKg: 500,
+            sizeMicron: products[0]?.size_micron || '',
+            grade: '',
+            sellingPricePerKg: '',
+            notes: '',
+            isCustomSize: false,
           },
         ],
       });
-      setIsOrderModalOpen(false);
-      setOrderForm((prev) => ({
-        ...prev,
-        grade: '',
-        sizeMicron: '',
-        sellingPricePerKg: '',
-        notes: '',
-        requestedQuantityKg: 500,
-      }));
       await fetchData();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to create order');
@@ -397,16 +495,32 @@ export const OrdersPage: React.FC = () => {
             </div>
           ) : (
             orders.map((order) => {
-              const item = order.customer_order_items?.[0] || order.items?.[0] || {};
-              const productName = item.products?.name || products.find((p) => p.id === item.product_id)?.name;
-              const orderGrade = order.grade || item.grade;
-              const orderSizeMicron = order.size_micron || order.sizeMicron || item.size_micron || item.sizeMicron;
-              const requested = Number(item.requested_quantity_kg || order.total_requested_weight_kg || 0);
-              const produced = Number(item.produced_quantity_kg || 0);
-              const dispatched = Number(item.dispatched_quantity_kg || 0);
+              const orderItems: any[] = (order.customer_order_items && order.customer_order_items.length > 0)
+                ? order.customer_order_items
+                : (order.items && order.items.length > 0 ? order.items : [{}]);
+              const isMultiItem = orderItems.length > 1;
+              const primaryItem = orderItems[0] || {};
+              const primaryProductName = primaryItem.products?.name || products.find((p) => p.id === primaryItem.product_id)?.name;
+              const primaryGrade = order.grade || primaryItem.grade;
+              const primarySizeMicron = order.size_micron || order.sizeMicron || primaryItem.size_micron || primaryItem.sizeMicron;
 
-              const prodPercent = requested > 0 ? Math.min(100, Math.round((produced / requested) * 100)) : 0;
-              const dispPercent = requested > 0 ? Math.min(100, Math.round((dispatched / requested) * 100)) : 0;
+              const totalRequested = orderItems.reduce(
+                (sum: number, it: any) => sum + Number(it.requested_quantity_kg || 0),
+                0
+              ) || Number(order.total_requested_weight_kg || 0);
+
+              const totalProduced = orderItems.reduce(
+                (sum: number, it: any) => sum + Number(it.produced_quantity_kg || 0),
+                0
+              );
+
+              const totalDispatched = orderItems.reduce(
+                (sum: number, it: any) => sum + Number(it.dispatched_quantity_kg || 0),
+                0
+              );
+
+              const prodPercent = totalRequested > 0 ? Math.min(100, Math.round((totalProduced / totalRequested) * 100)) : 0;
+              const dispPercent = totalRequested > 0 ? Math.min(100, Math.round((totalDispatched / totalRequested) * 100)) : 0;
 
               return (
                 <div
@@ -415,7 +529,7 @@ export const OrdersPage: React.FC = () => {
                 >
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                           {order.customers?.name || order.customer_name || 'Direct Client'}
                           {order.customers?.contact_person && (
@@ -435,6 +549,12 @@ export const OrdersPage: React.FC = () => {
                         >
                           {order.status}
                         </Badge>
+                        {isMultiItem && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">
+                            <Layers className="w-3 h-3 text-indigo-500" />
+                            {orderItems.length} Recipes
+                          </span>
+                        )}
                       </div>
                       {order.customers?.delivery_address && (
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1">
@@ -443,37 +563,37 @@ export const OrdersPage: React.FC = () => {
                         </p>
                       )}
 
-                      {/* Product Specifications: Product, Grade, Size / Micron */}
-                      {(productName || orderGrade || orderSizeMicron || (order.notes && !order.notes.startsWith('{'))) && (
+                      {/* Single Product Specifications (If 1 item) */}
+                      {!isMultiItem && (primaryProductName || primaryGrade || primarySizeMicron || (order.notes && !order.notes.startsWith('{'))) && (
                         <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                          {productName && (
+                          {primaryProductName && (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-slate-100 dark:bg-factory-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                               <Package className="w-3 h-3 text-brand-500" />
-                              {productName}
+                              {primaryProductName}
                             </span>
                           )}
-                          {orderGrade && (
+                          {primaryGrade && (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40">
                               <span className="text-[10px] uppercase font-semibold text-emerald-600 dark:text-emerald-400">Grade:</span>
-                              {orderGrade}
+                              {primaryGrade}
                             </span>
                           )}
-                          {orderSizeMicron && (
+                          {primarySizeMicron && (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/40">
                               <span className="text-[10px] uppercase font-semibold text-sky-600 dark:text-sky-400">Size / Micron:</span>
-                              {orderSizeMicron}
+                              {primarySizeMicron}
                             </span>
                           )}
-                          {Number(order.selling_price_per_kg || item.selling_price_per_kg) > 0 && (
+                          {Number(order.selling_price_per_kg || primaryItem.selling_price_per_kg) > 0 && (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800/40">
                               <span className="text-[10px] uppercase font-semibold text-teal-600 dark:text-teal-400">Sell:</span>
-                              ₹{Number(order.selling_price_per_kg || item.selling_price_per_kg).toFixed(2)}/kg
+                              ₹{Number(order.selling_price_per_kg || primaryItem.selling_price_per_kg).toFixed(2)}/kg
                             </span>
                           )}
-                          {Number(order.recipe_cost_per_kg || item.recipe_cost_per_kg) > 0 && (
+                          {Number(order.recipe_cost_per_kg || primaryItem.recipe_cost_per_kg) > 0 && (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-slate-100 dark:bg-factory-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
                               <span className="text-[10px] uppercase font-semibold text-slate-500">BOM Cost:</span>
-                              ₹{Number(order.recipe_cost_per_kg || item.recipe_cost_per_kg).toFixed(2)}/kg
+                              ₹{Number(order.recipe_cost_per_kg || primaryItem.recipe_cost_per_kg).toFixed(2)}/kg
                             </span>
                           )}
                           {order.notes && !order.notes.startsWith('{') && (
@@ -495,7 +615,7 @@ export const OrdersPage: React.FC = () => {
                         <span>Target Delivery: {order.required_delivery_date}</span>
                       </div>
                       <div className="font-mono font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 px-3 py-1 rounded-lg border border-brand-200 dark:border-brand-800/40 flex items-center gap-2">
-                        <span>Total: {order.total_requested_weight_kg} kg</span>
+                        <span>Total: {totalRequested} kg</span>
                         {Number(order.total_order_value) > 0 && (
                           <span className="text-emerald-600 dark:text-emerald-400 border-l border-brand-200 dark:border-brand-800/60 pl-2">
                             ₹{Number(order.total_order_value).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -505,12 +625,12 @@ export const OrdersPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Progress Tracking (Ordered -> Produced -> Dispatched) */}
+                  {/* Overall Progress Tracking (Ordered -> Produced -> Dispatched) */}
                   <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="p-3 rounded-xl bg-slate-50 dark:bg-factory-800/40 border border-slate-100 dark:border-slate-800">
-                      <span className="text-[10px] uppercase font-bold text-slate-400">1. Ordered</span>
+                      <span className="text-[10px] uppercase font-bold text-slate-400">1. Total Ordered</span>
                       <p className="font-mono text-base font-bold text-slate-800 dark:text-slate-200 mt-0.5">
-                        {requested} kg
+                        {totalRequested} kg
                       </p>
                       <p className="text-[10px] text-slate-400">100% Demand</p>
                     </div>
@@ -521,7 +641,7 @@ export const OrdersPage: React.FC = () => {
                         <span className="text-[10px] font-mono font-bold text-amber-500">{prodPercent}%</span>
                       </div>
                       <p className="font-mono text-base font-bold text-amber-600 dark:text-amber-400 mt-0.5">
-                        {produced} kg
+                        {totalProduced} kg
                       </p>
                       <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full mt-1.5 overflow-hidden">
                         <div className="bg-amber-500 h-full rounded-full" style={{ width: `${prodPercent}%` }}></div>
@@ -534,7 +654,7 @@ export const OrdersPage: React.FC = () => {
                         <span className="text-[10px] font-mono font-bold text-emerald-500">{dispPercent}%</span>
                       </div>
                       <p className="font-mono text-base font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
-                        {dispatched} kg
+                        {totalDispatched} kg
                       </p>
                       <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full mt-1.5 overflow-hidden">
                         <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${dispPercent}%` }}></div>
@@ -542,11 +662,93 @@ export const OrdersPage: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Multi-Recipe Itemized Specifications Breakdown */}
+                  {isMultiItem && (
+                    <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+                          <Layers className="w-3.5 h-3.5 text-indigo-500" />
+                          Multi-Recipe Specifications ({orderItems.length} Line Items)
+                        </span>
+                        <span className="text-[11px] font-mono text-slate-400">
+                          Total Demand: {totalRequested} kg
+                        </span>
+                      </div>
+
+                      <div className="space-y-2">
+                        {orderItems.map((itm: any, itmIdx: number) => {
+                          const itmProdName = itm.products?.name || products.find((p) => p.id === itm.product_id)?.name || 'Custom Formulation';
+                          const itmReq = Number(itm.requested_quantity_kg || 0);
+                          const itmProd = Number(itm.produced_quantity_kg || 0);
+                          const itmDisp = Number(itm.dispatched_quantity_kg || 0);
+                          const itmProdPct = itmReq > 0 ? Math.min(100, Math.round((itmProd / itmReq) * 100)) : 0;
+                          const itmDispPct = itmReq > 0 ? Math.min(100, Math.round((itmDisp / itmReq) * 100)) : 0;
+
+                          return (
+                            <div
+                              key={itm.id || itmIdx}
+                              className="p-3 rounded-xl bg-slate-50/70 dark:bg-factory-800/40 border border-slate-200/70 dark:border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                            >
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="px-2 py-0.5 rounded text-[10px] font-black bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
+                                    Item #{itmIdx + 1}
+                                  </span>
+                                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                                    {itmProdName}
+                                  </span>
+                                  {itm.grade && (
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40">
+                                      Grade: {itm.grade}
+                                    </span>
+                                  )}
+                                  {itm.size_micron && (
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/40">
+                                      {itm.size_micron}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400">
+                                  <span>Demand: <strong className="font-mono text-slate-700 dark:text-slate-300">{itmReq} kg</strong></span>
+                                  <span>Produced: <strong className="font-mono text-amber-600 dark:text-amber-400">{itmProd} kg ({itmProdPct}%)</strong></span>
+                                  <span>Dispatched: <strong className="font-mono text-emerald-600 dark:text-emerald-400">{itmDisp} kg ({itmDispPct}%)</strong></span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-3 self-end sm:self-center font-mono">
+                                {Number(itm.selling_price_per_kg) > 0 && (
+                                  <div className="text-right">
+                                    <span className="text-[10px] text-slate-400 block font-sans">Selling Rate</span>
+                                    <span className="font-bold text-teal-600 dark:text-teal-400">₹{Number(itm.selling_price_per_kg).toFixed(2)}/kg</span>
+                                  </div>
+                                )}
+                                {Number(itm.recipe_cost_per_kg) > 0 && (
+                                  <div className="text-right">
+                                    <span className="text-[10px] text-slate-400 block font-sans">BOM Cost</span>
+                                    <span className="text-slate-500">₹{Number(itm.recipe_cost_per_kg).toFixed(2)}/kg</span>
+                                  </div>
+                                )}
+                                {Number(itm.requested_quantity_kg) > 0 && Number(itm.selling_price_per_kg) > 0 && (
+                                  <div className="text-right border-l border-slate-200 dark:border-slate-700 pl-3">
+                                    <span className="text-[10px] text-slate-400 block font-sans">Item Value</span>
+                                    <span className="font-black text-slate-900 dark:text-white">
+                                      ₹{(Number(itm.requested_quantity_kg) * Number(itm.selling_price_per_kg)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Direct Dispatch Match Finder (Job Work & Floor Stock Matching Product + Spec) */}
                   {(() => {
-                    const targetProdId = item.product_id;
-                    const targetSpecLower = (orderSizeMicron || '').trim().toLowerCase();
-                    const pendingKg = Math.max(0, requested - dispatched);
+                    const targetProdId = primaryItem.product_id;
+                    const targetSpecLower = (primarySizeMicron || '').trim().toLowerCase();
+                    const pendingKg = Math.max(0, totalRequested - totalDispatched);
 
                     if (pendingKg <= 0 || !targetProdId || !targetSpecLower) return null;
 
@@ -593,7 +795,7 @@ export const OrdersPage: React.FC = () => {
                               )}
                             </div>
                             <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
-                              Product and exact specification <strong>"{orderSizeMicron}"</strong> are ready in floor inventory (Lot:{' '}
+                              Product and exact specification <strong>"{primarySizeMicron}"</strong> are ready in floor inventory (Lot:{' '}
                               <strong className="font-mono">{bestBatch.batch_number}</strong>). Fulfill this order directly with zero extra production wait!
                             </p>
                           </div>
@@ -878,106 +1080,48 @@ export const OrdersPage: React.FC = () => {
         </div>
       </Modal>
 
-      {/* Modal: Create Customer Order */}
+      {/* Modal: Create Customer Order (Multi-Recipe Support) */}
       <Modal
         isOpen={isOrderModalOpen}
         onClose={() => setIsOrderModalOpen(false)}
         title="Create Customer Order"
-        maxWidth="lg"
+        maxWidth="2xl"
       >
         <form onSubmit={handleCreateOrder} className="space-y-4">
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Select Customer *
-              </label>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsOrderModalOpen(false);
-                  handleOpenCreateCustomer();
-                }}
-                className="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1"
-              >
-                <Plus className="w-3 h-3" /> Add New Customer
-              </button>
-            </div>
-
-            {customers.length === 0 ? (
-              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-300 flex items-center justify-between gap-3">
-                <div>
-                  <p className="font-bold">No customers registered yet</p>
-                  <p className="text-[11px] opacity-80">You need to register at least one customer to place orders.</p>
-                </div>
+          {/* Customer & Delivery Date */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2 border-b border-slate-100 dark:border-slate-800">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Select Customer *
+                </label>
                 <button
                   type="button"
                   onClick={() => {
                     setIsOrderModalOpen(false);
                     handleOpenCreateCustomer();
                   }}
-                  className="px-3 py-1.5 rounded-lg bg-amber-500 text-white font-bold text-xs shrink-0 hover:bg-amber-600 transition-colors"
+                  className="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1"
                 >
-                  Add Customer
+                  <Plus className="w-3 h-3" /> Add New
                 </button>
               </div>
-            ) : (
-              <select
-                required
-                value={orderForm.customerId}
-                onChange={(e) => setOrderForm({ ...orderForm, customerId: e.target.value })}
-                className="w-full text-xs px-3 py-2.5 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
-              >
-                <option value="" disabled>-- Select Customer --</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Required Delivery Date *
-            </label>
-            <input
-              type="date"
-              required
-              value={orderForm.requiredDeliveryDate}
-              onChange={(e) => setOrderForm({ ...orderForm, requiredDeliveryDate: e.target.value })}
-              className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Ordered Product *
-              </label>
-              {products.length === 0 ? (
-                <div className="p-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-800">
-                  No products in catalog yet. Please add a product in Products & Recipes.
+              {customers.length === 0 ? (
+                <div className="p-2 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200">
+                  No customers registered. Please add a customer first.
                 </div>
               ) : (
                 <select
                   required
-                  value={orderForm.productId}
-                  onChange={(e) => {
-                    const chosenId = e.target.value;
-                    const prod = products.find((p) => p.id === chosenId);
-                    setOrderForm({
-                      ...orderForm,
-                      productId: chosenId,
-                      sizeMicron: prod?.size_micron || orderForm.sizeMicron,
-                    });
-                  }}
+                  value={orderForm.customerId}
+                  onChange={(e) => setOrderForm({ ...orderForm, customerId: e.target.value })}
                   className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
                 >
-                  <option value="" disabled>-- Select Product --</option>
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
+                  <option value="" disabled>-- Select Customer --</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
                     </option>
                   ))}
                 </select>
@@ -986,242 +1130,362 @@ export const OrdersPage: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Requested Weight (kg) *
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  step="0.001"
-                  min="1"
-                  required
-                  value={orderForm.requestedQuantityKg}
-                  onChange={(e) =>
-                    setOrderForm({ ...orderForm, requestedQuantityKg: parseFloat(e.target.value) || 0 })
-                  }
-                  className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
-                />
-                <span className="absolute right-3 top-2 text-xs text-slate-400 font-bold">kg</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Grade & Size / Micron */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Grade
+                Required Delivery Date *
               </label>
               <input
-                type="text"
-                placeholder="Enter grade (e.g. HDPE, Virgin, Relene 010F18)"
-                value={orderForm.grade}
-                onChange={(e) => setOrderForm({ ...orderForm, grade: e.target.value })}
+                type="date"
+                required
+                value={orderForm.requiredDeliveryDate}
+                onChange={(e) => setOrderForm({ ...orderForm, requiredDeliveryDate: e.target.value })}
                 className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl"
               />
             </div>
-
-            {/* Size / Micron Dropdown directly fetched from Master */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Size / Micron *
-                </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSizeToEdit(null);
-                    setQuickSizeForm({ size: '', micron: 50, unit: 'Micron', label: '50 Micron', description: '' });
-                    setIsQuickSizeModalOpen(true);
-                  }}
-                  className="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-0.5"
-                >
-                  <Plus className="w-3 h-3" /> Add New
-                </button>
-              </div>
-
-              <select
-                value={
-                  sizeMicrons.some((sm) => sm.label === orderForm.sizeMicron)
-                    ? orderForm.sizeMicron
-                    : orderForm.sizeMicron
-                      ? '__custom__'
-                      : ''
-                }
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === '__custom__') {
-                    setIsCustomSize(true);
-                  } else {
-                    setIsCustomSize(false);
-                    setOrderForm({ ...orderForm, sizeMicron: val });
-                  }
-                }}
-                className="w-full h-10 text-xs px-3 bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all cursor-pointer"
-              >
-                <option value="">-- Select Size / Micron from Master --</option>
-                {sizeMicrons
-                  .filter((sm) => sm.is_active)
-                  .map((sm) => (
-                    <option key={sm.id} value={sm.label}>
-                      {sm.label} {sm.description ? `(${sm.description})` : ''}
-                    </option>
-                  ))}
-                <option value="__custom__">➕ Custom Specification...</option>
-              </select>
-
-              {(isCustomSize || (!sizeMicrons.some((sm) => sm.label === orderForm.sizeMicron) && orderForm.sizeMicron)) && (
-                <div className="mt-2">
-                  <input
-                    type="text"
-                    placeholder="Enter custom size / micron (e.g. 50 Micron, 24x36)"
-                    value={orderForm.sizeMicron}
-                    onChange={(e) => setOrderForm({ ...orderForm, sizeMicron: e.target.value })}
-                    className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-brand-500 rounded-xl ring-2 ring-brand-500/20"
-                  />
-                  <p className="text-[10px] text-slate-400 mt-0.5">
-                    Tip: Click &quot;Add Master&quot; above to save this specification permanently for future orders.
-                  </p>
-                </div>
-              )}
-            </div>
           </div>
 
-          {/* Pricing: Recipe Cost (View Only) & Selling Price Per KG (Input) */}
-          {(() => {
-            const selectedProduct = products.find((p) => p.id === orderForm.productId);
-            const recipeCost = getProductRecipeCost(selectedProduct);
-            const sellPrice =
-              typeof orderForm.sellingPricePerKg === 'number'
-                ? orderForm.sellingPricePerKg
-                : parseFloat(String(orderForm.sellingPricePerKg)) || 0;
-            const margin = sellPrice > 0 ? sellPrice - recipeCost : 0;
-            const marginPct = recipeCost > 0 ? (margin / recipeCost) * 100 : 0;
-            const weight = Number(orderForm.requestedQuantityKg) || 0;
-            const totalVal = sellPrice * weight;
+          {/* Section: Recipe & Product Line Items */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Package className="w-3.5 h-3.5 text-brand-500" />
+                  Recipe Items & Product Line Items ({orderForm.items.length})
+                </h4>
+                <p className="text-[11px] text-slate-400">
+                  Customers can order multiple recipes / product specifications under a single purchase order.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddItem}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800/60 rounded-xl hover:bg-brand-100 transition-colors shadow-sm"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Recipe Item
+              </button>
+            </div>
 
-            return (
-              <div className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Recipe Cost Price - Viewable only */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        Recipe Cost Price
-                      </label>
-                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-factory-800 px-1.5 py-0.5 rounded border border-slate-200/60 dark:border-slate-700/60">
-                        View Only
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between px-3 py-2 bg-slate-100/90 dark:bg-factory-800/80 border border-slate-200 dark:border-slate-700 rounded-xl">
-                      <span className="font-mono text-xs font-black text-slate-800 dark:text-slate-200">
-                        ₹{recipeCost.toFixed(2)}{' '}
-                        <span className="text-[10px] font-semibold text-slate-400 font-sans">/ kg</span>
-                      </span>
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
-                        BOM Cost
-                      </span>
-                    </div>
-                  </div>
+            {/* List of Recipe Item Cards */}
+            <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+              {orderForm.items.map((it, idx) => {
+                const selectedProduct = products.find((p) => p.id === it.productId);
+                const recipeCost = getProductRecipeCost(selectedProduct);
+                const sellPrice =
+                  typeof it.sellingPricePerKg === 'number'
+                    ? it.sellingPricePerKg
+                    : parseFloat(String(it.sellingPricePerKg)) || 0;
+                const margin = sellPrice > 0 ? sellPrice - recipeCost : 0;
+                const marginPct = recipeCost > 0 ? (margin / recipeCost) * 100 : 0;
+                const weight = Number(it.requestedQuantityKg) || 0;
+                const totalItemVal = sellPrice * weight;
 
-                  {/* Selling Price Per KG - Input field */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Selling Price Per KG (₹) *
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        required
-                        placeholder="e.g. 135.00"
-                        value={orderForm.sellingPricePerKg}
-                        onChange={(e) =>
-                          setOrderForm({
-                            ...orderForm,
-                            sellingPricePerKg: e.target.value === '' ? '' : parseFloat(e.target.value),
-                          })
-                        }
-                        className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono pr-12 font-bold text-emerald-600 dark:text-emerald-400 focus:ring-2 focus:ring-emerald-500/20"
-                      />
-                      <span className="absolute right-3 top-2 text-xs text-slate-400 font-bold">₹/kg</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Dynamic Price & Profit Margin Card */}
-                {sellPrice > 0 && (
+                return (
                   <div
-                    className={`p-3 rounded-2xl border transition-all ${margin >= 0
-                      ? 'bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/40 border-emerald-200 dark:border-emerald-800/60'
-                      : 'bg-gradient-to-r from-rose-50 to-amber-50 dark:from-rose-950/40 dark:to-amber-950/40 border-rose-200 dark:border-rose-800/60'
-                      }`}
+                    key={it.id}
+                    className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-factory-800/40 space-y-3 transition-all hover:border-slate-300 dark:hover:border-slate-700"
                   >
-                    <div className="flex items-center justify-between gap-2">
+                    {/* Item Card Header */}
+                    <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div
-                          className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${margin >= 0
-                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                            : 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
-                            }`}
-                        >
-                          <IndianRupee className="w-3.5 h-3.5" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400">
-                            Estimated Gross Margin
-                          </p>
-                          <p
-                            className={`text-xs font-bold ${margin >= 0
-                              ? 'text-emerald-700 dark:text-emerald-300'
-                              : 'text-rose-600 dark:text-rose-400'
-                              }`}
-                          >
-                            {margin >= 0 ? '+' : ''}₹{margin.toFixed(2)} / kg
-                            {recipeCost > 0 && (
-                              <span className="text-[10px] font-normal ml-1.5 opacity-80">
-                                ({margin >= 0 ? '+' : ''}
-                                {marginPct.toFixed(2)}%)
-                              </span>
-                            )}
-                          </p>
-                        </div>
+                        <span className="px-2.5 py-0.5 rounded-lg text-xs font-black bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
+                          Recipe Item #{idx + 1}
+                        </span>
+                        {selectedProduct && (
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                            {selectedProduct.name}
+                          </span>
+                        )}
+                        {weight > 0 && (
+                          <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 font-semibold">
+                            ({weight} kg)
+                          </span>
+                        )}
                       </div>
 
-                      <div className="text-right">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">
-                          Est. Total Order Value
-                        </span>
-                        <p className="font-mono text-sm font-black text-slate-900 dark:text-white leading-tight">
-                          ₹{totalVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </p>
-                        {weight > 0 && (
-                          <p className="text-[10px] text-slate-400 font-mono">
-                            {weight} kg @ ₹{sellPrice.toFixed(2)}/kg
-                          </p>
+                      {orderForm.items.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItem(it.id)}
+                          className="p-1 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
+                          title="Remove this recipe item"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Product & Weight */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                          Product / Recipe *
+                        </label>
+                        {products.length === 0 ? (
+                          <div className="p-2 text-xs text-amber-600 bg-amber-50 rounded-xl border">
+                            No products available.
+                          </div>
+                        ) : (
+                          <select
+                            required
+                            value={it.productId}
+                            onChange={(e) => handleItemChange(it.id, 'productId', e.target.value)}
+                            className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
+                          >
+                            <option value="" disabled>-- Select Product --</option>
+                            {products.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name} {p.code ? `(${p.code})` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                          Requested Weight (kg) *
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            step="0.001"
+                            min="1"
+                            required
+                            value={it.requestedQuantityKg}
+                            onChange={(e) =>
+                              handleItemChange(it.id, 'requestedQuantityKg', parseFloat(e.target.value) || '')
+                            }
+                            placeholder="e.g. 100"
+                            className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
+                          />
+                          <span className="absolute right-3 top-2 text-xs text-slate-400 font-bold">kg</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Grade & Size / Micron */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                          Grade
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. HDPE, Virgin, Relene 010F18"
+                          value={it.grade}
+                          onChange={(e) => handleItemChange(it.id, 'grade', e.target.value)}
+                          className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl"
+                        />
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                            Size / Micron *
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveQuickSizeItemId(it.id);
+                              setSizeToEdit(null);
+                              setQuickSizeForm({ size: '', micron: 50, unit: 'Micron', label: '50 Micron', description: '' });
+                              setIsQuickSizeModalOpen(true);
+                            }}
+                            className="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-0.5"
+                          >
+                            <Plus className="w-3 h-3" /> Add Master
+                          </button>
+                        </div>
+
+                        <select
+                          value={
+                            sizeMicrons.some((sm) => sm.label === it.sizeMicron)
+                              ? it.sizeMicron
+                              : it.sizeMicron
+                                ? '__custom__'
+                                : ''
+                          }
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === '__custom__') {
+                              handleItemChange(it.id, 'isCustomSize', true);
+                            } else {
+                              handleItemChange(it.id, 'isCustomSize', false);
+                              handleItemChange(it.id, 'sizeMicron', val);
+                            }
+                          }}
+                          className="w-full h-9 text-xs px-3 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl font-medium focus:outline-none focus:ring-1 focus:ring-brand-500"
+                        >
+                          <option value="">-- Select Size / Micron from Master --</option>
+                          {sizeMicrons
+                            .filter((sm) => sm.is_active)
+                            .map((sm) => (
+                              <option key={sm.id} value={sm.label}>
+                                {sm.label} {sm.description ? `(${sm.description})` : ''}
+                              </option>
+                            ))}
+                          <option value="__custom__">➕ Custom Specification...</option>
+                        </select>
+
+                        {(it.isCustomSize ||
+                          (!sizeMicrons.some((sm) => sm.label === it.sizeMicron) && it.sizeMicron)) && (
+                          <div className="mt-1.5">
+                            <input
+                              type="text"
+                              placeholder="Enter custom size / micron (e.g. 50 Micron, 24x36)"
+                              value={it.sizeMicron}
+                              onChange={(e) => handleItemChange(it.id, 'sizeMicron', e.target.value)}
+                              className="w-full text-xs px-3 py-1.5 bg-white dark:bg-factory-900 border border-brand-500 rounded-xl ring-2 ring-brand-500/20"
+                            />
+                          </div>
                         )}
                       </div>
                     </div>
 
-                    {margin < 0 && (
-                      <p className="text-[11px] text-rose-600 dark:text-rose-400 font-medium mt-1.5 pt-1.5 border-t border-rose-200/60 dark:border-rose-800/60 flex items-center gap-1">
-                        <AlertTriangle className="w-3 h-3 shrink-0" />
-                        Warning: Selling price is below the BOM recipe cost of ₹{recipeCost.toFixed(2)}/kg
-                      </p>
+                    {/* Pricing: Recipe Cost & Selling Price */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                            Recipe Cost Price
+                          </label>
+                          <span className="text-[10px] font-bold text-slate-400 bg-slate-200/60 dark:bg-factory-800 px-1.5 py-0.5 rounded">
+                            BOM
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between px-3 py-2 bg-slate-100/90 dark:bg-factory-800/80 border border-slate-200 dark:border-slate-700 rounded-xl">
+                          <span className="font-mono text-xs font-black text-slate-800 dark:text-slate-200">
+                            ₹{recipeCost.toFixed(2)}{' '}
+                            <span className="text-[10px] font-semibold text-slate-400 font-sans">/ kg</span>
+                          </span>
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400">Formula BOM</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                          Selling Price Per KG (₹) *
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            required
+                            placeholder="e.g. 135.00"
+                            value={it.sellingPricePerKg}
+                            onChange={(e) =>
+                              handleItemChange(
+                                it.id,
+                                'sellingPricePerKg',
+                                e.target.value === '' ? '' : parseFloat(e.target.value)
+                              )
+                            }
+                            className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl font-mono pr-12 font-bold text-emerald-600 dark:text-emerald-400 focus:ring-2 focus:ring-emerald-500/20"
+                          />
+                          <span className="absolute right-3 top-2 text-xs text-slate-400 font-bold">₹/kg</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Item Margin Subtotal pill */}
+                    {sellPrice > 0 && (
+                      <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-700/80 text-[11px]">
+                        <span className="text-slate-500 dark:text-slate-400">
+                          Item Margin:{' '}
+                          <strong
+                            className={
+                              margin >= 0
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : 'text-rose-600 dark:text-rose-400'
+                            }
+                          >
+                            {margin >= 0 ? '+' : ''}₹{margin.toFixed(2)}/kg
+                            {recipeCost > 0 && ` (${margin >= 0 ? '+' : ''}${marginPct.toFixed(1)}%)`}
+                          </strong>
+                        </span>
+                        <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                          Subtotal: ₹{totalItemVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
                     )}
                   </div>
-                )}
+                );
+              })}
+            </div>
+
+            {/* Big friendly Add Item button */}
+            <button
+              type="button"
+              onClick={handleAddItem}
+              className="w-full py-2.5 px-4 border-2 border-dashed border-brand-300 dark:border-brand-800/60 hover:border-brand-500 dark:hover:border-brand-500 rounded-2xl text-xs font-bold text-brand-600 dark:text-brand-400 hover:bg-brand-50/50 dark:hover:bg-brand-950/20 transition-all flex items-center justify-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Add Another Recipe / Line Item to this Order
+            </button>
+          </div>
+
+          {/* Aggregate Order Summary Footer */}
+          {(() => {
+            const totalWeight = orderForm.items.reduce(
+              (sum, it) => sum + (Number(it.requestedQuantityKg) || 0),
+              0
+            );
+            const totalVal = orderForm.items.reduce((sum, it) => {
+              const qty = Number(it.requestedQuantityKg) || 0;
+              const sell = Number(it.sellingPricePerKg) || 0;
+              return sum + qty * sell;
+            }, 0);
+            const totalCost = orderForm.items.reduce((sum, it) => {
+              const qty = Number(it.requestedQuantityKg) || 0;
+              const prod = products.find((p) => p.id === it.productId);
+              const cost = getProductRecipeCost(prod);
+              return sum + qty * cost;
+            }, 0);
+            const totalMargin = totalVal - totalCost;
+            const marginPct = totalCost > 0 ? (totalMargin / totalCost) * 100 : 0;
+
+            return (
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-slate-900 to-factory-900 text-white shadow-lg space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-300 font-semibold flex items-center gap-1.5">
+                    <ShoppingCart className="w-3.5 h-3.5 text-brand-400" />
+                    Order Total ({orderForm.items.length} {orderForm.items.length === 1 ? 'Recipe' : 'Recipes'})
+                  </span>
+                  <span className="font-mono font-bold text-brand-400">
+                    Total Weight: {totalWeight} kg
+                  </span>
+                </div>
+                <div className="flex items-center justify-between pt-1 border-t border-slate-700/60">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Est. Gross Margin</span>
+                    <span
+                      className={`text-xs font-mono font-bold ${
+                        totalMargin >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                      }`}
+                    >
+                      {totalMargin >= 0 ? '+' : ''}₹{totalMargin.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {totalCost > 0 && ` (${totalMargin >= 0 ? '+' : ''}${marginPct.toFixed(1)}%)`}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Order Value</span>
+                    <span className="font-mono text-base font-black text-white">
+                      ₹{totalVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
               </div>
             );
           })()}
 
+          {/* General Notes */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Order Notes / Quality Specs
+              Order Notes / Delivery Instructions
             </label>
             <textarea
               rows={2}
-              placeholder="e.g. Corona treatment 42 dynes, food-grade certificate required"
+              placeholder="e.g. PO #PO-99124, delivery at gate #2, certificate of analysis required"
               value={orderForm.notes}
               onChange={(e) => setOrderForm({ ...orderForm, notes: e.target.value })}
               className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl resize-none"
@@ -1242,7 +1506,7 @@ export const OrdersPage: React.FC = () => {
               isLoading={isSubmitting}
               loadingText="Creating Order..."
             >
-              Confirm Customer Order
+              Confirm Customer Order ({orderForm.items.length} {orderForm.items.length === 1 ? 'Recipe' : 'Recipes'})
             </Button>
           </div>
         </form>
@@ -1289,8 +1553,10 @@ export const OrdersPage: React.FC = () => {
                   isActive: true,
                 });
                 const created = res.data.sizeMicron;
-                setOrderForm({ ...orderForm, sizeMicron: created.label });
-                setIsCustomSize(false);
+                if (activeQuickSizeItemId) {
+                  handleItemChange(activeQuickSizeItemId, 'sizeMicron', created.label);
+                  handleItemChange(activeQuickSizeItemId, 'isCustomSize', false);
+                }
               }
 
               await fetchData();
