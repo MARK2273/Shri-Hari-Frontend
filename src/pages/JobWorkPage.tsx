@@ -22,6 +22,7 @@ import {
   Mail,
   UserCheck,
   Percent,
+  Ruler,
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
@@ -100,6 +101,18 @@ export const JobWorkPage: React.FC = () => {
     expectedDeliveryDate: '',
     instructions: '',
   });
+
+  // Size & Micron sync state
+  const [isCustomSizeMicron, setIsCustomSizeMicron] = useState<boolean>(false);
+  const [isQuickSizeModalOpen, setIsQuickSizeModalOpen] = useState<boolean>(false);
+  const [quickSizeForm, setQuickSizeForm] = useState({
+    size: '',
+    micron: 50,
+    unit: 'Micron',
+    label: '50 Micron',
+    description: '',
+  });
+  const [isQuickSaving, setIsQuickSaving] = useState<boolean>(false);
 
   // 3. Receive Goods Form State
   const [receiveForm, setReceiveForm] = useState({
@@ -1511,32 +1524,118 @@ export const JobWorkPage: React.FC = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
-                Target Size (Dimensions)
+          {/* Size & Micron Specification Selector from Master */}
+          <div className="space-y-2 p-3.5 bg-slate-50/75 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 rounded-2xl">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase flex items-center gap-1.5">
+                <Ruler className="w-3.5 h-3.5 text-brand-500" />
+                <span>Size & Micron Specification *</span>
               </label>
-              <input
-                type="text"
-                value={orderForm.targetSize}
-                onChange={(e) => setOrderForm({ ...orderForm, targetSize: e.target.value })}
-                placeholder="e.g. 12x18 inches"
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-              />
+              <button
+                type="button"
+                onClick={() => {
+                  setQuickSizeForm({ size: '', micron: 50, unit: 'Micron', label: '50 Micron', description: '' });
+                  setIsQuickSizeModalOpen(true);
+                }}
+                className="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <Plus className="w-3 h-3" /> Add Spec to Master
+              </button>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
-                Target Thickness (Microns)
-              </label>
-              <input
-                type="number"
-                step="any"
-                value={orderForm.targetMicron}
-                onChange={(e) => setOrderForm({ ...orderForm, targetMicron: e.target.value })}
-                placeholder="e.g. 50"
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-              />
+            <select
+              value={
+                isCustomSizeMicron
+                  ? '__custom__'
+                  : sizeMicrons.find(
+                      (sm) =>
+                        (sm.size === orderForm.targetSize || sm.label === orderForm.targetSize) &&
+                        Number(sm.micron) === Number(orderForm.targetMicron)
+                    )?.id ||
+                    (orderForm.targetSize || orderForm.targetMicron ? '__custom__' : '')
+              }
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '__custom__') {
+                  setIsCustomSizeMicron(true);
+                } else if (!val) {
+                  setIsCustomSizeMicron(false);
+                  setOrderForm({ ...orderForm, targetSize: '', targetMicron: '' });
+                } else {
+                  setIsCustomSizeMicron(false);
+                  const selectedSpec = sizeMicrons.find((sm) => sm.id === val);
+                  if (selectedSpec) {
+                    setOrderForm({
+                      ...orderForm,
+                      targetSize: selectedSpec.size || selectedSpec.label || '',
+                      targetMicron: String(selectedSpec.micron || ''),
+                    });
+                  }
+                }
+              }}
+              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 font-medium cursor-pointer"
+            >
+              <option value="">-- Select from Master Size & Micron Catalog --</option>
+              {sizeMicrons
+                .filter((sm) => sm.is_active !== false)
+                .map((sm) => (
+                  <option key={sm.id} value={sm.id}>
+                    {sm.label} {sm.size ? `(${sm.size})` : ''} — {sm.micron} {sm.unit || 'Micron'}
+                  </option>
+                ))}
+              <option value="__custom__">⚙️ Custom / Manual Specification...</option>
+            </select>
+
+            {/* Editable Dimensions and Micron inputs */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1 flex items-center justify-between">
+                  <span>Target Dimensions / Size</span>
+                  {!isCustomSizeMicron && orderForm.targetSize && (
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                      Master Synced
+                    </span>
+                  )}
+                </label>
+                <input
+                  type="text"
+                  value={orderForm.targetSize}
+                  onChange={(e) => {
+                    setIsCustomSizeMicron(true);
+                    setOrderForm({ ...orderForm, targetSize: e.target.value });
+                  }}
+                  placeholder="e.g. 600 or 12x18 inches"
+                  required
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1 flex items-center justify-between">
+                  <span>Target Micron (Thickness)</span>
+                  {!isCustomSizeMicron && orderForm.targetMicron && (
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                      Master Synced
+                    </span>
+                  )}
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="any"
+                    min="1"
+                    value={orderForm.targetMicron}
+                    onChange={(e) => {
+                      setIsCustomSizeMicron(true);
+                      setOrderForm({ ...orderForm, targetMicron: e.target.value });
+                    }}
+                    placeholder="e.g. 50"
+                    required
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 pr-10"
+                  />
+                  <span className="absolute right-3 top-2 text-xs font-bold text-slate-400">µm</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1939,6 +2038,139 @@ export const JobWorkPage: React.FC = () => {
             </Button>
             <Button variant="primary" type="submit" disabled={isSubmitting}>
               {isSubmitting ? 'Registering...' : 'Register Job Worker'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* QUICK ADD SIZE & MICRON MODAL */}
+      <Modal
+        isOpen={isQuickSizeModalOpen}
+        onClose={() => setIsQuickSizeModalOpen(false)}
+        title="Add New Size & Micron Specification"
+      >
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const finalLabel =
+              quickSizeForm.label.trim() ||
+              (quickSizeForm.size.trim()
+                ? `${quickSizeForm.size.trim()} - ${quickSizeForm.micron} ${quickSizeForm.unit}`
+                : `${quickSizeForm.micron} ${quickSizeForm.unit}`);
+
+            setIsQuickSaving(true);
+            try {
+              const res = await api.post('/size-microns', {
+                label: finalLabel,
+                size: quickSizeForm.size.trim() || 'Standard',
+                micron: Number(quickSizeForm.micron),
+                unit: quickSizeForm.unit || 'Micron',
+                description: quickSizeForm.description.trim(),
+                isActive: true,
+              });
+
+              toast.success('Size & Micron specification saved to Master catalog!', 'Specification Created');
+              const created = res.data.sizeMicron;
+              if (created) {
+                setSizeMicrons((prev) => [created, ...prev]);
+                setOrderForm((prev) => ({
+                  ...prev,
+                  targetSize: created.size || created.label || '',
+                  targetMicron: String(created.micron || ''),
+                }));
+                setIsCustomSizeMicron(false);
+              }
+              setIsQuickSizeModalOpen(false);
+              setQuickSizeForm({ size: '', micron: 50, unit: 'Micron', label: '50 Micron', description: '' });
+              fetchData();
+            } catch (err: any) {
+              const msg =
+                err.response?.data?.message ||
+                err.response?.data?.error ||
+                'Failed to save specification to master.';
+              toast.error(msg, 'Save Error');
+            } finally {
+              setIsQuickSaving(false);
+            }
+          }}
+          className="space-y-4"
+        >
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+              Specification Label *
+            </label>
+            <input
+              type="text"
+              required
+              value={quickSizeForm.label}
+              onChange={(e) => setQuickSizeForm({ ...quickSizeForm, label: e.target.value })}
+              placeholder="e.g. 600 - 20 Micron"
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                Size / Width / Dimensions
+              </label>
+              <input
+                type="text"
+                value={quickSizeForm.size}
+                onChange={(e) => {
+                  const s = e.target.value;
+                  setQuickSizeForm({
+                    ...quickSizeForm,
+                    size: s,
+                    label: s
+                      ? `${s} - ${quickSizeForm.micron} ${quickSizeForm.unit}`
+                      : `${quickSizeForm.micron} ${quickSizeForm.unit}`,
+                  });
+                }}
+                placeholder="e.g. 600 or 12x18"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                Micron Value *
+              </label>
+              <input
+                type="number"
+                min="1"
+                step="any"
+                required
+                value={quickSizeForm.micron}
+                onChange={(e) => {
+                  const m = Number(e.target.value) || 50;
+                  setQuickSizeForm({
+                    ...quickSizeForm,
+                    micron: m,
+                    label: quickSizeForm.size
+                      ? `${quickSizeForm.size} - ${m} ${quickSizeForm.unit}`
+                      : `${m} ${quickSizeForm.unit}`,
+                  });
+                }}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsQuickSizeModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={isQuickSaving}
+            >
+              {isQuickSaving ? 'Saving...' : 'Save to Master Catalog'}
             </Button>
           </div>
         </form>
