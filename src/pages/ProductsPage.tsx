@@ -319,9 +319,6 @@ export const ProductsPage: React.FC = () => {
             <FlaskConical className="w-6 h-6 text-brand-500" />
             Product Catalog & Versioned Recipes (BOM)
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Bill of materials, multi-plastic formulations & automated requirements checking
-          </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
@@ -383,8 +380,8 @@ export const ProductsPage: React.FC = () => {
                     key={p.id}
                     onClick={() => setSelectedProduct(p)}
                     className={`p-4 rounded-2xl border transition-all cursor-pointer relative group ${isSelected
-                        ? 'bg-white dark:bg-factory-900 border-brand-500 shadow-md ring-2 ring-brand-500/20'
-                        : 'bg-white/70 dark:bg-factory-900/70 border-slate-200/80 dark:border-slate-800 hover:border-slate-300'
+                      ? 'bg-white dark:bg-factory-900 border-brand-500 shadow-md ring-2 ring-brand-500/20'
+                      : 'bg-white/70 dark:bg-factory-900/70 border-slate-200/80 dark:border-slate-800 hover:border-slate-300'
                       }`}
                   >
                     <div className="flex items-center justify-end mb-1">
@@ -453,7 +450,7 @@ export const ProductsPage: React.FC = () => {
                         </h2>
                       </div>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        {selectedProduct.description || 'Standard industrial production specification.'}
+                        {selectedProduct.description}
                       </p>
                     </div>
 
@@ -563,9 +560,9 @@ export const ProductsPage: React.FC = () => {
                         <Calculator className="w-4 h-4 text-brand-500" />
                         Production Requirements & Stock Feasibility Check
                       </h3>
-                      <p className="text-[11px] text-slate-400">
+                      {/* <p className="text-[11px] text-slate-400">
                         Calculates required raw plastic lot weights and verifies warehouse stock before creating production batches.
-                      </p>
+                      </p> */}
                     </div>
                     <div className="flex items-center gap-2">
                       <label className="text-xs font-semibold text-slate-500">Planned Output:</label>
