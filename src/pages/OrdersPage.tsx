@@ -268,6 +268,31 @@ export const OrdersPage: React.FC = () => {
     }
   };
 
+  // Open Create Order Modal with fresh default values
+  const handleOpenCreateOrder = () => {
+    const defaultCustId = customers[0]?.id || '';
+    const defaultProd = products[0];
+    setOrderForm({
+      customerId: defaultCustId,
+      orderNumber: `ORD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-00${Math.floor(Math.random() * 90 + 10)}`,
+      requiredDeliveryDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+      notes: '',
+      items: [
+        {
+          id: `item-${Date.now()}`,
+          productId: defaultProd?.id || '',
+          requestedQuantityKg: 500,
+          sizeMicron: defaultProd?.size_micron || '',
+          grade: '',
+          sellingPricePerKg: '',
+          notes: '',
+          isCustomSize: false,
+        },
+      ],
+    });
+    setIsOrderModalOpen(true);
+  };
+
   // Line Item Management
   const handleAddItem = () => {
     const defaultProd = products[0];
@@ -431,7 +456,7 @@ export const OrdersPage: React.FC = () => {
               if (customers.length === 0) {
                 handleOpenCreateCustomer();
               } else {
-                setIsOrderModalOpen(true);
+                handleOpenCreateOrder();
               }
             }}
             className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl transition-colors shadow-md shadow-brand-500/20"
@@ -1085,15 +1110,15 @@ export const OrdersPage: React.FC = () => {
         isOpen={isOrderModalOpen}
         onClose={() => setIsOrderModalOpen(false)}
         title="Create Customer Order"
-        maxWidth="2xl"
+        maxWidth="4xl"
       >
         <form onSubmit={handleCreateOrder} className="space-y-4">
           {/* Customer & Delivery Date */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2 border-b border-slate-100 dark:border-slate-800">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-slate-50/80 dark:bg-factory-800/60 border border-slate-200/80 dark:border-slate-800">
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Select Customer *
+                  Select Customer Company *
                 </label>
                 <button
                   type="button"
@@ -1103,7 +1128,7 @@ export const OrdersPage: React.FC = () => {
                   }}
                   className="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1"
                 >
-                  <Plus className="w-3 h-3" /> Add New
+                  <Plus className="w-3 h-3" /> Add New Customer
                 </button>
               </div>
 
@@ -1116,9 +1141,9 @@ export const OrdersPage: React.FC = () => {
                   required
                   value={orderForm.customerId}
                   onChange={(e) => setOrderForm({ ...orderForm, customerId: e.target.value })}
-                  className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
+                  className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl font-medium focus:ring-2 focus:ring-brand-500/20"
                 >
-                  <option value="" disabled>-- Select Customer --</option>
+                  <option value="" disabled>-- Select Customer Company --</option>
                   {customers.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -1130,14 +1155,14 @@ export const OrdersPage: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Required Delivery Date *
+                Target Delivery Date *
               </label>
               <input
                 type="date"
                 required
                 value={orderForm.requiredDeliveryDate}
                 onChange={(e) => setOrderForm({ ...orderForm, requiredDeliveryDate: e.target.value })}
-                className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl"
+                className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl font-medium focus:ring-2 focus:ring-brand-500/20"
               />
             </div>
           </div>
@@ -1151,21 +1176,21 @@ export const OrdersPage: React.FC = () => {
                   Recipe Items & Product Line Items ({orderForm.items.length})
                 </h4>
                 <p className="text-[11px] text-slate-400">
-                  Customers can order multiple recipes / product specifications under a single purchase order.
+                  Customers can order multiple film recipes / product formulations under a single purchase order.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={handleAddItem}
-                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800/60 rounded-xl hover:bg-brand-100 transition-colors shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800/60 rounded-xl hover:bg-brand-100 dark:hover:bg-brand-900/40 transition-colors shadow-sm"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Add Recipe Item
               </button>
             </div>
 
-            {/* List of Recipe Item Cards */}
-            <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+            {/* List of Recipe Item Cards - Single smooth flow, NO inner scroll traps */}
+            <div className="space-y-3">
               {orderForm.items.map((it, idx) => {
                 const selectedProduct = products.find((p) => p.id === it.productId);
                 const recipeCost = getProductRecipeCost(selectedProduct);
@@ -1181,22 +1206,28 @@ export const OrdersPage: React.FC = () => {
                 return (
                   <div
                     key={it.id}
-                    className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-factory-800/40 space-y-3 transition-all hover:border-slate-300 dark:hover:border-slate-700"
+                    className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-factory-800/30 transition-all hover:border-slate-300 dark:hover:border-slate-700 shadow-sm"
                   >
                     {/* Item Card Header */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-slate-200/80 dark:border-slate-800">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="px-2.5 py-0.5 rounded-lg text-xs font-black bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
                           Recipe Item #{idx + 1}
                         </span>
                         {selectedProduct && (
-                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                            <Package className="w-3.5 h-3.5 text-brand-500" />
                             {selectedProduct.name}
                           </span>
                         )}
+                        {it.sizeMicron && (
+                          <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-slate-100 dark:bg-factory-800 text-slate-600 dark:text-slate-300 font-bold border border-slate-200 dark:border-slate-700">
+                            {it.sizeMicron}
+                          </span>
+                        )}
                         {weight > 0 && (
-                          <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 font-semibold">
-                            ({weight} kg)
+                          <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800/60">
+                            {weight} kg
                           </span>
                         )}
                       </div>
@@ -1205,19 +1236,21 @@ export const OrdersPage: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => handleRemoveItem(it.id)}
-                          className="p-1 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors border border-rose-200 dark:border-rose-900/50"
                           title="Remove this recipe item"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Remove</span>
                         </button>
                       )}
                     </div>
 
-                    {/* Product & Weight */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
+                    {/* Form Fields: Row 1 */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
+                      {/* Product Formulation */}
+                      <div className="md:col-span-5">
                         <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                          Product / Recipe *
+                          Product / Formulation *
                         </label>
                         {products.length === 0 ? (
                           <div className="p-2 text-xs text-amber-600 bg-amber-50 rounded-xl border">
@@ -1228,9 +1261,9 @@ export const OrdersPage: React.FC = () => {
                             required
                             value={it.productId}
                             onChange={(e) => handleItemChange(it.id, 'productId', e.target.value)}
-                            className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
+                            className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl font-medium focus:ring-2 focus:ring-brand-500/20"
                           >
-                            <option value="" disabled>-- Select Product --</option>
+                            <option value="" disabled>-- Select Formulation --</option>
                             {products.map((p) => (
                               <option key={p.id} value={p.id}>
                                 {p.name} {p.code ? `(${p.code})` : ''}
@@ -1240,44 +1273,8 @@ export const OrdersPage: React.FC = () => {
                         )}
                       </div>
 
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                          Requested Weight (kg) *
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            step="0.001"
-                            min="1"
-                            required
-                            value={it.requestedQuantityKg}
-                            onChange={(e) =>
-                              handleItemChange(it.id, 'requestedQuantityKg', parseFloat(e.target.value) || '')
-                            }
-                            placeholder="e.g. 100"
-                            className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
-                          />
-                          <span className="absolute right-3 top-2 text-xs text-slate-400 font-bold">kg</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Grade & Size / Micron */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                          Grade
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="e.g. HDPE, Virgin, Relene 010F18"
-                          value={it.grade}
-                          onChange={(e) => handleItemChange(it.id, 'grade', e.target.value)}
-                          className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl"
-                        />
-                      </div>
-
-                      <div>
+                      {/* Size / Micron */}
+                      <div className="md:col-span-4">
                         <div className="flex items-center justify-between mb-1">
                           <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                             Size / Micron *
@@ -1290,9 +1287,9 @@ export const OrdersPage: React.FC = () => {
                               setQuickSizeForm({ size: '', micron: 50, unit: 'Micron', label: '50 Micron', description: '' });
                               setIsQuickSizeModalOpen(true);
                             }}
-                            className="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-0.5"
+                            className="text-[10px] font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-0.5"
                           >
-                            <Plus className="w-3 h-3" /> Add Master
+                            <Plus className="w-2.5 h-2.5" /> Master
                           </button>
                         </div>
 
@@ -1313,9 +1310,9 @@ export const OrdersPage: React.FC = () => {
                               handleItemChange(it.id, 'sizeMicron', val);
                             }
                           }}
-                          className="w-full h-9 text-xs px-3 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl font-medium focus:outline-none focus:ring-1 focus:ring-brand-500"
+                          className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl font-medium focus:ring-2 focus:ring-brand-500/20"
                         >
-                          <option value="">-- Select Size / Micron from Master --</option>
+                          <option value="">-- Master Specification --</option>
                           {sizeMicrons
                             .filter((sm) => sm.is_active)
                             .map((sm) => (
@@ -1331,7 +1328,7 @@ export const OrdersPage: React.FC = () => {
                           <div className="mt-1.5">
                             <input
                               type="text"
-                              placeholder="Enter custom size / micron (e.g. 50 Micron, 24x36)"
+                              placeholder="e.g. 600 - 20 Micron"
                               value={it.sizeMicron}
                               onChange={(e) => handleItemChange(it.id, 'sizeMicron', e.target.value)}
                               className="w-full text-xs px-3 py-1.5 bg-white dark:bg-factory-900 border border-brand-500 rounded-xl ring-2 ring-brand-500/20"
@@ -1339,31 +1336,59 @@ export const OrdersPage: React.FC = () => {
                           </div>
                         )}
                       </div>
+
+                      {/* Grade */}
+                      <div className="md:col-span-3">
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                          Grade / Resin Spec
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Virgin, Food"
+                          value={it.grade}
+                          onChange={(e) => handleItemChange(it.id, 'grade', e.target.value)}
+                          className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl"
+                        />
+                      </div>
                     </div>
 
-                    {/* Pricing: Recipe Cost & Selling Price */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    {/* Form Fields: Row 2 (Weight, Costs, Selling Rate, Line Subtotal) */}
+                    <div className="mt-3 p-3 rounded-xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-4 gap-3 items-center">
+                      {/* Requested Weight */}
                       <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                            Recipe Cost Price
-                          </label>
-                          <span className="text-[10px] font-bold text-slate-400 bg-slate-200/60 dark:bg-factory-800 px-1.5 py-0.5 rounded">
-                            BOM
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between px-3 py-2 bg-slate-100/90 dark:bg-factory-800/80 border border-slate-200 dark:border-slate-700 rounded-xl">
-                          <span className="font-mono text-xs font-black text-slate-800 dark:text-slate-200">
-                            ₹{recipeCost.toFixed(2)}{' '}
-                            <span className="text-[10px] font-semibold text-slate-400 font-sans">/ kg</span>
-                          </span>
-                          <span className="text-[10px] text-slate-500 dark:text-slate-400">Formula BOM</span>
+                        <label className="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">
+                          Requested Weight *
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            step="0.001"
+                            min="1"
+                            required
+                            value={it.requestedQuantityKg}
+                            onChange={(e) =>
+                              handleItemChange(it.id, 'requestedQuantityKg', parseFloat(e.target.value) || '')
+                            }
+                            placeholder="100"
+                            className="w-full text-xs px-2.5 py-1.5 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-lg font-mono font-bold text-slate-800 dark:text-slate-200 pr-8"
+                          />
+                          <span className="absolute right-2.5 top-1.5 text-xs text-slate-400 font-bold">kg</span>
                         </div>
                       </div>
 
+                      {/* Formula BOM Cost */}
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                          Selling Price Per KG (₹) *
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Formula BOM Cost</span>
+                        <div className="flex items-center gap-1.5 font-mono text-xs font-black text-slate-700 dark:text-slate-300 py-1">
+                          <span>₹{recipeCost.toFixed(2)}</span>
+                          <span className="text-[10px] font-semibold text-slate-400 font-sans">/kg</span>
+                        </div>
+                      </div>
+
+                      {/* Selling Price Per KG */}
+                      <div>
+                        <label className="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">
+                          Selling Price (₹/kg) *
                         </label>
                         <div className="relative">
                           <input
@@ -1380,40 +1405,33 @@ export const OrdersPage: React.FC = () => {
                                 e.target.value === '' ? '' : parseFloat(e.target.value)
                               )
                             }
-                            className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl font-mono pr-12 font-bold text-emerald-600 dark:text-emerald-400 focus:ring-2 focus:ring-emerald-500/20"
+                            className="w-full text-xs px-2.5 py-1.5 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-lg font-mono font-bold text-emerald-600 dark:text-emerald-400 pr-10 focus:ring-2 focus:ring-emerald-500/20"
                           />
-                          <span className="absolute right-3 top-2 text-xs text-slate-400 font-bold">₹/kg</span>
+                          <span className="absolute right-2 top-1.5 text-[11px] text-slate-400 font-bold">₹/kg</span>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Item Margin Subtotal pill */}
-                    {sellPrice > 0 && (
-                      <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-700/80 text-[11px]">
-                        <span className="text-slate-500 dark:text-slate-400">
-                          Item Margin:{' '}
-                          <strong
-                            className={
-                              margin >= 0
-                                ? 'text-emerald-600 dark:text-emerald-400'
-                                : 'text-rose-600 dark:text-rose-400'
-                            }
-                          >
-                            {margin >= 0 ? '+' : ''}₹{margin.toFixed(2)}/kg
-                            {recipeCost > 0 && ` (${margin >= 0 ? '+' : ''}${marginPct.toFixed(1)}%)`}
-                          </strong>
-                        </span>
-                        <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                          Subtotal: ₹{totalItemVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
+                      {/* Line Subtotal & Margin */}
+                      <div className="text-left sm:text-right">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Line Subtotal & Margin</span>
+                        <div className="font-mono text-sm font-black text-slate-900 dark:text-white">
+                          ₹{totalItemVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        {sellPrice > 0 ? (
+                          <div className={`text-[10px] font-mono font-bold mt-0.5 ${margin >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                            {margin >= 0 ? '+' : ''}₹{margin.toFixed(2)}/kg {recipeCost > 0 && `(${margin >= 0 ? '+' : ''}${marginPct.toFixed(1)}%)`}
+                          </div>
+                        ) : (
+                          <div className="text-[10px] text-slate-400 italic mt-0.5">Pending selling price</div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 );
               })}
             </div>
 
-            {/* Big friendly Add Item button */}
+            {/* Add Recipe Button */}
             <button
               type="button"
               onClick={handleAddItem}
@@ -1424,7 +1442,7 @@ export const OrdersPage: React.FC = () => {
             </button>
           </div>
 
-          {/* Aggregate Order Summary Footer */}
+          {/* Aggregate Order Summary */}
           {(() => {
             const totalWeight = orderForm.items.reduce(
               (sum, it) => sum + (Number(it.requestedQuantityKg) || 0),
@@ -1443,33 +1461,65 @@ export const OrdersPage: React.FC = () => {
             }, 0);
             const totalMargin = totalVal - totalCost;
             const marginPct = totalCost > 0 ? (totalMargin / totalCost) * 100 : 0;
+            const hasEnteredPrices = orderForm.items.some((it) => Number(it.sellingPricePerKg) > 0);
 
             return (
-              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-slate-900 to-factory-900 text-white shadow-lg space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-300 font-semibold flex items-center gap-1.5">
-                    <ShoppingCart className="w-3.5 h-3.5 text-brand-400" />
-                    Order Total ({orderForm.items.length} {orderForm.items.length === 1 ? 'Recipe' : 'Recipes'})
-                  </span>
-                  <span className="font-mono font-bold text-brand-400">
-                    Total Weight: {totalWeight} kg
-                  </span>
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-factory-900 to-slate-950 text-white shadow-xl border border-slate-800 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2.5 border-b border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center shrink-0 border border-brand-500/30">
+                      <ShoppingCart className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-white block">
+                        Combined Order Summary
+                      </span>
+                      <span className="text-[11px] text-slate-400">
+                        {orderForm.items.length} {orderForm.items.length === 1 ? 'Recipe Item' : 'Recipe Items'} under this Purchase Order
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="px-3 py-1 rounded-xl bg-slate-800/80 border border-slate-700/80 text-right">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Weight</span>
+                      <span className="font-mono text-xs font-black text-brand-400">
+                        {totalWeight.toLocaleString('en-IN')} kg
+                      </span>
+                    </div>
+
+                    <div className="px-3 py-1 rounded-xl bg-slate-800/80 border border-slate-700/80 text-right">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Est. Material Cost</span>
+                      <span className="font-mono text-xs font-semibold text-slate-300">
+                        ₹{totalCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between pt-1 border-t border-slate-700/60">
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-0.5">
                   <div>
                     <span className="text-[10px] uppercase font-bold text-slate-400 block">Est. Gross Margin</span>
-                    <span
-                      className={`text-xs font-mono font-bold ${
-                        totalMargin >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                      }`}
-                    >
-                      {totalMargin >= 0 ? '+' : ''}₹{totalMargin.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      {totalCost > 0 && ` (${totalMargin >= 0 ? '+' : ''}${marginPct.toFixed(1)}%)`}
-                    </span>
+                    {hasEnteredPrices ? (
+                      <span
+                        className={`text-sm font-mono font-bold ${
+                          totalMargin >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                        }`}
+                      >
+                        {totalMargin >= 0 ? '+' : ''}₹{totalMargin.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {totalCost > 0 && ` (${totalMargin >= 0 ? '+' : ''}${marginPct.toFixed(1)}%)`}
+                      </span>
+                    ) : (
+                      <span className="text-xs font-semibold text-amber-300/90 flex items-center gap-1.5 mt-0.5">
+                        <Clock className="w-3.5 h-3.5" />
+                        Awaiting Selling Price Inputs
+                      </span>
+                    )}
                   </div>
-                  <div className="text-right">
+
+                  <div className="text-left sm:text-right">
                     <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Order Value</span>
-                    <span className="font-mono text-base font-black text-white">
+                    <span className="font-mono text-xl font-black text-white">
                       ₹{totalVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
