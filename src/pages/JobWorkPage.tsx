@@ -676,11 +676,10 @@ export const JobWorkPage: React.FC = () => {
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
             <button
               onClick={() => setActiveTab('orders')}
-              className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
-                activeTab === 'orders'
-                  ? 'bg-brand-600 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
+              className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all ${activeTab === 'orders'
+                ? 'bg-brand-600 text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
             >
               <Workflow className="w-4 h-4" />
               <span>Job Work Orders ({orders.length})</span>
@@ -688,11 +687,10 @@ export const JobWorkPage: React.FC = () => {
 
             <button
               onClick={() => setActiveTab('vendors')}
-              className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
-                activeTab === 'vendors'
-                  ? 'bg-brand-600 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
+              className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all ${activeTab === 'vendors'
+                ? 'bg-brand-600 text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
             >
               <Boxes className="w-4 h-4" />
               <span>Material Held by Vendors ({vendorBalances.length})</span>
@@ -700,17 +698,16 @@ export const JobWorkPage: React.FC = () => {
 
             <button
               onClick={() => setActiveTab('receipts')}
-              className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
-                activeTab === 'receipts'
-                  ? 'bg-brand-600 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
+              className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all ${activeTab === 'receipts'
+                ? 'bg-brand-600 text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
             >
               <Package className="w-4 h-4" />
               <span>Inward Receipts ({receipts.length})</span>
             </button>
 
-            <button
+            {/* <button
               onClick={() => setActiveTab('outward')}
               className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
                 activeTab === 'outward'
@@ -720,7 +717,7 @@ export const JobWorkPage: React.FC = () => {
             >
               <Truck className="w-4 h-4" />
               <span>Outward Challans ({outwardChallans.length})</span>
-            </button>
+            </button> */}
           </div>
 
           {/* Search & Status Filter */}
@@ -1134,7 +1131,7 @@ export const JobWorkPage: React.FC = () => {
         )}
 
         {/* TAB 4: OUTWARD CHALLANS */}
-        {activeTab === 'outward' && (
+        {/* {activeTab === 'outward' && (
           <div className="overflow-x-auto">
             {filteredOutward.length === 0 ? (
               <div className="text-center py-16 px-4">
@@ -1212,7 +1209,7 @@ export const JobWorkPage: React.FC = () => {
               </table>
             )}
           </div>
-        )}
+        )} */}
       </div>
 
       {/* MODAL 1: SEND MATERIAL OUTWARD CHALLAN */}
@@ -1700,11 +1697,10 @@ export const JobWorkPage: React.FC = () => {
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label
-                className={`p-3 rounded-xl border cursor-pointer flex items-center gap-3 transition-all ${
-                  receiveForm.deliveryDestination === 'factory_stock'
-                    ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-950/30'
-                    : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
-                }`}
+                className={`p-3 rounded-xl border cursor-pointer flex items-center gap-3 transition-all ${receiveForm.deliveryDestination === 'factory_stock'
+                  ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-950/30'
+                  : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  }`}
               >
                 <input
                   type="radio"
@@ -1724,11 +1720,10 @@ export const JobWorkPage: React.FC = () => {
               </label>
 
               <label
-                className={`p-3 rounded-xl border cursor-pointer flex items-center gap-3 transition-all ${
-                  receiveForm.deliveryDestination === 'direct_customer'
-                    ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-950/30'
-                    : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
-                }`}
+                className={`p-3 rounded-xl border cursor-pointer flex items-center gap-3 transition-all ${receiveForm.deliveryDestination === 'direct_customer'
+                  ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-950/30'
+                  : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  }`}
               >
                 <input
                   type="radio"
