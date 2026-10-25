@@ -402,14 +402,14 @@ export const DispatchPage: React.FC = () => {
       <Modal
         isOpen={isDispatchModalOpen}
         onClose={() => setIsDispatchModalOpen(false)}
-        title="Direct Floor Dispatch & Delivery Note"
-        maxWidth="2xl"
+        title="Create & Confirm Dispatch Note"
+        maxWidth="lg"
       >
         <form onSubmit={handleCreateDispatch} className="space-y-4">
-          {/* Step 1: Select Customer Order */}
+          {/* Select Customer Order */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Select Customer Order to Fulfill
+              Select Customer Order
             </label>
             {orders.length === 0 ? (
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-300">
@@ -441,63 +441,20 @@ export const DispatchPage: React.FC = () => {
             )}
           </div>
 
-          {/* Active Order Summary Card */}
-          {activeOrder && (
-            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-factory-800/60 border border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3 text-xs">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-900 dark:text-white">
-                    {activeOrder.customers?.name || activeOrder.customer_name}
-                  </span>
-                  <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-                    {activeOrder.order_number}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-500">
-                  <span>Product: <strong className="text-slate-700 dark:text-slate-200">{activeOrderItem.products?.name || 'Finished Product'}</strong></span>
-                  {activeOrderSpec && (
-                    <span className="inline-flex items-center gap-1 font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-md border border-indigo-200/80 dark:border-indigo-800/60">
-                      <Ruler className="w-3 h-3" />
-                      {activeOrderSpec}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="text-right">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Pending Demand</span>
-                <span className="font-mono text-sm font-black text-amber-600 dark:text-amber-400">
-                  {Math.max(
-                    0,
-                    Number(activeOrderItem.requested_quantity_kg || activeOrder.total_requested_weight_kg || 0) -
-                      Number(activeOrderItem.dispatched_quantity_kg || 0)
-                  )}{' '}
-                  kg
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Step 2: Select Matching Finished Goods Batch */}
+          {/* Select Finished Goods Batch */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Allocate Finished Goods Batch
               </label>
               {exactMatches.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200/80 dark:border-emerald-800/40">
-                    <Zap className="w-3 h-3 fill-emerald-500" />
-                    Perfect Match ({exactMatches.length})
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setShowAllBatches(!showAllBatches)}
-                    className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 underline"
-                  >
-                    {showAllBatches ? 'Show only matches' : 'Other batches'}
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAllBatches(!showAllBatches)}
+                  className="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 underline"
+                >
+                  {showAllBatches ? 'Show only matches' : 'Other batches'}
+                </button>
               )}
             </div>
 
@@ -541,36 +498,7 @@ export const DispatchPage: React.FC = () => {
             )}
           </div>
 
-          {/* Clean, Non-Cluttered Match Banner */}
-          {activeBatch && (
-            <div
-              className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2 ${
-                isExactMatch
-                  ? 'bg-emerald-50/80 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-200'
-                  : 'bg-amber-50/80 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-200'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                {isExactMatch ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                ) : (
-                  <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                )}
-                <span className="font-semibold">
-                  {isExactMatch
-                    ? `Perfect Specification Match: Lot ${activeBatch.batch_number} (${activeBatch.size_micron}) from ${isSelectedFromJobWork ? jobWorkVendorName : 'Factory Floor'}`
-                    : `Alternate Specification: Order requested "${activeOrderSpec || 'Standard'}", batch is "${activeBatch.size_micron || 'Standard'}"`}
-                </span>
-              </div>
-              {isSelectedFromJobWork && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 shrink-0">
-                  Job Work
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Step 3: Quantities, Destination & Vehicle */}
+          {/* Quantities & Vehicle */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -586,11 +514,6 @@ export const DispatchPage: React.FC = () => {
                 }
                 className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold"
               />
-              {activeBatch && (
-                <span className="text-[10px] text-slate-400 mt-1 block">
-                  Available in Lot {activeBatch.batch_number}: <strong>{activeBatch.quantity_on_hand_kg} kg</strong>
-                </span>
-              )}
             </div>
 
             <div>
@@ -607,6 +530,7 @@ export const DispatchPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Destination */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Destination Delivery Address
@@ -618,13 +542,6 @@ export const DispatchPage: React.FC = () => {
               onChange={(e) => setDispatchForm({ ...dispatchForm, destinationAddress: e.target.value })}
               className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl"
             />
-          </div>
-
-          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-400">
-            ⚠️ <strong>Atomic Stock Deduction Notice:</strong> Confirming this dispatch will immediately deduct{' '}
-            <span className="font-mono font-bold">{dispatchForm.quantityKg} kg</span> from batch{' '}
-            <span className="font-mono font-bold">{activeBatch?.batch_number || 'selected lot'}</span>, credit customer
-            order progress, and record irreversible delivery ledger entries.
           </div>
 
           <div className="pt-2 flex justify-end gap-2">
