@@ -11,6 +11,7 @@ import { ProductsPage } from './pages/ProductsPage';
 import { OrdersPage } from './pages/OrdersPage';
 import { ProductionPage } from './pages/ProductionPage';
 import { FinishedGoodsPage } from './pages/FinishedGoodsPage';
+import { JobWorkPage } from './pages/JobWorkPage';
 import { DispatchPage } from './pages/DispatchPage';
 import { TraceabilityPage } from './pages/TraceabilityPage';
 import { ReportsPage } from './pages/ReportsPage';
@@ -33,6 +34,7 @@ export function App() {
               <Route path="/size-microns" element={<Navigate to="/materials" replace />} />
               <Route path="/orders" element={<OrdersPage />} />
               <Route path="/production" element={<ProductionPage />} />
+              <Route path="/job-work" element={<JobWorkPage />} />
               <Route path="/finished-goods" element={<FinishedGoodsPage />} />
               <Route path="/dispatch" element={<DispatchPage />} />
               <Route path="/traceability" element={<TraceabilityPage />} />

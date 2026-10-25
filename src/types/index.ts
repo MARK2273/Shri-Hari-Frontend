@@ -198,3 +198,100 @@ export interface SizeMicron {
   updated_at?: string;
 }
 
+export interface JobWorker {
+  id: string;
+  tenant_id?: string;
+  name: string;
+  contact_person?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  is_active: boolean;
+  created_at?: string;
+}
+
+export interface JobWorkOutward {
+  id: string;
+  challan_number: string;
+  vendor_id: string;
+  vendor_name: string;
+  material_id: string;
+  material_name: string;
+  source_batch_id?: string;
+  source_batch_number?: string;
+  quantity_kg: number;
+  dispatch_date: string;
+  vehicle_number?: string;
+  notes?: string;
+  created_at: string;
+}
+
+export interface JobWorkOrder {
+  id: string;
+  order_number: string;
+  vendor_id: string;
+  vendor_name: string;
+  product_id: string;
+  product_name: string;
+  recipe_id?: string;
+  recipe_name?: string;
+  target_size?: string;
+  target_micron?: number;
+  planned_quantity_kg: number;
+  received_quantity_kg: number;
+  scrap_quantity_kg: number;
+  customer_id?: string;
+  customer_name?: string;
+  status: 'draft' | 'in_progress' | 'completed' | 'cancelled';
+  expected_delivery_date?: string;
+  instructions?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface JobWorkReceipt {
+  id: string;
+  receipt_number: string;
+  job_work_order_id: string;
+  job_work_order_number: string;
+  vendor_id: string;
+  vendor_name: string;
+  product_id: string;
+  product_name: string;
+  accepted_quantity_kg: number;
+  scrap_quantity_kg: number;
+  delivery_destination: 'factory_stock' | 'direct_customer';
+  customer_id?: string;
+  customer_name?: string;
+  vehicle_number?: string;
+  delivery_date: string;
+  notes?: string;
+  materials_consumed?: Array<{
+    material_id: string;
+    material_name: string;
+    consumed_kg: number;
+  }>;
+  fg_batch_id?: string;
+  delivery_id?: string;
+  created_at: string;
+}
+
+export interface VendorMaterialBalance {
+  material_id: string;
+  material_name: string;
+  sent_kg: number;
+  consumed_kg: number;
+  balance_kg: number;
+}
+
+export interface VendorStockSummary {
+  vendor_id: string;
+  vendor_name: string;
+  contact_person?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  total_balance_kg: number;
+  materials: VendorMaterialBalance[];
+}
+
