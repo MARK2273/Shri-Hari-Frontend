@@ -16,6 +16,7 @@ import { JobWorkPage } from './pages/JobWorkPage';
 import { DispatchPage } from './pages/DispatchPage';
 import { TraceabilityPage } from './pages/TraceabilityPage';
 import { ReportsPage } from './pages/ReportsPage';
+import { ScrapPage } from './pages/ScrapPage';
 
 export function App() {
   return (
@@ -38,6 +39,7 @@ export function App() {
               <Route path="/production" element={<ProductionPage />} />
               <Route path="/job-work" element={<JobWorkPage />} />
               <Route path="/finished-goods" element={<FinishedGoodsPage />} />
+              <Route path="/scrap" element={<ScrapPage />} />
               <Route path="/dispatch" element={<DispatchPage />} />
               <Route path="/traceability" element={<TraceabilityPage />} />
               <Route path="/reports" element={<ReportsPage />} />

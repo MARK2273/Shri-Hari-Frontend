@@ -295,3 +295,63 @@ export interface VendorStockSummary {
   materials: VendorMaterialBalance[];
 }
 
+export interface ScrapEntry {
+  id: string;
+  tenant_id: string;
+  entry_number: string;
+  entry_date: string;
+  source_type: string;
+  production_batch_id?: string;
+  product_id?: string;
+  scrap_type: string;
+  quantity_kg: number;
+  notes?: string;
+  recorded_by?: string;
+  created_at: string;
+  production_batches?: {
+    id: string;
+    batch_number: string;
+    status: string;
+  };
+  products?: {
+    id: string;
+    code: string;
+    name: string;
+  };
+}
+
+export interface ScrapSale {
+  id: string;
+  tenant_id: string;
+  sale_number: string;
+  sale_date: string;
+  buyer_name: string;
+  buyer_phone?: string;
+  buyer_address?: string;
+  scrap_type: string;
+  quantity_kg: number;
+  rate_per_kg: number;
+  total_amount: number;
+  payment_mode: 'cash' | 'upi' | 'bank_transfer' | 'cheque' | 'pending';
+  payment_status: 'received' | 'pending' | 'partial';
+  vehicle_number?: string;
+  driver_name?: string;
+  gate_pass_number?: string;
+  notes?: string;
+  created_by?: string;
+  created_at: string;
+}
+
+export interface ScrapSummary {
+  total_generated_kg: number;
+  total_sold_kg: number;
+  on_floor_scrap_kg: number;
+  total_sales_revenue: number;
+  average_rate_per_kg: number;
+  entries_count: number;
+  sales_count: number;
+  scrap_by_type: Record<string, number>;
+  recent_entries: ScrapEntry[];
+  recent_sales: ScrapSale[];
+}
+

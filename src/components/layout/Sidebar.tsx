@@ -15,6 +15,7 @@ import {
   Compass,
   X,
   Workflow,
+  Recycle,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTour } from '../../context/TourContext';
@@ -34,6 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
     { name: 'Products & Recipes', href: '/products', icon: FlaskConical },
     { name: 'Customer Orders', href: '/orders', icon: ShoppingCart },
     { name: 'Production Runs', href: '/production', icon: Factory },
+    { name: 'Scrap & Waste Sales', href: '/scrap', icon: Recycle },
     { name: 'Job Work (Outsource)', href: '/job-work', icon: Workflow },
     { name: 'Finished Goods', href: '/finished-goods', icon: PackageCheck },
     { name: 'Dispatch & Delivery', href: '/dispatch', icon: Truck },
