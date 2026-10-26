@@ -23,6 +23,11 @@ import {
   Truck,
   Zap,
   Layers,
+  TrendingUp,
+  ArrowUpRight,
+  Info,
+  Lock,
+  Flame,
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
@@ -73,6 +78,294 @@ export const OrdersPage: React.FC = () => {
   const [sizeMicronSearch, setSizeMicronSearch] = useState('');
   const [sizeToEdit, setSizeToEdit] = useState<SizeMicron | null>(null);
   const [sizeToDelete, setSizeToDelete] = useState<SizeMicron | null>(null);
+
+  // Increase Order Quantity state (available ONLY if order is NOT in the production run)
+  const [orderToIncrease, setOrderToIncrease] = useState<any | null>(null);
+  const [selectedItemToIncreaseId, setSelectedItemToIncreaseId] = useState<string>('');
+  const [selectedRecipeProductId, setSelectedRecipeProductId] = useState<string>('');
+  const [selectedSizeMicron, setSelectedSizeMicron] = useState<string>('');
+  const [selectedGrade, setSelectedGrade] = useState<string>('');
+  const [selectedSellingPrice, setSelectedSellingPrice] = useState<number | ''>('');
+  const [increaseAmountKg, setIncreaseAmountKg] = useState<number | ''>(50);
+  const [newTotalQuantityKg, setNewTotalQuantityKg] = useState<number | ''>('');
+  const [increaseReason, setIncreaseReason] = useState<string>('');
+  const [isSubmittingIncrease, setIsSubmittingIncrease] = useState<boolean>(false);
+  const [increaseError, setIncreaseError] = useState<string | null>(null);
+  const [feasibilityCheck, setFeasibilityCheck] = useState<{
+    loading: boolean;
+    result: any | null;
+  }>({ loading: false, result: null });
+
+  // Material Feasibility Checker
+  const checkStockFeasibility = async (productId: string, quantityKg: number) => {
+    if (!productId || !quantityKg || quantityKg <= 0) {
+      setFeasibilityCheck({ loading: false, result: null });
+      return;
+    }
+    setFeasibilityCheck({ loading: true, result: null });
+    try {
+      const res = await api.post('/products/calculate-requirements', {
+        productId,
+        quantityKg,
+      });
+      setFeasibilityCheck({ loading: false, result: res.data });
+    } catch (err: any) {
+      setFeasibilityCheck({ loading: false, result: null });
+    }
+  };
+
+  const openIncreaseQtyModal = (order: any, defaultItemId?: string) => {
+    if (order.is_in_production_run) {
+      alert(`Order ${order.order_number} cannot be increased because it is already in the production run.`);
+      return;
+    }
+    setOrderToIncrease(order);
+    const items = (order.customer_order_items && order.customer_order_items.length > 0)
+      ? order.customer_order_items
+      : (order.items && order.items.length > 0 ? order.items : [{}]);
+    const chosenItemId = defaultItemId || items[0]?.id || '';
+    setSelectedItemToIncreaseId(chosenItemId);
+    const chosenItem = items.find((i: any) => i.id === chosenItemId) || items[0] || {};
+    const currentKg = Number(chosenItem?.requested_quantity_kg || order.total_requested_weight_kg || 0);
+
+    const initialProdId = chosenItem.product_id || (products[0]?.id || '');
+    setSelectedRecipeProductId(initialProdId);
+    setSelectedSizeMicron(chosenItem.size_micron || order.size_micron || '');
+    setSelectedGrade(chosenItem.grade || order.grade || '');
+    setSelectedSellingPrice(chosenItem.selling_price_per_kg || order.selling_price_per_kg || '');
+    setIncreaseAmountKg(50);
+    setNewTotalQuantityKg(currentKg + 50);
+    setIncreaseReason('');
+    setIncreaseError(null);
+    checkStockFeasibility(initialProdId, 50);
+  };
+
+  const handleItemSelectChange = (itemId: string) => {
+    setSelectedItemToIncreaseId(itemId);
+    if (!orderToIncrease) return;
+    const items = (orderToIncrease.customer_order_items && orderToIncrease.customer_order_items.length > 0)
+      ? orderToIncrease.customer_order_items
+      : (orderToIncrease.items && orderToIncrease.items.length > 0 ? orderToIncrease.items : [{}]);
+    const item = items.find((i: any) => i.id === itemId) || items[0] || {};
+    const currentKg = Number(item.requested_quantity_kg || 0);
+    const extra = typeof increaseAmountKg === 'number' ? increaseAmountKg : 50;
+    setNewTotalQuantityKg(currentKg + extra);
+    const pId = item.product_id || selectedRecipeProductId;
+    setSelectedRecipeProductId(pId);
+    setSelectedSizeMicron(item.size_micron || selectedSizeMicron);
+    setSelectedGrade(item.grade || selectedGrade);
+    setSelectedSellingPrice(item.selling_price_per_kg || selectedSellingPrice);
+    if (extra > 0) {
+      checkStockFeasibility(pId, extra);
+    }
+  };
+
+  const handleExtraKgChange = (val: number | '') => {
+    setIncreaseAmountKg(val);
+    if (!orderToIncrease) return;
+    const items = (orderToIncrease.customer_order_items && orderToIncrease.customer_order_items.length > 0)
+      ? orderToIncrease.customer_order_items
+      : (orderToIncrease.items && orderToIncrease.items.length > 0 ? orderToIncrease.items : [{}]);
+    const chosenItem = items.find((i: any) => i.id === selectedItemToIncreaseId) || items[0] || {};
+    const currentKg = Number(chosenItem.requested_quantity_kg || orderToIncrease.total_requested_weight_kg || 0);
+    const extra = val === '' ? 0 : Number(val);
+    if (val === '') {
+      setNewTotalQuantityKg('');
+      setFeasibilityCheck({ loading: false, result: null });
+    } else {
+      setNewTotalQuantityKg(currentKg + extra);
+      if (extra > 0) {
+        checkStockFeasibility(selectedRecipeProductId || chosenItem.product_id, extra);
+      } else {
+        setFeasibilityCheck({ loading: false, result: null });
+      }
+    }
+  };
+
+  const handleNewTotalKgChange = (val: number | '') => {
+    setNewTotalQuantityKg(val);
+    if (!orderToIncrease) return;
+    const items = (orderToIncrease.customer_order_items && orderToIncrease.customer_order_items.length > 0)
+      ? orderToIncrease.customer_order_items
+      : (orderToIncrease.items && orderToIncrease.items.length > 0 ? orderToIncrease.items : [{}]);
+    const chosenItem = items.find((i: any) => i.id === selectedItemToIncreaseId) || items[0] || {};
+    const currentKg = Number(chosenItem.requested_quantity_kg || orderToIncrease.total_requested_weight_kg || 0);
+    if (val === '') {
+      setIncreaseAmountKg('');
+      setFeasibilityCheck({ loading: false, result: null });
+    } else {
+      const extra = Math.max(0, Number(val) - currentKg);
+      setIncreaseAmountKg(extra);
+      if (extra > 0) {
+        checkStockFeasibility(selectedRecipeProductId || chosenItem.product_id, extra);
+      } else {
+        setFeasibilityCheck({ loading: false, result: null });
+      }
+    }
+  };
+
+  const handleConfirmIncreaseQty = async () => {
+    if (!orderToIncrease) return;
+    const items = (orderToIncrease.customer_order_items && orderToIncrease.customer_order_items.length > 0)
+      ? orderToIncrease.customer_order_items
+      : (orderToIncrease.items && orderToIncrease.items.length > 0 ? orderToIncrease.items : [{}]);
+    const chosenItem = items.find((i: any) => i.id === selectedItemToIncreaseId) || items[0] || {};
+    const currentKg = Number(chosenItem.requested_quantity_kg || orderToIncrease.total_requested_weight_kg || 0);
+    const targetKg = Number(newTotalQuantityKg);
+
+    if (!targetKg || targetKg <= currentKg) {
+      setIncreaseError(`New quantity (${targetKg || 0} kg) must be strictly greater than current quantity (${currentKg} kg).`);
+      return;
+    }
+
+    if (feasibilityCheck.result && !feasibilityCheck.result.sufficient) {
+      setIncreaseError(`Cannot increase order: ${feasibilityCheck.result.missingDetails || 'Insufficient raw material stock in warehouse to produce extra demand.'}`);
+      return;
+    }
+
+    setIsSubmittingIncrease(true);
+    setIncreaseError(null);
+    try {
+      await api.patch(`/orders/${orderToIncrease.id}/increase-quantity`, {
+        itemId: chosenItem.id,
+        newQuantityKg: targetKg,
+        productId: selectedRecipeProductId || undefined,
+        sizeMicron: selectedSizeMicron || undefined,
+        grade: selectedGrade || undefined,
+        sellingPricePerKg: selectedSellingPrice ? Number(selectedSellingPrice) : undefined,
+        reason: increaseReason.trim() || undefined,
+      });
+      await fetchData();
+      setOrderToIncrease(null);
+    } catch (err: any) {
+      setIncreaseError(err.response?.data?.message || 'Failed to increase order quantity.');
+    } finally {
+      setIsSubmittingIncrease(false);
+    }
+  };
+
+  // Edit Order state (allowed ONLY if NOT in production run)
+  const [orderToEdit, setOrderToEdit] = useState<any | null>(null);
+  const [isEditOrderModalOpen, setIsEditOrderModalOpen] = useState(false);
+  const [editOrderForm, setEditOrderForm] = useState<{
+    customerId: string;
+    requiredDeliveryDate: string;
+    notes: string;
+    items: OrderLineItem[];
+  }>({
+    customerId: '',
+    requiredDeliveryDate: '',
+    notes: '',
+    items: [],
+  });
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+  const [editOrderError, setEditOrderError] = useState<string | null>(null);
+
+  const openEditOrderModal = (order: any) => {
+    if (order.is_in_production_run) {
+      alert(`Order ${order.order_number} cannot be edited because it is already in the production run.`);
+      return;
+    }
+    setOrderToEdit(order);
+    setEditOrderError(null);
+    const items = (order.customer_order_items && order.customer_order_items.length > 0)
+      ? order.customer_order_items
+      : (order.items && order.items.length > 0 ? order.items : []);
+
+    setEditOrderForm({
+      customerId: order.customer_id || '',
+      requiredDeliveryDate: order.required_delivery_date || '',
+      notes: order.notes && !order.notes.startsWith('{') ? order.notes : '',
+      items: items.length > 0
+        ? items.map((it: any, idx: number) => ({
+            id: it.id || `edit-item-${idx}`,
+            productId: it.product_id || (products[0]?.id || ''),
+            requestedQuantityKg: Number(it.requested_quantity_kg || 100),
+            sizeMicron: it.size_micron || '',
+            grade: it.grade || '',
+            sellingPricePerKg: it.selling_price_per_kg || '',
+            notes: it.notes && !it.notes.startsWith('{') ? it.notes : '',
+            isCustomSize: !sizeMicrons.some((sm) => sm.label === it.size_micron) && !!it.size_micron,
+          }))
+        : [
+            {
+              id: 'edit-item-0',
+              productId: products[0]?.id || '',
+              requestedQuantityKg: Number(order.total_requested_weight_kg || 100),
+              sizeMicron: order.size_micron || '',
+              grade: order.grade || '',
+              sellingPricePerKg: order.selling_price_per_kg || '',
+              notes: '',
+              isCustomSize: false,
+            },
+          ],
+    });
+    setIsEditOrderModalOpen(true);
+  };
+
+  const handleEditItemChange = (id: string, field: keyof OrderLineItem, value: any) => {
+    setEditOrderForm((prev) => ({
+      ...prev,
+      items: prev.items.map((it) => (it.id === id ? { ...it, [field]: value } : it)),
+    }));
+  };
+
+  const handleAddEditItem = () => {
+    setEditOrderForm((prev) => ({
+      ...prev,
+      items: [
+        ...prev.items,
+        {
+          id: `edit-item-${Date.now()}`,
+          productId: products[0]?.id || '',
+          requestedQuantityKg: 100,
+          sizeMicron: '',
+          grade: '',
+          sellingPricePerKg: '',
+          notes: '',
+          isCustomSize: false,
+        },
+      ],
+    }));
+  };
+
+  const handleRemoveEditItem = (id: string) => {
+    if (editOrderForm.items.length <= 1) return;
+    setEditOrderForm((prev) => ({
+      ...prev,
+      items: prev.items.filter((it) => it.id !== id),
+    }));
+  };
+
+  const handleConfirmEditOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!orderToEdit) return;
+    setIsSubmittingEdit(true);
+    setEditOrderError(null);
+    try {
+      await api.put(`/orders/${orderToEdit.id}`, {
+        customerId: editOrderForm.customerId,
+        requiredDeliveryDate: editOrderForm.requiredDeliveryDate,
+        notes: editOrderForm.notes,
+        items: editOrderForm.items.map((it) => ({
+          id: it.id.startsWith('edit-item-') ? undefined : it.id,
+          productId: it.productId,
+          requestedQuantityKg: Number(it.requestedQuantityKg),
+          sizeMicron: it.sizeMicron,
+          grade: it.grade,
+          sellingPricePerKg: Number(it.sellingPricePerKg) || undefined,
+          notes: it.notes,
+        })),
+      });
+      await fetchData();
+      setIsEditOrderModalOpen(false);
+      setOrderToEdit(null);
+    } catch (err: any) {
+      setEditOrderError(err.response?.data?.message || 'Failed to update order.');
+    } finally {
+      setIsSubmittingEdit(false);
+    }
+  };
 
   // Form state: Order with multiple recipe line items
   const [orderForm, setOrderForm] = useState<{
@@ -546,6 +839,17 @@ export const OrdersPage: React.FC = () => {
 
               const prodPercent = totalRequested > 0 ? Math.min(100, Math.round((totalProduced / totalRequested) * 100)) : 0;
               const dispPercent = totalRequested > 0 ? Math.min(100, Math.round((totalDispatched / totalRequested) * 100)) : 0;
+              const isProductionCompleted =
+                ['completed', 'delivered', 'cancelled'].includes(order.status) ||
+                (totalProduced >= totalRequested && totalRequested > 0 && ['produced', 'completed'].includes(order.status));
+
+              const isInProductionRun = Boolean(
+                order.is_in_production_run ?? (
+                  ['in_production', 'partially_produced', 'produced', 'completed', 'partially_dispatched', 'dispatched'].includes(order.status) ||
+                  totalProduced > 0 ||
+                  Number(order.active_production_batches_count || 0) > 0
+                )
+              );
 
               return (
                 <div
@@ -630,7 +934,7 @@ export const OrdersPage: React.FC = () => {
                       )}
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
                       <div className="flex items-center gap-1.5">
                         <Calendar className="w-3.5 h-3.5 text-slate-400" />
                         <span>Order Date: {order.order_date}</span>
@@ -647,6 +951,38 @@ export const OrdersPage: React.FC = () => {
                           </span>
                         )}
                       </div>
+
+                      {/* Order Modification Actions: Locked if order is in production run */}
+                      {isInProductionRun ? (
+                        <span
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 shadow-xs cursor-default"
+                          title="Order is locked: Production has already started or batches exist. Quantities and formulations cannot be altered."
+                        >
+                          <Lock className="w-3.5 h-3.5 text-amber-500" />
+                          <span>In Production Run (Locked)</span>
+                        </span>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEditOrderModal(order)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-factory-800 dark:hover:bg-factory-700 border border-slate-200 dark:border-slate-700 transition-all hover:scale-[1.02] active:scale-95 shadow-xs"
+                            title="Edit order recipes, items, specs, or delivery date before production starts"
+                          >
+                            <Edit2 className="w-3.5 h-3.5 text-brand-500" />
+                            <span>Edit Order</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openIncreaseQtyModal(order)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-800 dark:text-emerald-200 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 transition-all hover:scale-[1.02] active:scale-95 shadow-xs"
+                            title="Increase order quantity before production starts"
+                          >
+                            <TrendingUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                            <span>Increase Quantity</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -760,6 +1096,17 @@ export const OrdersPage: React.FC = () => {
                                       ₹{(Number(itm.requested_quantity_kg) * Number(itm.selling_price_per_kg)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </span>
                                   </div>
+                                )}
+                                {!isInProductionRun && itmProd < itmReq && (
+                                  <button
+                                    type="button"
+                                    onClick={() => openIncreaseQtyModal(order, itm.id)}
+                                    className="px-2.5 py-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-1 transition-colors ml-1 shrink-0"
+                                    title="Increase requested quantity for this specific recipe"
+                                  >
+                                    <Plus className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                    <span>Increase</span>
+                                  </button>
                                 )}
                               </div>
                             </div>
@@ -1790,6 +2137,615 @@ export const OrdersPage: React.FC = () => {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* Modal: Increase Order Quantity */}
+      <Modal
+        isOpen={Boolean(orderToIncrease)}
+        onClose={() => {
+          if (!isSubmittingIncrease) setOrderToIncrease(null);
+        }}
+        title={orderToIncrease ? `Increase Order Quantity — ${orderToIncrease.order_number}` : ''}
+        maxWidth="lg"
+      >
+        {orderToIncrease && (() => {
+          const items: any[] = (orderToIncrease.customer_order_items && orderToIncrease.customer_order_items.length > 0)
+            ? orderToIncrease.customer_order_items
+            : (orderToIncrease.items && orderToIncrease.items.length > 0 ? orderToIncrease.items : [{}]);
+          const chosenItem = items.find((i: any) => i.id === selectedItemToIncreaseId) || items[0] || {};
+          const chosenProductName = chosenItem.products?.name || products.find((p) => p.id === chosenItem.product_id)?.name || 'Custom Product';
+          const chosenSpec = chosenItem.size_micron || orderToIncrease.size_micron || orderToIncrease.sizeMicron || 'Standard';
+          const chosenGrade = chosenItem.grade || orderToIncrease.grade || '';
+          
+          const currentItemReq = Number(chosenItem.requested_quantity_kg || orderToIncrease.total_requested_weight_kg || 0);
+          const currentItemProd = Number(chosenItem.produced_quantity_kg || 0);
+          const currentItemDisp = Number(chosenItem.dispatched_quantity_kg || 0);
+          const currentTotalReq = items.reduce((s, it) => s + Number(it.requested_quantity_kg || 0), 0) || currentItemReq;
+          
+          const extraKg = typeof increaseAmountKg === 'number' ? increaseAmountKg : 0;
+          const targetTotalItemKg = currentItemReq + extraKg;
+          const newTotalOrderKg = currentTotalReq + extraKg;
+          const newRemainingDemandKg = Math.max(0, targetTotalItemKg - currentItemProd);
+          
+          const sellRate = Number(chosenItem.selling_price_per_kg || orderToIncrease.selling_price_per_kg || 0);
+          const extraValue = extraKg * sellRate;
+
+          return (
+            <div className="space-y-4">
+              {/* Order Info Banner */}
+              <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-blue-500/10 border border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-slate-900 dark:text-white">
+                      {orderToIncrease.customers?.name || orderToIncrease.customer_name || 'Direct Client'}
+                    </span>
+                    <Badge variant="warning">{orderToIncrease.status}</Badge>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Order Date: <span className="font-semibold text-slate-700 dark:text-slate-300">{orderToIncrease.order_date}</span> • Target Delivery: <span className="font-semibold text-slate-700 dark:text-slate-300">{orderToIncrease.required_delivery_date}</span>
+                  </p>
+                </div>
+                <div className="text-left sm:text-right">
+                  <span className="text-[10px] text-slate-400 block uppercase font-bold">Current Order Demand</span>
+                  <span className="font-mono text-base font-bold text-slate-800 dark:text-slate-200">{currentTotalReq} kg</span>
+                </div>
+              </div>
+
+              {/* Multi-Item Selector if order has multiple line items */}
+              {items.length > 1 && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-indigo-500" />
+                    Select Recipe Line Item to Increase:
+                  </label>
+                  <select
+                    value={selectedItemToIncreaseId}
+                    onChange={(e) => handleItemSelectChange(e.target.value)}
+                    className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-factory-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium focus:ring-1 focus:ring-brand-500 outline-none"
+                  >
+                    {items.map((it: any, idx: number) => {
+                      const pName = it.products?.name || products.find((p) => p.id === it.product_id)?.name || 'Product';
+                      const spec = it.size_micron || 'Standard';
+                      const req = Number(it.requested_quantity_kg || 0);
+                      const prod = Number(it.produced_quantity_kg || 0);
+                      return (
+                        <option key={it.id || idx} value={it.id}>
+                          Recipe #{idx + 1}: {pName} • {spec} {it.grade ? `[${it.grade}]` : ''} (Current: {req} kg | Produced: {prod} kg)
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              )}
+
+              {/* Recipe / Product Formulation Selector to update recipe */}
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-factory-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <Package className="w-3.5 h-3.5 text-brand-500" />
+                    Product Formulation & Recipe:
+                  </label>
+                  {selectedRecipeProductId !== chosenItem.product_id && (
+                    <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800/40">
+                      Recipe Update Pending
+                    </span>
+                  )}
+                </div>
+
+                <select
+                  value={selectedRecipeProductId}
+                  onChange={(e) => {
+                    setSelectedRecipeProductId(e.target.value);
+                    if (extraKg > 0) {
+                      checkStockFeasibility(e.target.value, extraKg);
+                    }
+                  }}
+                  className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl font-medium focus:ring-2 focus:ring-brand-500/20 outline-none"
+                >
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} {p.code ? `(${p.code})` : ''}
+                    </option>
+                  ))}
+                </select>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                      Size / Micron Spec
+                    </label>
+                    <select
+                      value={
+                        sizeMicrons.some((sm) => sm.label === selectedSizeMicron)
+                          ? selectedSizeMicron
+                          : selectedSizeMicron ? '__custom__' : ''
+                      }
+                      onChange={(e) => {
+                        if (e.target.value !== '__custom__') {
+                          setSelectedSizeMicron(e.target.value);
+                        }
+                      }}
+                      className="w-full text-xs px-3 py-1.5 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-lg outline-none"
+                    >
+                      <option value="">-- Match Master Spec --</option>
+                      {sizeMicrons.filter((sm) => sm.is_active).map((sm) => (
+                        <option key={sm.id} value={sm.label}>{sm.label}</option>
+                      ))}
+                      <option value="__custom__">➕ Custom Spec</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                      Grade / Resin Spec
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Virgin / Food Grade"
+                      value={selectedGrade}
+                      onChange={(e) => setSelectedGrade(e.target.value)}
+                      className="w-full text-xs px-3 py-1.5 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-lg outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Quantity Adjustment Inputs */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Add Extra Quantity (+ kg) *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min={1}
+                      step="any"
+                      value={increaseAmountKg}
+                      onChange={(e) => handleExtraKgChange(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      placeholder="e.g. 50"
+                      className="w-full text-sm font-mono font-bold px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-emerald-600 dark:text-emerald-400"
+                    />
+                    <span className="absolute right-3 top-2.5 text-xs font-bold text-slate-400">kg</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    New Total Item Quantity (kg) *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min={currentItemReq + 1}
+                      step="any"
+                      value={newTotalQuantityKg}
+                      onChange={(e) => handleNewTotalKgChange(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      placeholder={`Min: ${currentItemReq + 1}`}
+                      className="w-full text-sm font-mono font-bold px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-slate-900 dark:text-white"
+                    />
+                    <span className="absolute right-3 top-2.5 text-xs font-bold text-slate-400">kg</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Add Pills */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[11px] font-semibold text-slate-400 mr-1">Quick Add:</span>
+                {[10, 25, 50, 100, 250, 500].map((pill) => (
+                  <button
+                    key={pill}
+                    type="button"
+                    onClick={() => handleExtraKgChange(pill)}
+                    className="px-2.5 py-1 text-xs font-mono font-bold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-factory-800 dark:hover:bg-factory-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors"
+                  >
+                    +{pill} kg
+                  </button>
+                ))}
+              </div>
+
+              {/* Real-time Material Inventory Feasibility Check Card */}
+              <div className="p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-slate-50/50 dark:bg-factory-800/40 space-y-2.5 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <Package className="w-3.5 h-3.5 text-brand-500" />
+                    Production Raw Material Availability Check (+{extraKg} kg)
+                  </span>
+                  {feasibilityCheck.loading ? (
+                    <span className="text-[11px] text-slate-400 flex items-center gap-1 font-medium">
+                      <RefreshCw className="w-3 h-3 animate-spin text-brand-500" /> Checking stock...
+                    </span>
+                  ) : feasibilityCheck.result ? (
+                    feasibilityCheck.result.sufficient ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800/40">
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-600" /> Sufficient Material Stock
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 px-2.5 py-0.5 rounded-md border border-rose-200 dark:border-rose-800/40">
+                        <AlertTriangle className="w-3.5 h-3.5 text-rose-600" /> Insufficient Stock
+                      </span>
+                    )
+                  ) : null}
+                </div>
+
+                {feasibilityCheck.result && feasibilityCheck.result.requirements?.length > 0 ? (
+                  <div className="space-y-1.5 pt-1">
+                    {feasibilityCheck.result.requirements.map((req: any) => (
+                      <div
+                        key={req.material_id}
+                        className={`flex items-center justify-between p-2 rounded-lg text-xs font-mono border ${
+                          req.sufficient
+                            ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200/60 dark:border-emerald-900/30 text-emerald-900 dark:text-emerald-300'
+                            : 'bg-rose-50/60 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900/40 text-rose-900 dark:text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {req.sufficient ? (
+                            <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          ) : (
+                            <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                          )}
+                          <span className="font-sans font-bold">{req.material_name}</span>
+                          <span className="text-[10px] text-slate-400 font-sans">({req.percentage}%)</span>
+                        </div>
+                        <div className="text-right flex items-center gap-3">
+                          <span>Need: <strong>{req.required_kg} kg</strong></span>
+                          <span className={req.sufficient ? 'text-emerald-700 font-bold' : 'text-rose-600 font-bold'}>
+                            In Stock: {req.available_stock_kg} kg
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  !feasibilityCheck.loading && (
+                    <p className="text-[11px] text-slate-400 italic">No formulation ingredients required for standard input.</p>
+                  )
+                )}
+
+                {feasibilityCheck.result && !feasibilityCheck.result.sufficient && (
+                  <div className="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-medium border border-rose-200 dark:border-rose-900/50 flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
+                    <span>Cannot increase order: Factory warehouse does not have enough raw materials in stock to produce this extra demand. Please procure raw material inventory before increasing demand.</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Live Preview Summary Card */}
+              <div className="p-3.5 rounded-xl bg-gradient-to-br from-emerald-500/5 via-teal-500/5 to-slate-50 dark:from-factory-800/80 dark:to-factory-800/40 border border-emerald-500/20 dark:border-emerald-500/30 space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  Order Impact Preview
+                </span>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+                  <div className="p-2 rounded-lg bg-white/80 dark:bg-factory-900/80 border border-slate-100 dark:border-slate-800">
+                    <span className="text-[10px] text-slate-400 block font-sans">Additional</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">+{extraKg} kg</span>
+                  </div>
+                  <div className="p-2 rounded-lg bg-white/80 dark:bg-factory-900/80 border border-slate-100 dark:border-slate-800">
+                    <span className="text-[10px] text-slate-400 block font-sans">New Item Total</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{targetTotalItemKg} kg</span>
+                  </div>
+                  <div className="p-2 rounded-lg bg-white/80 dark:bg-factory-900/80 border border-slate-100 dark:border-slate-800">
+                    <span className="text-[10px] text-slate-400 block font-sans">New Order Total</span>
+                    <span className="font-bold text-brand-600 dark:text-brand-400">{newTotalOrderKg} kg</span>
+                  </div>
+                  <div className="p-2 rounded-lg bg-white/80 dark:bg-factory-900/80 border border-slate-100 dark:border-slate-800">
+                    <span className="text-[10px] text-slate-400 block font-sans">To Produce</span>
+                    <span className="font-bold text-amber-600 dark:text-amber-400">{newRemainingDemandKg} kg</span>
+                  </div>
+                </div>
+
+                {sellRate > 0 && extraValue > 0 && (
+                  <div className="pt-2 border-t border-emerald-500/10 flex items-center justify-between text-xs font-sans">
+                    <span className="text-slate-500 dark:text-slate-400">Additional Order Value (@ ₹{sellRate.toFixed(2)}/kg):</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                      +₹{extraValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Optional Reason / Notes */}
+              <div>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Reason / Notes (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={increaseReason}
+                  onChange={(e) => setIncreaseReason(e.target.value)}
+                  placeholder="e.g. Customer requested +50 kg more before production run"
+                  className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-1 focus:ring-brand-500 outline-none"
+                />
+              </div>
+
+              {/* Error Message */}
+              {increaseError && (
+                <div className="p-3 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800 rounded-xl text-xs flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span>{increaseError}</span>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setOrderToIncrease(null)}
+                  disabled={isSubmittingIncrease}
+                >
+                  Cancel
+                </Button>
+                <button
+                  type="button"
+                  onClick={handleConfirmIncreaseQty}
+                  disabled={
+                    isSubmittingIncrease ||
+                    !extraKg ||
+                    extraKg <= 0 ||
+                    Boolean(feasibilityCheck.result && !feasibilityCheck.result.sufficient)
+                  }
+                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 rounded-xl shadow-md shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
+                >
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  {isSubmittingIncrease ? 'Increasing Quantity...' : `Confirm & Add +${extraKg} kg`}
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
+
+      {/* Edit Customer Order & Recipes Modal (Available only when order is not in production run) */}
+      <Modal
+        isOpen={isEditOrderModalOpen}
+        onClose={() => {
+          if (!isSubmittingEdit) {
+            setIsEditOrderModalOpen(false);
+            setOrderToEdit(null);
+          }
+        }}
+        title={orderToEdit ? `Edit Order & Formulations - ${orderToEdit.order_number}` : 'Edit Customer Order'}
+        maxWidth="4xl"
+      >
+        {orderToEdit && (
+          <form onSubmit={handleConfirmEditOrder} className="space-y-4">
+            <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40 text-xs text-blue-800 dark:text-blue-300 flex items-center gap-2">
+              <Info className="w-4 h-4 shrink-0 text-blue-600" />
+              <span>
+                You are updating <strong>{orderToEdit.order_number}</strong>. Because this order is not yet running in production, line items, recipes, target specifications, and demand quantities can be safely adjusted.
+              </span>
+            </div>
+
+            {/* Customer & Delivery Date */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Customer / Enterprise Client *
+                </label>
+                <select
+                  required
+                  value={editOrderForm.customerId}
+                  onChange={(e) => setEditOrderForm({ ...editOrderForm, customerId: e.target.value })}
+                  className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl"
+                >
+                  <option value="">-- Select Customer --</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Required Delivery Date *
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={editOrderForm.requiredDeliveryDate}
+                  onChange={(e) => setEditOrderForm({ ...editOrderForm, requiredDeliveryDate: e.target.value })}
+                  className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl"
+                />
+              </div>
+            </div>
+
+            {/* Line Items List */}
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-brand-500" />
+                  Order Recipe Line Items ({editOrderForm.items.length})
+                </span>
+                <button
+                  type="button"
+                  onClick={handleAddEditItem}
+                  className="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add Recipe Item
+                </button>
+              </div>
+
+              <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+                {editOrderForm.items.map((it, idx) => (
+                  <div
+                    key={it.id || idx}
+                    className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-factory-800/40 space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        Item #{idx + 1}
+                      </span>
+                      {editOrderForm.items.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveEditItem(it.id)}
+                          className="text-[11px] font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" /> Remove
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
+                      {/* Product Formulation */}
+                      <div className="md:col-span-5">
+                        <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                          Product Formulation (Recipe) *
+                        </label>
+                        <select
+                          required
+                          value={it.productId}
+                          onChange={(e) => handleEditItemChange(it.id, 'productId', e.target.value)}
+                          className="w-full text-xs px-2.5 py-1.5 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-lg"
+                        >
+                          {products.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} {p.code ? `(${p.code})` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Size / Micron */}
+                      <div className="md:col-span-4">
+                        <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                          Size / Micron
+                        </label>
+                        <select
+                          value={
+                            sizeMicrons.some((sm) => sm.label === it.sizeMicron)
+                              ? it.sizeMicron
+                              : it.sizeMicron ? '__custom__' : ''
+                          }
+                          onChange={(e) => {
+                            if (e.target.value !== '__custom__') {
+                              handleEditItemChange(it.id, 'sizeMicron', e.target.value);
+                            }
+                          }}
+                          className="w-full text-xs px-2.5 py-1.5 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-lg"
+                        >
+                          <option value="">-- Match Master Spec --</option>
+                          {sizeMicrons.filter((sm) => sm.is_active).map((sm) => (
+                            <option key={sm.id} value={sm.label}>{sm.label}</option>
+                          ))}
+                          <option value="__custom__">➕ Custom Spec</option>
+                        </select>
+                      </div>
+
+                      {/* Grade */}
+                      <div className="md:col-span-3">
+                        <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                          Grade / Resin Spec
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Virgin"
+                          value={it.grade}
+                          onChange={(e) => handleEditItemChange(it.id, 'grade', e.target.value)}
+                          className="w-full text-xs px-2.5 py-1.5 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-lg"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
+                      {/* Requested Weight */}
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                          Requested Weight (kg) *
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          min="1"
+                          required
+                          value={it.requestedQuantityKg}
+                          onChange={(e) => handleEditItemChange(it.id, 'requestedQuantityKg', parseFloat(e.target.value) || '')}
+                          className="w-full text-xs font-mono font-bold px-2.5 py-1.5 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-lg text-emerald-600"
+                        />
+                      </div>
+
+                      {/* Selling Price */}
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                          Selling Price (₹/kg)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="e.g. 135"
+                          value={it.sellingPricePerKg}
+                          onChange={(e) => handleEditItemChange(it.id, 'sellingPricePerKg', e.target.value === '' ? '' : parseFloat(e.target.value))}
+                          className="w-full text-xs font-mono px-2.5 py-1.5 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-lg"
+                        />
+                      </div>
+
+                      {/* Item Total Value */}
+                      <div className="text-right pt-2 font-mono">
+                        <span className="text-[10px] text-slate-400 uppercase block">Line Subtotal</span>
+                        <span className="text-sm font-bold text-slate-800 dark:text-white">
+                          ₹{((Number(it.requestedQuantityKg) || 0) * (Number(it.sellingPricePerKg) || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Order Notes / Customer Remarks
+              </label>
+              <textarea
+                rows={2}
+                value={editOrderForm.notes}
+                onChange={(e) => setEditOrderForm({ ...editOrderForm, notes: e.target.value })}
+                placeholder="Optional notes or instructions..."
+                className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl"
+              />
+            </div>
+
+            {editOrderError && (
+              <div className="p-3 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800 rounded-xl text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{editOrderError}</span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsEditOrderModalOpen(false);
+                  setOrderToEdit(null);
+                }}
+                disabled={isSubmittingEdit}
+              >
+                Cancel
+              </Button>
+              <button
+                type="submit"
+                disabled={isSubmittingEdit}
+                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-500 rounded-xl shadow-md disabled:opacity-50 transition-all active:scale-95"
+              >
+                <CheckCircle className="w-3.5 h-3.5" />
+                {isSubmittingEdit ? 'Saving Changes...' : 'Save & Update Order'}
+              </button>
+            </div>
+          </form>
+        )}
       </Modal>
     </div>
   );

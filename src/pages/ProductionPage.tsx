@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../api/client';
-import { Factory, Plus, Play, CheckCircle2, AlertCircle, ArrowRight, Layers, User, Edit2, GitBranch, Scissors, Check, Package, Ruler, Scale, Building2 } from 'lucide-react';
+import { Factory, Plus, Play, CheckCircle2, AlertCircle, ArrowRight, Layers, User, Edit2, GitBranch, Scissors, Check, Package, Ruler, Scale, Building2, TrendingUp, Lock } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import { Button } from '../components/common/Button';
@@ -72,10 +72,95 @@ export const ProductionPage: React.FC = () => {
   const [activeBatchForOperator, setActiveBatchForOperator] = useState<any>(null);
   const [editingOperatorName, setEditingOperatorName] = useState('');
 
+  // Modal 4: Quick Increase Order Quantity
+  const [isIncreaseOrderModalOpen, setIsIncreaseOrderModalOpen] = useState(false);
+  const [orderToIncreaseInProd, setOrderToIncreaseInProd] = useState<any | null>(null);
+  const [increaseItemInProdId, setIncreaseItemInProdId] = useState<string>('');
+  const [increaseAmountKgInProd, setIncreaseAmountKgInProd] = useState<number | ''>(50);
+  const [newTotalKgInProd, setNewTotalKgInProd] = useState<number | ''>('');
+  const [increaseReasonInProd, setIncreaseReasonInProd] = useState<string>('');
+  const [isSubmittingIncreaseInProd, setIsSubmittingIncreaseInProd] = useState(false);
+  const [increaseErrorInProd, setIncreaseErrorInProd] = useState<string | null>(null);
+  const [feasibilityCheckInProd, setFeasibilityCheckInProd] = useState<{
+    loading: boolean;
+    result: any | null;
+  }>({ loading: false, result: null });
+
+  const checkStockFeasibilityInProd = async (productId: string, quantityKg: number) => {
+    if (!productId || !quantityKg || quantityKg <= 0) {
+      setFeasibilityCheckInProd({ loading: false, result: null });
+      return;
+    }
+    setFeasibilityCheckInProd({ loading: true, result: null });
+    try {
+      const res = await api.post('/products/calculate-requirements', {
+        productId,
+        quantityKg,
+      });
+      setFeasibilityCheckInProd({ loading: false, result: res.data });
+    } catch (err: any) {
+      setFeasibilityCheckInProd({ loading: false, result: null });
+    }
+  };
+
   const openEditOperatorModal = (batch: any) => {
     setActiveBatchForOperator(batch);
     setEditingOperatorName(batch.operator_name || '');
     setIsEditOperatorModalOpen(true);
+  };
+
+  const handleConfirmIncreaseInProd = async () => {
+    if (!orderToIncreaseInProd) return;
+    if (orderToIncreaseInProd.is_in_production_run) {
+      setIncreaseErrorInProd(`Order ${orderToIncreaseInProd.order_number} cannot be increased because it is already in the production run.`);
+      return;
+    }
+
+    const items = orderToIncreaseInProd.customer_order_items || orderToIncreaseInProd.items || [];
+    const chosenItem = items.find((i: any) => i.id === increaseItemInProdId) || items[0] || {};
+    const currentKg = Number(chosenItem.requested_quantity_kg || orderToIncreaseInProd.total_requested_weight_kg || 0);
+    const targetKg = Number(newTotalKgInProd);
+
+    if (!targetKg || targetKg <= currentKg) {
+      setIncreaseErrorInProd(`New quantity (${targetKg || 0} kg) must be strictly greater than current quantity (${currentKg} kg).`);
+      return;
+    }
+
+    if (feasibilityCheckInProd.result && !feasibilityCheckInProd.result.all_sufficient) {
+      setIncreaseErrorInProd('Cannot increase order: insufficient raw material inventory in stock to produce the added quantity.');
+      return;
+    }
+
+    setIsSubmittingIncreaseInProd(true);
+    setIncreaseErrorInProd(null);
+    try {
+      await api.patch(`/orders/${orderToIncreaseInProd.id}/increase-quantity`, {
+        itemId: chosenItem.id,
+        newQuantityKg: targetKg,
+        reason: increaseReasonInProd.trim() || undefined,
+      });
+
+      // Refresh orders and production data
+      const ordRes = await api.get('/orders');
+      const updatedOrders = ordRes.data.orders || [];
+      setOrders(updatedOrders);
+
+      // Update draft form planned quantity to new remaining demand
+      const prodKg = Number(chosenItem.produced_quantity_kg || 0);
+      const dispKg = Number(chosenItem.dispatched_quantity_kg || 0);
+      const newRem = Math.max(0, targetKg - Math.max(prodKg, dispKg));
+      setDraftForm((prev) => ({
+        ...prev,
+        plannedQuantityKg: newRem > 0 ? newRem : targetKg,
+      }));
+
+      setIsIncreaseOrderModalOpen(false);
+      setOrderToIncreaseInProd(null);
+    } catch (err: any) {
+      setIncreaseErrorInProd(err.response?.data?.message || 'Failed to increase order quantity.');
+    } finally {
+      setIsSubmittingIncreaseInProd(false);
+    }
   };
 
   const handleSaveOperator = async (e: React.FormEvent) => {
@@ -1009,9 +1094,39 @@ export const ProductionPage: React.FC = () => {
                       </div>
                       <div className="text-right">
                         <span className="text-[10px] text-slate-400 block font-medium">Order Demand</span>
-                        <span className="text-xs font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                          {requestedKg} kg
-                        </span>
+                        <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                          <span className="text-xs font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                            {requestedKg} kg
+                          </span>
+                          {ord?.is_in_production_run ? (
+                            <span
+                              className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30"
+                              title="This order is already in the production run. Quantity and recipe cannot be modified."
+                            >
+                              <Lock className="w-2.5 h-2.5" />
+                              <span>In Run</span>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOrderToIncreaseInProd(ord);
+                                setIncreaseItemInProdId(item.id || '');
+                                setIncreaseAmountKgInProd(50);
+                                setNewTotalKgInProd(requestedKg + 50);
+                                setIncreaseReasonInProd('');
+                                setIncreaseErrorInProd(null);
+                                checkStockFeasibilityInProd(item.product_id || ord.product_id, 50);
+                                setIsIncreaseOrderModalOpen(true);
+                              }}
+                              className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-500/30 transition-all active:scale-95"
+                              title="Increase customer order quantity"
+                            >
+                              <TrendingUp className="w-2.5 h-2.5" />
+                              <span>+ Increase</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -1441,6 +1556,180 @@ export const ProductionPage: React.FC = () => {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal: Quick Increase Order Quantity from Production */}
+      <Modal
+        isOpen={isIncreaseOrderModalOpen}
+        onClose={() => {
+          if (!isSubmittingIncreaseInProd) setIsIncreaseOrderModalOpen(false);
+        }}
+        title={orderToIncreaseInProd ? `Increase Order Demand — ${orderToIncreaseInProd.order_number}` : ''}
+        maxWidth="md"
+      >
+        {orderToIncreaseInProd && (() => {
+          const items: any[] = (orderToIncreaseInProd.customer_order_items && orderToIncreaseInProd.customer_order_items.length > 0)
+            ? orderToIncreaseInProd.customer_order_items
+            : (orderToIncreaseInProd.items && orderToIncreaseInProd.items.length > 0 ? orderToIncreaseInProd.items : [{}]);
+          const chosenItem = items.find((i: any) => i.id === increaseItemInProdId) || items[0] || {};
+          const chosenProdName = products.find((p) => p.id === chosenItem.product_id)?.name || 'Finished Product';
+          const spec = chosenItem.size_micron || orderToIncreaseInProd.size_micron || 'Standard';
+          const currentKg = Number(chosenItem.requested_quantity_kg || orderToIncreaseInProd.total_requested_weight_kg || 0);
+          const producedKg = Number(chosenItem.produced_quantity_kg || 0);
+          const extraKg = typeof increaseAmountKgInProd === 'number' ? increaseAmountKgInProd : 0;
+          const targetTotalKg = currentKg + extraKg;
+          const newRemaining = Math.max(0, targetTotalKg - producedKg);
+
+          return (
+            <div className="space-y-4">
+              <div className="p-3 bg-slate-50 dark:bg-factory-800/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-900 dark:text-white">{chosenProdName}</span>
+                  <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300">
+                    {spec}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-[11px] text-slate-500 font-mono">
+                  <span>Current: <strong>{currentKg} kg</strong></span>
+                  <span>Produced: <strong className="text-amber-600">{producedKg} kg</strong></span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Add Extra (+ kg) *
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={increaseAmountKgInProd}
+                    onChange={(e) => {
+                      const val = e.target.value === '' ? '' : parseFloat(e.target.value);
+                      setIncreaseAmountKgInProd(val);
+                      setNewTotalKgInProd(val === '' ? '' : currentKg + Number(val));
+                      if (val && Number(val) > 0) {
+                        checkStockFeasibilityInProd(chosenItem.product_id || orderToIncreaseInProd.product_id, Number(val));
+                      }
+                    }}
+                    className="w-full text-sm font-mono font-bold px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-emerald-600 dark:text-emerald-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    New Total (kg) *
+                  </label>
+                  <input
+                    type="number"
+                    min={currentKg + 1}
+                    value={newTotalKgInProd}
+                    onChange={(e) => {
+                      const val = e.target.value === '' ? '' : parseFloat(e.target.value);
+                      setNewTotalKgInProd(val);
+                      const extra = val === '' ? '' : Math.max(0, Number(val) - currentKg);
+                      setIncreaseAmountKgInProd(extra);
+                      if (extra && Number(extra) > 0) {
+                        checkStockFeasibilityInProd(chosenItem.product_id || orderToIncreaseInProd.product_id, Number(extra));
+                      }
+                    }}
+                    className="w-full text-sm font-mono font-bold px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {[25, 50, 100, 200, 500].map((pill) => (
+                  <button
+                    key={pill}
+                    type="button"
+                    onClick={() => {
+                      setIncreaseAmountKgInProd(pill);
+                      setNewTotalKgInProd(currentKg + pill);
+                      checkStockFeasibilityInProd(chosenItem.product_id || orderToIncreaseInProd.product_id, pill);
+                    }}
+                    className="px-2 py-0.5 text-xs font-mono font-bold rounded bg-slate-100 hover:bg-slate-200 dark:bg-factory-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                  >
+                    +{pill} kg
+                  </button>
+                ))}
+              </div>
+
+              {/* Material Feasibility Check */}
+              {feasibilityCheckInProd.loading ? (
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-factory-800/80 border border-slate-200 dark:border-slate-700 text-xs text-slate-500 flex items-center gap-2">
+                  <div className="w-3.5 h-3.5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin shrink-0" />
+                  <span>Checking raw material inventory stock for +{extraKg} kg...</span>
+                </div>
+              ) : feasibilityCheckInProd.result ? (
+                feasibilityCheckInProd.result.all_sufficient ? (
+                  <div className="p-3 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs space-y-1">
+                    <div className="flex items-center gap-1.5 font-bold">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span>Stock Verified: Sufficient Raw Materials in Inventory</span>
+                    </div>
+                    <p className="text-[11px] text-emerald-700/90 dark:text-emerald-400/90 pl-5">
+                      Warehouse has sufficient batch quantities available to produce this added demand (+{extraKg} kg).
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-xs space-y-1.5">
+                    <div className="flex items-center gap-1.5 font-bold">
+                      <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                      <span>Insufficient Raw Material Stock — Increase Blocked</span>
+                    </div>
+                    <div className="text-[11px] space-y-1 pl-5">
+                      {feasibilityCheckInProd.result.requirements?.filter((r: any) => !r.is_sufficient).map((r: any) => (
+                        <div key={r.material_id} className="flex items-center justify-between font-mono">
+                          <span>{r.material_name}:</span>
+                          <span>Required {r.required_kg} kg | Available {r.available_kg} kg <strong className="text-rose-600">(Missing: {r.missing_kg} kg)</strong></span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              ) : null}
+
+              <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 flex items-center justify-between text-xs font-mono">
+                <span className="text-slate-600 dark:text-slate-400 font-sans">New Remaining to Produce:</span>
+                <span className="font-bold text-emerald-700 dark:text-emerald-300 text-sm">{newRemaining} kg</span>
+              </div>
+
+              {increaseErrorInProd && (
+                <div className="p-2.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{increaseErrorInProd}</span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsIncreaseOrderModalOpen(false)}
+                  disabled={isSubmittingIncreaseInProd}
+                >
+                  Cancel
+                </Button>
+                <button
+                  type="button"
+                  onClick={handleConfirmIncreaseInProd}
+                  disabled={
+                    isSubmittingIncreaseInProd ||
+                    !extraKg ||
+                    extraKg <= 0 ||
+                    feasibilityCheckInProd.loading ||
+                    (feasibilityCheckInProd.result !== null && !feasibilityCheckInProd.result.all_sufficient)
+                  }
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 rounded-xl shadow-md shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  {isSubmittingIncreaseInProd ? 'Updating...' : `Confirm (+${extraKg} kg)`}
+                </button>
+              </div>
+            </div>
+          );
+        })()}
       </Modal>
     </div>
   );
