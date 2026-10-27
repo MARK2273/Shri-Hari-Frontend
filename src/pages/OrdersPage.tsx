@@ -28,6 +28,8 @@ import {
   Info,
   Lock,
   Flame,
+  XCircle,
+  Ban,
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
@@ -364,6 +366,43 @@ export const OrdersPage: React.FC = () => {
       setEditOrderError(err.response?.data?.message || 'Failed to update order.');
     } finally {
       setIsSubmittingEdit(false);
+    }
+  };
+
+  // Cancel Order state (allowed ONLY if NOT in production run)
+  const [orderToCancel, setOrderToCancel] = useState<any | null>(null);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+
+  const openCancelModal = (order: any) => {
+    if (order.is_in_production_run) {
+      alert(`Order ${order.order_number} cannot be cancelled because it is already in the production run.`);
+      return;
+    }
+    setOrderToCancel(order);
+    setCancelReason('');
+    setCancelError(null);
+    setIsCancelModalOpen(true);
+  };
+
+  const handleConfirmCancelOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!orderToCancel) return;
+    setIsSubmittingCancel(true);
+    setCancelError(null);
+    try {
+      await api.post(`/orders/${orderToCancel.id}/cancel`, {
+        reason: cancelReason.trim() || undefined,
+      });
+      await fetchData();
+      setIsCancelModalOpen(false);
+      setOrderToCancel(null);
+    } catch (err: any) {
+      setCancelError(err.response?.data?.message || 'Failed to cancel customer order.');
+    } finally {
+      setIsSubmittingCancel(false);
     }
   };
 
@@ -871,9 +910,11 @@ export const OrdersPage: React.FC = () => {
                           variant={
                             order.status === 'completed'
                               ? 'success'
-                              : order.status === 'in_production' || order.status === 'partially_produced'
-                                ? 'warning'
-                                : 'info'
+                              : order.status === 'cancelled'
+                                ? 'danger'
+                                : order.status === 'in_production' || order.status === 'partially_produced'
+                                  ? 'warning'
+                                  : 'info'
                           }
                         >
                           {order.status}
@@ -956,10 +997,18 @@ export const OrdersPage: React.FC = () => {
                       {isInProductionRun ? (
                         <span
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 shadow-xs cursor-default"
-                          title="Order is locked: Production has already started or batches exist. Quantities and formulations cannot be altered."
+                          title="Order is locked: Production has already started or batches exist. Quantities, recipes, and status cannot be cancelled or altered."
                         >
                           <Lock className="w-3.5 h-3.5 text-amber-500" />
                           <span>In Production Run (Locked)</span>
+                        </span>
+                      ) : order.status === 'cancelled' ? (
+                        <span
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/40 shadow-xs cursor-default"
+                          title="This order has been cancelled"
+                        >
+                          <Ban className="w-3.5 h-3.5 text-rose-500" />
+                          <span>Order Cancelled</span>
                         </span>
                       ) : (
                         <div className="flex items-center gap-2">
@@ -980,6 +1029,15 @@ export const OrdersPage: React.FC = () => {
                           >
                             <TrendingUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                             <span>Increase Quantity</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openCancelModal(order)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/40 border border-rose-200 dark:border-rose-800/50 transition-all hover:scale-[1.02] active:scale-95 shadow-xs"
+                            title="Cancel this order before production begins"
+                          >
+                            <XCircle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                            <span>Cancel Order</span>
                           </button>
                         </div>
                       )}
@@ -2742,6 +2800,107 @@ export const OrdersPage: React.FC = () => {
               >
                 <CheckCircle className="w-3.5 h-3.5" />
                 {isSubmittingEdit ? 'Saving Changes...' : 'Save & Update Order'}
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* Modal: Cancel Customer Order */}
+      <Modal
+        isOpen={isCancelModalOpen}
+        onClose={() => {
+          if (!isSubmittingCancel) {
+            setIsCancelModalOpen(false);
+            setOrderToCancel(null);
+          }
+        }}
+        title={`Cancel Customer Order: ${orderToCancel?.order_number || ''}`}
+        maxWidth="md"
+      >
+        {orderToCancel && (
+          <form onSubmit={handleConfirmCancelOrder} className="space-y-4">
+            <div className="p-4 rounded-xl bg-rose-50/80 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 space-y-2">
+              <div className="flex items-start gap-2.5">
+                <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-xs font-bold text-rose-900 dark:text-rose-200">
+                    Are you sure you want to cancel this order?
+                  </h4>
+                  <p className="text-[11px] text-rose-700/90 dark:text-rose-300/90 mt-1">
+                    Once cancelled, this customer order will be marked as <strong>Cancelled</strong> and removed from the active factory production queue.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-3 pt-3 border-t border-rose-200/60 dark:border-rose-900/40 grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Customer</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    {orderToCancel.customers?.name || orderToCancel.customer_name || 'Direct Client'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Demand</span>
+                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                    {orderToCancel.total_requested_weight_kg || 0} kg
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Target Delivery</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    {orderToCancel.required_delivery_date || '—'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Current Status</span>
+                  <span className="capitalize font-semibold text-slate-800 dark:text-slate-200">
+                    {orderToCancel.status}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Reason for Cancellation <span className="text-slate-400 font-normal">(Optional)</span>
+              </label>
+              <textarea
+                rows={2}
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="e.g. Customer cancelled order, specifications changed, duplicate entry..."
+                className="w-full text-xs px-3 py-2 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+              />
+            </div>
+
+            {cancelError && (
+              <div className="p-3 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800 rounded-xl text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{cancelError}</span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsCancelModalOpen(false);
+                  setOrderToCancel(null);
+                }}
+                disabled={isSubmittingCancel}
+              >
+                Keep Order
+              </Button>
+              <button
+                type="submit"
+                disabled={isSubmittingCancel}
+                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-md disabled:opacity-50 transition-all active:scale-95"
+              >
+                <XCircle className="w-3.5 h-3.5" />
+                {isSubmittingCancel ? 'Cancelling...' : 'Confirm Order Cancellation'}
               </button>
             </div>
           </form>
