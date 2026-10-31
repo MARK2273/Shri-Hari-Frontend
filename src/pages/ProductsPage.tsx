@@ -47,25 +47,54 @@ export const ProductsPage: React.FC = () => {
     }, 0);
     return totalCost / totalKg;
   };
-  // Calculate 3-Input Plate breakdown (Type A, B, C)
-  const getPlateStats = (items: Array<{ plateType?: string; plate_type?: string; quantityKg?: number | string; percentage?: number | string; planned_kg_per_kg_output?: number }>) => {
-    const stats = {
-      A: { totalKg: 0, pct: 0, count: 0 },
-      B: { totalKg: 0, pct: 0, count: 0 },
-      C: { totalKg: 0, pct: 0, count: 0 },
+  // Calculate 3-Input Plate distribution (Machine Feed Plates: Type A, B, C)
+  const getPlateDistribution = (
+    plateA: number | string,
+    plateB: number | string,
+    plateC: number | string,
+    containerTotalKg: number = 0
+  ) => {
+    const a = Number(plateA) || 0;
+    const b = Number(plateB) || 0;
+    const c = Number(plateC) || 0;
+    const plateSum = Number((a + b + c).toFixed(2));
+    const total = containerTotalKg > 0 ? containerTotalKg : (plateSum > 0 ? plateSum : 150);
+
+    const aPct = total > 0 ? Number(((a / total) * 100).toFixed(1)) : 0;
+    const bPct = total > 0 ? Number(((b / total) * 100).toFixed(1)) : 0;
+    const cPct = total > 0 ? Number(((c / total) * 100).toFixed(1)) : 0;
+
+    return {
+      stats: {
+        A: { totalKg: a, pct: aPct },
+        B: { totalKg: b, pct: bPct },
+        C: { totalKg: c, pct: cPct },
+      },
+      plateSum,
+      containerTotal: total,
+      diff: Number((plateSum - total).toFixed(2)),
+      isBalanced: Math.abs(plateSum - total) < 0.05,
     };
-    const totalKg = items.reduce((sum, it) => sum + (Number(it.quantityKg ?? it.percentage) || 0), 0) || 1;
-    items.forEach((it) => {
-      const raw = (it.plateType || it.plate_type || 'A').toUpperCase();
-      const p = (raw === 'B' || raw === 'C' ? raw : 'A') as 'A' | 'B' | 'C';
-      const kg = Number(it.quantityKg ?? it.percentage) || 0;
-      stats[p].totalKg = Number((stats[p].totalKg + kg).toFixed(2));
-      stats[p].count += 1;
-    });
-    (['A', 'B', 'C'] as const).forEach((p) => {
-      stats[p].pct = totalKg > 0 ? Number(((stats[p].totalKg / totalKg) * 100).toFixed(1)) : 0;
-    });
-    return { stats, totalBatchKg: Number(totalKg.toFixed(2)) };
+  };
+
+  // Helper backward-compatible adapter
+  const getPlateStats = (itemsOrPlateA: any, plateB?: any, plateC?: any, containerTotalKg?: number) => {
+    if (Array.isArray(itemsOrPlateA)) {
+      const items = itemsOrPlateA;
+      const totalKg = items.reduce((sum, it) => sum + (Number(it.quantityKg ?? it.percentage) || 0), 0) || 1;
+      const a = Number((totalKg * 0.4).toFixed(2));
+      const b = Number((totalKg * (40 / 150)).toFixed(2));
+      const c = Number((totalKg - a - b).toFixed(2));
+      return {
+        stats: {
+          A: { totalKg: a, pct: 40.0, count: 1 },
+          B: { totalKg: b, pct: 26.7, count: 1 },
+          C: { totalKg: c, pct: 33.3, count: 1 },
+        },
+        totalBatchKg: Number(totalKg.toFixed(2)),
+      };
+    }
+    return getPlateDistribution(itemsOrPlateA, plateB, plateC, containerTotalKg || 0);
   };
 
   const [calculationResult, setCalculationResult] = useState<any>(null);
@@ -88,9 +117,12 @@ export const ProductsPage: React.FC = () => {
     unit: 'kg' | 'pcs' | 'rolls';
     standardWeightKg: number;
     sizeMicron: string;
+    plateA_kg: number | string;
+    plateB_kg: number | string;
+    plateC_kg: number | string;
     initialRecipeItems: Array<{
       materialId: string;
-      plateType: 'A' | 'B' | 'C';
+      plateType?: 'A' | 'B' | 'C';
       quantityKg: number | string;
       plannedKgPerKgOutput: number;
     }>;
@@ -100,20 +132,29 @@ export const ProductsPage: React.FC = () => {
     unit: 'kg',
     standardWeightKg: 1.0,
     sizeMicron: '',
+    plateA_kg: 60,
+    plateB_kg: 40,
+    plateC_kg: 50,
     initialRecipeItems: [],
   });
 
   // Recipe Version Form
   const [recipeForm, setRecipeForm] = useState<{
     notes: string;
+    plateA_kg: number | string;
+    plateB_kg: number | string;
+    plateC_kg: number | string;
     items: Array<{
       materialId: string;
-      plateType: 'A' | 'B' | 'C';
+      plateType?: 'A' | 'B' | 'C';
       quantityKg: number | string;
       plannedKgPerKgOutput: number;
     }>;
   }>({
     notes: '',
+    plateA_kg: 60,
+    plateB_kg: 40,
+    plateC_kg: 50,
     items: [],
   });
 
@@ -194,22 +235,23 @@ export const ProductsPage: React.FC = () => {
       unit: 'kg',
       standardWeightKg: 1.0,
       sizeMicron: '',
+      plateA_kg: 60,
+      plateB_kg: 40,
+      plateC_kg: 50,
       initialRecipeItems:
         materials.length > 0
           ? [
             {
               materialId: materials[0].id,
-              plateType: 'A' as const,
-              quantityKg: 60,
-              plannedKgPerKgOutput: 0.4,
+              quantityKg: 70,
+              plannedKgPerKgOutput: 70 / 150,
             },
             ...(materials.length > 1
               ? [
                 {
                   materialId: materials[1].id,
-                  plateType: 'B' as const,
-                  quantityKg: 40,
-                  plannedKgPerKgOutput: 0.267,
+                  quantityKg: 50,
+                  plannedKgPerKgOutput: 50 / 150,
                 },
               ]
               : []),
@@ -217,9 +259,8 @@ export const ProductsPage: React.FC = () => {
               ? [
                 {
                   materialId: materials[2].id,
-                  plateType: 'C' as const,
-                  quantityKg: 50,
-                  plannedKgPerKgOutput: 0.333,
+                  quantityKg: 30,
+                  plannedKgPerKgOutput: 30 / 150,
                 },
               ]
               : []),
@@ -238,6 +279,9 @@ export const ProductsPage: React.FC = () => {
       unit: prod.unit || 'kg',
       standardWeightKg: Number(prod.standard_weight_kg) || 1.0,
       sizeMicron: prod.size_micron || '',
+      plateA_kg: prod.active_recipe?.plate_a_kg ?? 60,
+      plateB_kg: prod.active_recipe?.plate_b_kg ?? 40,
+      plateC_kg: prod.active_recipe?.plate_c_kg ?? 50,
       initialRecipeItems: [],
     });
     setIsProductModalOpen(true);
@@ -271,12 +315,15 @@ export const ProductsPage: React.FC = () => {
           const totalKg = productForm.initialRecipeItems.reduce((acc, it) => acc + (Number(it.quantityKg) || 0), 0) || 1;
           payload.initialRecipe = {
             notes: 'Initial production formulation (V1)',
+            plateA_kg: Number(productForm.plateA_kg) || 0,
+            plateB_kg: Number(productForm.plateB_kg) || 0,
+            plateC_kg: Number(productForm.plateC_kg) || 0,
+            totalBatchKg: totalKg,
             items: productForm.initialRecipeItems.map((item) => {
               const itemKg = Number(item.quantityKg) || 0;
               const ratio = itemKg / totalKg;
               return {
                 materialId: item.materialId,
-                plateType: item.plateType || 'A',
                 quantityKg: itemKg,
                 percentage: Number((ratio * 100).toFixed(2)),
                 plannedKgPerKgOutput: Number(ratio.toFixed(6)),
@@ -321,19 +368,22 @@ export const ProductsPage: React.FC = () => {
       [];
 
     const totalCurrentKg = currentItems.reduce((acc: number, ci: any) => acc + (Number(ci.quantity_kg ?? ci.percentage) || 0), 0) || 1;
+    const rec = selectedProduct.active_recipe;
 
     setRecipeForm({
-      notes: `Revision V${(selectedProduct.active_recipe?.version || 1) + 1} optimization`,
+      notes: `Revision V${(rec?.version || 1) + 1} optimization`,
+      plateA_kg: rec?.plate_a_kg ?? 60,
+      plateB_kg: rec?.plate_b_kg ?? 40,
+      plateC_kg: rec?.plate_c_kg ?? 50,
       items:
         currentItems.length > 0
           ? currentItems.map((ci: any) => ({
             materialId: ci.material_id,
-            plateType: (ci.plate_type || ci.plateType || 'A').toUpperCase() as 'A' | 'B' | 'C',
             quantityKg: Number(ci.quantity_kg ?? ci.percentage) || 0,
             plannedKgPerKgOutput: Number(ci.planned_kg_per_kg_output) || (Number(ci.quantity_kg ?? ci.percentage) || 0) / totalCurrentKg,
           }))
           : materials.length > 0
-            ? [{ materialId: materials[0].id, plateType: 'A', quantityKg: 100, plannedKgPerKgOutput: 1.0 }]
+            ? [{ materialId: materials[0].id, quantityKg: 100, plannedKgPerKgOutput: 1.0 }]
             : [],
     });
     setIsRecipeModalOpen(true);
@@ -348,12 +398,15 @@ export const ProductsPage: React.FC = () => {
       const totalKg = recipeForm.items.reduce((acc, it) => acc + (Number(it.quantityKg) || 0), 0) || 1;
       await api.post(`/products/${selectedProduct.id}/recipes`, {
         notes: recipeForm.notes,
+        plateA_kg: Number(recipeForm.plateA_kg) || 0,
+        plateB_kg: Number(recipeForm.plateB_kg) || 0,
+        plateC_kg: Number(recipeForm.plateC_kg) || 0,
+        totalBatchKg: totalKg,
         items: recipeForm.items.map((i) => {
           const itemKg = Number(i.quantityKg) || 0;
           const ratio = itemKg / totalKg;
           return {
             materialId: i.materialId,
-            plateType: i.plateType || 'A',
             quantityKg: itemKg,
             percentage: Number((ratio * 100).toFixed(2)),
             plannedKgPerKgOutput: Number(ratio.toFixed(6)),
@@ -567,10 +620,10 @@ export const ProductsPage: React.FC = () => {
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                        3-Input Plate Extrusion Breakdown (Feed Plates: Type A, B & C):
+                        3-Input Plates Extrusion Distribution (Plates Type A, B & C):
                       </h4>
                       <span className="text-[11px] text-slate-400 font-mono">
-                        Batch Weight: {(selectedProduct.active_recipe?.product_recipe_items || []).reduce((sum: number, it: any) => sum + (Number(it.quantity_kg ?? it.percentage) || 0), 0).toFixed(2)} kg
+                        Container Batch Output: {(selectedProduct.active_recipe?.product_recipe_items || []).reduce((sum: number, it: any) => sum + (Number(it.quantity_kg ?? it.percentage) || 0), 0).toFixed(2)} kg
                       </span>
                     </div>
 
@@ -580,8 +633,27 @@ export const ProductsPage: React.FC = () => {
                       </div>
                     ) : (
                       (() => {
-                        const items = selectedProduct.active_recipe?.product_recipe_items || [];
-                        const { stats, totalBatchKg } = getPlateStats(items);
+                        const rec = selectedProduct.active_recipe;
+                        const items = rec?.product_recipe_items || [];
+                        const containerTotalKg = items.reduce((sum: number, it: any) => sum + (Number(it.quantity_kg ?? it.percentage) || 0), 0);
+                        const hasExplicitPlates = (rec?.plate_a_kg !== undefined && rec?.plate_a_kg !== null && (Number(rec.plate_a_kg) > 0 || Number(rec.plate_b_kg) > 0 || Number(rec.plate_c_kg) > 0));
+                        const plateDist = hasExplicitPlates
+                          ? getPlateDistribution(rec.plate_a_kg, rec.plate_b_kg, rec.plate_c_kg, rec.total_batch_kg || containerTotalKg)
+                          : (rec?.plate_summary
+                              ? {
+                                  stats: {
+                                    A: { totalKg: Number(rec.plate_summary.A?.total_kg ?? 0), pct: Number(rec.plate_summary.A?.percentage ?? 0) },
+                                    B: { totalKg: Number(rec.plate_summary.B?.total_kg ?? 0), pct: Number(rec.plate_summary.B?.percentage ?? 0) },
+                                    C: { totalKg: Number(rec.plate_summary.C?.total_kg ?? 0), pct: Number(rec.plate_summary.C?.percentage ?? 0) },
+                                  },
+                                  plateSum: Number(rec.total_batch_kg || containerTotalKg),
+                                  totalBatchKg: Number(rec.total_batch_kg || containerTotalKg),
+                                  isBalanced: true,
+                                  diff: 0
+                                }
+                              : getPlateStats(items));
+                        const { stats } = plateDist;
+
                         return (
                           <div className="space-y-4">
                             {/* 3-Input Plate Summary Cards */}
@@ -601,7 +673,7 @@ export const ProductsPage: React.FC = () => {
                                     {stats.A.totalKg} <span className="text-xs font-semibold text-blue-500">kg</span>
                                   </span>
                                   <span className="text-[10px] text-blue-600/80 dark:text-blue-400">
-                                    {stats.A.count} material{stats.A.count === 1 ? '' : 's'}
+                                    Extruder Plate A
                                   </span>
                                 </div>
                               </div>
@@ -621,7 +693,7 @@ export const ProductsPage: React.FC = () => {
                                     {stats.B.totalKg} <span className="text-xs font-semibold text-amber-500">kg</span>
                                   </span>
                                   <span className="text-[10px] text-amber-600/80 dark:text-amber-400">
-                                    {stats.B.count} material{stats.B.count === 1 ? '' : 's'}
+                                    Extruder Plate B
                                   </span>
                                 </div>
                               </div>
@@ -641,67 +713,65 @@ export const ProductsPage: React.FC = () => {
                                     {stats.C.totalKg} <span className="text-xs font-semibold text-emerald-500">kg</span>
                                   </span>
                                   <span className="text-[10px] text-emerald-600/80 dark:text-emerald-400">
-                                    {stats.C.count} material{stats.C.count === 1 ? '' : 's'}
+                                    Extruder Plate C
                                   </span>
                                 </div>
                               </div>
                             </div>
 
-                            {/* Detailed Polymer Cards */}
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                              {items.map((item: any, idx: number) => {
-                                const matCost = getMaterialCost(item.material_id);
-                                const itemKg = Number(item.quantity_kg ?? item.percentage) || 0;
-                                const itemPct = totalBatchKg > 0 ? Number(((itemKg / totalBatchKg) * 100).toFixed(1)) : 0;
-                                const rowCost = (itemKg / totalBatchKg) * matCost;
-                                const plate = (item.plate_type || 'A').toUpperCase();
-                                const plateBadge =
-                                  plate === 'B'
-                                    ? 'bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700'
-                                    : plate === 'C'
-                                      ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
-                                      : 'bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700';
+                            {/* Combined Raw Polymers in Master Container */}
+                            <div>
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                  Combined Raw Polymers in Master Mix Container ({containerTotalKg.toFixed(2)} kg):
+                                </span>
+                                <span className="text-[10px] text-slate-400">
+                                  Resins blended together before 3-plate machine feed
+                                </span>
+                              </div>
 
-                                return (
-                                  <div
-                                    key={idx}
-                                    className="p-3.5 rounded-xl bg-slate-50 dark:bg-factory-800/60 border border-slate-200/80 dark:border-slate-700/60"
-                                  >
-                                    <div className="flex items-center justify-between gap-1 mb-1">
-                                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border ${plateBadge}`}>
-                                        Plate {plate}
-                                      </span>
-                                      <span className="font-mono text-xs font-black text-brand-600 dark:text-brand-400 shrink-0">
-                                        {itemKg} kg <span className="text-[10px] text-slate-400 font-normal">({itemPct}%)</span>
-                                      </span>
-                                    </div>
-                                    <div className="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate">
-                                      {item.materials?.name || item.material_name || `Polymer #${idx + 1}`}
-                                    </div>
-                                    <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full mt-2.5 overflow-hidden">
-                                      <div
-                                        className={
-                                          plate === 'B'
-                                            ? 'bg-amber-500 h-full rounded-full transition-all'
-                                            : plate === 'C'
-                                              ? 'bg-emerald-500 h-full rounded-full transition-all'
-                                              : 'bg-blue-500 h-full rounded-full transition-all'
-                                        }
-                                        style={{ width: `${Math.min(itemPct, 100)}%` }}
-                                      ></div>
-                                    </div>
-                                    <div className="text-[10px] text-slate-400 mt-2 font-mono space-y-1">
-                                      <div className="flex items-center justify-between">
-                                        <span>Ratio: {item.planned_kg_per_kg_output || (itemKg / totalBatchKg).toFixed(4)} kg / 1 kg</span>
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                {items.map((item: any, idx: number) => {
+                                  const matCost = getMaterialCost(item.material_id);
+                                  const itemKg = Number(item.quantity_kg ?? item.percentage) || 0;
+                                  const itemPct = containerTotalKg > 0 ? Number(((itemKg / containerTotalKg) * 100).toFixed(1)) : 0;
+                                  const rowCost = (itemKg / containerTotalKg) * matCost;
+
+                                  return (
+                                    <div
+                                      key={idx}
+                                      className="p-3.5 rounded-xl bg-slate-50 dark:bg-factory-800/60 border border-slate-200/80 dark:border-slate-700/60"
+                                    >
+                                      <div className="flex items-center justify-between gap-1 mb-1">
+                                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                                          Polymer #{idx + 1}
+                                        </span>
+                                        <span className="font-mono text-xs font-black text-brand-600 dark:text-brand-400 shrink-0">
+                                          {itemKg} kg <span className="text-[10px] text-slate-400 font-normal">({itemPct}%)</span>
+                                        </span>
                                       </div>
-                                      <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-slate-700/60 font-semibold text-slate-600 dark:text-slate-300">
-                                        <span>Rate: ₹{matCost.toFixed(2)}/kg</span>
-                                        <span className="text-brand-600 dark:text-brand-400">Cost: ₹{rowCost.toFixed(2)}</span>
+                                      <div className="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate">
+                                        {item.materials?.name || item.material_name || `Polymer #${idx + 1}`}
+                                      </div>
+                                      <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full mt-2.5 overflow-hidden">
+                                        <div
+                                          className="bg-brand-500 h-full rounded-full transition-all"
+                                          style={{ width: `${Math.min(itemPct, 100)}%` }}
+                                        ></div>
+                                      </div>
+                                      <div className="text-[10px] text-slate-400 mt-2 font-mono space-y-1">
+                                        <div className="flex items-center justify-between">
+                                          <span>Container Ratio: {item.planned_kg_per_kg_output || (itemKg / containerTotalKg).toFixed(4)} kg / 1 kg</span>
+                                        </div>
+                                        <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-slate-700/60 font-semibold text-slate-600 dark:text-slate-300">
+                                          <span>Rate: ₹{matCost.toFixed(2)}/kg</span>
+                                          <span className="text-brand-600 dark:text-brand-400">Cost: ₹{rowCost.toFixed(2)}</span>
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                );
-                              })}
+                                  );
+                                })}
+                              </div>
                             </div>
                           </div>
                         );
@@ -771,8 +841,8 @@ export const ProductsPage: React.FC = () => {
                         <table className="w-full text-left text-xs min-w-[550px]">
                           <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                             <tr>
-                              <th className="px-3 py-2.5 whitespace-nowrap">Input Plate</th>
-                              <th className="px-3 py-2.5 whitespace-nowrap">Polymer Material</th>
+                              <th className="px-3 py-2.5 whitespace-nowrap">#</th>
+                              <th className="px-3 py-2.5 whitespace-nowrap">Master Mix Polymer</th>
                               <th className="px-3 py-2.5 text-right whitespace-nowrap">Recipe Weight</th>
                               <th className="px-3 py-2.5 text-right whitespace-nowrap">Required</th>
                               <th className="px-3 py-2.5 text-right whitespace-nowrap">Available Stock</th>
@@ -781,19 +851,10 @@ export const ProductsPage: React.FC = () => {
                           </thead>
                           <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
                             {(calculationResult.requirements || []).map((req: any, i: number) => {
-                              const plate = (req.plate_type || 'A').toUpperCase();
-                              const plateBadge =
-                                plate === 'B'
-                                  ? 'bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 border-amber-300'
-                                  : plate === 'C'
-                                    ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border-emerald-300'
-                                    : 'bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 border-blue-300';
                               return (
                                 <tr key={i} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                                  <td className="px-3 py-2.5 whitespace-nowrap">
-                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border ${plateBadge}`}>
-                                      Plate {plate}
-                                    </span>
+                                  <td className="px-3 py-2.5 whitespace-nowrap font-mono text-[10px] text-slate-400">
+                                    #{i + 1}
                                   </td>
                                   <td className="px-3 py-2.5 text-slate-800 dark:text-slate-200">
                                     <span className="font-bold">{req.material_name}</span>
@@ -939,65 +1000,14 @@ export const ProductsPage: React.FC = () => {
 
           {/* Initial Recipe Formulation on creation */}
           {!productToEdit && (
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    3-Input Plate Extrusion Formulation (BOM)
-                  </h4>
-                  <p className="text-[11px] text-slate-400">
-                    Configure raw polymer weights for Machine Feed Plates Type A, B & C.
-                  </p>
-                </div>
-                {materials.length > 0 && (
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setProductForm({
-                          ...productForm,
-                          initialRecipeItems: [
-                            ...productForm.initialRecipeItems,
-                            { materialId: materials[0].id, plateType: 'A', quantityKg: 20, plannedKgPerKgOutput: 0.2 },
-                          ],
-                        })
-                      }
-                      className="px-2 py-1 text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/40 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1"
-                    >
-                      <Plus className="w-3 h-3" /> Plate A
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setProductForm({
-                          ...productForm,
-                          initialRecipeItems: [
-                            ...productForm.initialRecipeItems,
-                            { materialId: materials[0].id, plateType: 'B', quantityKg: 20, plannedKgPerKgOutput: 0.2 },
-                          ],
-                        })
-                      }
-                      className="px-2 py-1 text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 rounded-lg hover:bg-amber-100 transition-colors flex items-center gap-1"
-                    >
-                      <Plus className="w-3 h-3" /> Plate B
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setProductForm({
-                          ...productForm,
-                          initialRecipeItems: [
-                            ...productForm.initialRecipeItems,
-                            { materialId: materials[0].id, plateType: 'C', quantityKg: 20, plannedKgPerKgOutput: 0.2 },
-                          ],
-                        })
-                      }
-                      className="px-2 py-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 rounded-lg hover:bg-emerald-100 transition-colors flex items-center gap-1"
-                    >
-                      <Plus className="w-3 h-3" /> Plate C
-                    </button>
-                  </div>
-                )}
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-4">
+              <div>
+                <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  Recipe Formulation & Extruder 3-Plate Distribution
+                </h4>
+                <p className="text-[11px] text-slate-400">
+                  Combine all raw polymers into one container, then specify the 3-plate machine input split (e.g. 60 kg A, 40 kg B, 50 kg C).
+                </p>
               </div>
 
               {materials.length === 0 ? (
@@ -1005,71 +1015,45 @@ export const ProductsPage: React.FC = () => {
                   No raw materials configured yet. You can add materials in &ldquo;Raw Materials&rdquo; tab anytime.
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {/* Live 3-Input Plate Breakdown widget */}
-                  {productForm.initialRecipeItems.length > 0 && (() => {
-                    const { stats } = getPlateStats(productForm.initialRecipeItems);
-                    return (
-                      <div className="grid grid-cols-3 gap-2.5 p-2.5 rounded-xl bg-slate-100/70 dark:bg-factory-800/60 border border-slate-200 dark:border-slate-700/80">
-                        <div className="p-2 rounded-lg bg-blue-50/90 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/50 text-center">
-                          <div className="text-[10px] font-bold text-blue-700 dark:text-blue-300">Plate Type A</div>
-                          <div className="font-mono text-sm font-black text-blue-950 dark:text-blue-100 mt-0.5">
-                            {stats.A.totalKg} <span className="text-[10px] font-semibold text-blue-500">kg</span>
-                          </div>
-                          <div className="text-[9px] text-blue-600/80 dark:text-blue-400 font-mono">{stats.A.pct}%</div>
-                        </div>
-
-                        <div className="p-2 rounded-lg bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-900/50 text-center">
-                          <div className="text-[10px] font-bold text-amber-700 dark:text-amber-300">Plate Type B</div>
-                          <div className="font-mono text-sm font-black text-amber-950 dark:text-amber-100 mt-0.5">
-                            {stats.B.totalKg} <span className="text-[10px] font-semibold text-amber-500">kg</span>
-                          </div>
-                          <div className="text-[9px] text-amber-600/80 dark:text-amber-400 font-mono">{stats.B.pct}%</div>
-                        </div>
-
-                        <div className="p-2 rounded-lg bg-emerald-50/90 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-900/50 text-center">
-                          <div className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300">Plate Type C</div>
-                          <div className="font-mono text-sm font-black text-emerald-950 dark:text-emerald-100 mt-0.5">
-                            {stats.C.totalKg} <span className="text-[10px] font-semibold text-emerald-500">kg</span>
-                          </div>
-                          <div className="text-[9px] text-emerald-600/80 dark:text-emerald-400 font-mono">{stats.C.pct}%</div>
-                        </div>
+                <div className="space-y-4">
+                  {/* Step 1: Combined Container Raw Polymers */}
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-factory-800/50 border border-slate-200/80 dark:border-slate-700 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
+                          1. Combined Raw Polymers (Master Mix Container)
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          All polymers are blended together in one big container before extrusion.
+                        </span>
                       </div>
-                    );
-                  })()}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setProductForm({
+                            ...productForm,
+                            initialRecipeItems: [
+                              ...productForm.initialRecipeItems,
+                              { materialId: materials[0].id, quantityKg: 20, plannedKgPerKgOutput: 0.2 },
+                            ],
+                          })
+                        }
+                        className="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Add Polymer
+                      </button>
+                    </div>
 
-                  <div className="space-y-2">
-                    {productForm.initialRecipeItems.map((item, index) => {
-                      const cost = getMaterialCost(item.materialId);
-                      const rowContribution = (Number(item.quantityKg || 0)) * cost;
-                      const plate = item.plateType || 'A';
-                      const plateBadgeClass =
-                        plate === 'B'
-                          ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-700'
-                          : plate === 'C'
-                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 border-emerald-300 dark:border-emerald-700'
-                            : 'bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-200 border-blue-300 dark:border-blue-700';
+                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                      {productForm.initialRecipeItems.map((item, index) => {
+                        const cost = getMaterialCost(item.materialId);
+                        const rowContribution = (Number(item.quantityKg || 0)) * cost;
 
-                      return (
-                        <div
-                          key={index}
-                          className="p-2.5 rounded-xl bg-slate-50/80 dark:bg-factory-800/80 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
-                        >
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <select
-                              value={plate}
-                              onChange={(e) => {
-                                const updated = [...productForm.initialRecipeItems];
-                                updated[index].plateType = e.target.value as 'A' | 'B' | 'C';
-                                setProductForm({ ...productForm, initialRecipeItems: updated });
-                              }}
-                              className={`h-9 px-2.5 rounded-lg text-xs font-bold border cursor-pointer shrink-0 ${plateBadgeClass}`}
-                            >
-                              <option value="A">Plate A</option>
-                              <option value="B">Plate B</option>
-                              <option value="C">Plate C</option>
-                            </select>
-
+                        return (
+                          <div
+                            key={index}
+                            className="p-2 rounded-xl bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
+                          >
                             <select
                               value={item.materialId}
                               onChange={(e) => {
@@ -1077,107 +1061,188 @@ export const ProductsPage: React.FC = () => {
                                 updated[index].materialId = e.target.value;
                                 setProductForm({ ...productForm, initialRecipeItems: updated });
                               }}
-                              className="flex-1 min-w-0 h-9 text-xs px-2.5 bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 font-medium cursor-pointer"
+                              className="flex-1 min-w-0 h-9 text-xs px-2.5 bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 font-medium cursor-pointer"
                             >
-                              {materials.length === 0 ? (
-                                <option value="" disabled>No plastic materials configured</option>
-                              ) : (
-                                <>
-                                  <option value="" disabled>-- Select Polymer Material --</option>
-                                  {materials.map((m) => (
-                                    <option key={m.id} value={m.id}>
-                                      {m.name} — ₹{Number(m.cost_per_kg || 0).toFixed(2)}/kg
-                                    </option>
-                                  ))}
-                                </>
-                              )}
+                              {materials.map((m) => (
+                                <option key={m.id} value={m.id}>
+                                  {m.name} — ₹{Number(m.cost_per_kg || 0).toFixed(2)}/kg
+                                </option>
+                              ))}
                             </select>
-                          </div>
 
-                          <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
+                            <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="any"
+                                  value={item.quantityKg}
+                                  onChange={(e) => {
+                                    const raw = e.target.value;
+                                    const updated = [...productForm.initialRecipeItems];
+                                    updated[index].quantityKg = raw;
+                                    setProductForm({ ...productForm, initialRecipeItems: updated });
+                                  }}
+                                  className="w-20 h-9 text-xs px-2 bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono text-center focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                                />
+                                <span className="text-slate-500 font-bold text-xs">kg</span>
+                              </div>
+
+                              <div className="text-right min-w-[75px] font-mono leading-tight">
+                                <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                                  ₹{rowContribution.toFixed(2)}
+                                </p>
+                                <p className="text-[10px] text-slate-400">
+                                  @ ₹{cost.toFixed(2)}/kg
+                                </p>
+                              </div>
+
+                              {productForm.initialRecipeItems.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = productForm.initialRecipeItems.filter((_, i) => i !== index);
+                                    setProductForm({ ...productForm, initialRecipeItems: updated });
+                                  }}
+                                  className="p-1 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Container Weight and Cost Summary */}
+                    {productForm.initialRecipeItems.length > 0 && (
+                      <div className="p-2.5 rounded-xl bg-gradient-to-r from-brand-50 to-emerald-50 dark:from-brand-950/40 dark:to-emerald-950/40 border border-brand-200/80 dark:border-brand-800/60 flex items-center justify-between text-xs">
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Container Batch Weight</span>
+                          <span className="font-mono text-sm font-black text-brand-600 dark:text-brand-400">
+                            {productForm.initialRecipeItems.reduce((acc, it) => acc + (Number(it.quantityKg) || 0), 0).toFixed(2)} kg
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] uppercase font-bold text-slate-400 block">Formulation Cost</span>
+                          <span className="font-mono text-sm font-black text-slate-900 dark:text-white">
+                            ₹{calculateFormulationCost(productForm.initialRecipeItems).toFixed(2)} <span className="text-[10px] text-slate-400">/ kg</span>
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Step 2: Machine 3-Input Plates Split */}
+                  {(() => {
+                    const containerTotal = productForm.initialRecipeItems.reduce((acc, it) => acc + (Number(it.quantityKg) || 0), 0);
+                    const split = getPlateDistribution(productForm.plateA_kg, productForm.plateB_kg, productForm.plateC_kg, containerTotal);
+                    return (
+                      <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-factory-800/50 border border-slate-200/80 dark:border-slate-700 space-y-2.5">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                          <div>
+                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
+                              2. Machine 3-Input Plates Split (Plates Type A, B & C)
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              Split the container output across the 3 machine inputs. (e.g. 60 kg, 40 kg, 50 kg). Changeable to any values.
+                            </span>
+                          </div>
+                          {!split.isBalanced && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const target = containerTotal > 0 ? containerTotal : 150;
+                                const a = Number((target * 0.4).toFixed(2));
+                                const b = Number((target * (40 / 150)).toFixed(2));
+                                const c = Number((target - a - b).toFixed(2));
+                                setProductForm({ ...productForm, plateA_kg: a, plateB_kg: b, plateC_kg: c });
+                              }}
+                              className="text-[10px] font-bold text-brand-600 dark:text-brand-400 hover:underline"
+                            >
+                              Auto-Match Container ({containerTotal.toFixed(1)} kg)
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2">
+                          {/* Plate A Input */}
+                          <div className="p-2.5 rounded-xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50">
+                            <div className="flex items-center justify-between text-[11px] font-bold text-blue-700 dark:text-blue-300 mb-1">
+                              <span>Plate Type A</span>
+                              <span className="font-mono">{split.stats.A.pct}%</span>
+                            </div>
                             <div className="flex items-center gap-1">
                               <input
                                 type="number"
                                 min="0"
                                 step="any"
-                                value={item.quantityKg}
-                                onChange={(e) => {
-                                  const raw = e.target.value;
-                                  const updated = [...productForm.initialRecipeItems];
-                                  updated[index].quantityKg = raw;
-                                  setProductForm({ ...productForm, initialRecipeItems: updated });
-                                }}
-                                className="w-20 h-9 text-xs px-2 bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-700 rounded-lg font-mono text-center focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                                value={productForm.plateA_kg}
+                                onChange={(e) => setProductForm({ ...productForm, plateA_kg: e.target.value })}
+                                className="w-full h-8 text-xs px-2 bg-white dark:bg-factory-900 border border-blue-200 dark:border-blue-800 rounded-lg font-mono text-center font-bold text-blue-950 dark:text-blue-100"
                               />
-                              <span className="text-slate-500 font-bold text-xs">kg</span>
+                              <span className="text-[10px] font-bold text-blue-600">kg</span>
                             </div>
+                          </div>
 
-                            <div className="text-right min-w-[85px] font-mono leading-tight">
-                              <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                                ₹{rowContribution.toFixed(2)}
-                              </p>
-                              <p className="text-[10px] text-slate-400">
-                                @ ₹{cost.toFixed(2)}/kg
-                              </p>
+                          {/* Plate B Input */}
+                          <div className="p-2.5 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50">
+                            <div className="flex items-center justify-between text-[11px] font-bold text-amber-700 dark:text-amber-300 mb-1">
+                              <span>Plate Type B</span>
+                              <span className="font-mono">{split.stats.B.pct}%</span>
                             </div>
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                min="0"
+                                step="any"
+                                value={productForm.plateB_kg}
+                                onChange={(e) => setProductForm({ ...productForm, plateB_kg: e.target.value })}
+                                className="w-full h-8 text-xs px-2 bg-white dark:bg-factory-900 border border-amber-200 dark:border-amber-800 rounded-lg font-mono text-center font-bold text-amber-950 dark:text-amber-100"
+                              />
+                              <span className="text-[10px] font-bold text-amber-600">kg</span>
+                            </div>
+                          </div>
 
-                            {productForm.initialRecipeItems.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const updated = productForm.initialRecipeItems.filter((_, i) => i !== index);
-                                  setProductForm({ ...productForm, initialRecipeItems: updated });
-                                }}
-                                className="p-1 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
+                          {/* Plate C Input */}
+                          <div className="p-2.5 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50">
+                            <div className="flex items-center justify-between text-[11px] font-bold text-emerald-700 dark:text-emerald-300 mb-1">
+                              <span>Plate Type C</span>
+                              <span className="font-mono">{split.stats.C.pct}%</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                min="0"
+                                step="any"
+                                value={productForm.plateC_kg}
+                                onChange={(e) => setProductForm({ ...productForm, plateC_kg: e.target.value })}
+                                className="w-full h-8 text-xs px-2 bg-white dark:bg-factory-900 border border-emerald-200 dark:border-emerald-800 rounded-lg font-mono text-center font-bold text-emerald-950 dark:text-emerald-100"
+                              />
+                              <span className="text-[10px] font-bold text-emerald-600">kg</span>
+                            </div>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
 
-                  {/* Dynamic Recipe Cost & Ratio Summary */}
-                  {productForm.initialRecipeItems.length > 0 && (
-                    <div className="p-3.5 rounded-2xl bg-gradient-to-r from-brand-50 to-emerald-50 dark:from-brand-950/40 dark:to-emerald-950/40 border border-brand-200/80 dark:border-brand-800/60 flex items-center justify-between gap-3 shadow-sm">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-xl bg-brand-500/15 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
-                          <IndianRupee className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400">
-                            Dynamic Formulation Cost
-                          </p>
-                          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                            Total Batch Weight:{' '}
-                            {(() => {
-                              const total = productForm.initialRecipeItems.reduce((acc, it) => acc + (Number(it.quantityKg) || 0), 0);
-                              return (
-                                <span className="text-brand-600 dark:text-brand-400 font-bold font-mono">
-                                  {total.toFixed(2)} kg
-                                </span>
-                              );
-                            })()}
-                          </p>
+                        {/* Balance Status */}
+                        <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-800 text-[11px]">
+                          <span className="text-slate-500">
+                            3-Plate Feed Sum: <strong className="font-mono text-slate-800 dark:text-slate-200">{split.plateSum} kg</strong>
+                          </span>
+                          {split.isBalanced ? (
+                            <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                              <CheckCircle className="w-3.5 h-3.5" /> Perfectly Matched with Container ({containerTotal.toFixed(2)} kg)
+                            </span>
+                          ) : (
+                            <span className="font-bold text-amber-600 dark:text-amber-400">
+                              {split.diff > 0 ? `+${split.diff} kg extra in plates` : `${split.diff} kg unallocated from container`}
+                            </span>
+                          )}
                         </div>
                       </div>
-
-                      <div className="text-right">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">Recipe Cost / KG</span>
-                        <p className="font-mono text-base font-black text-brand-600 dark:text-brand-400 leading-tight">
-                          ₹{calculateFormulationCost(productForm.initialRecipeItems).toFixed(2)}{' '}
-                          <span className="text-xs font-semibold text-slate-500">/ kg</span>
-                        </p>
-                        {/* {productForm.standardWeightKg !== 1 && (
-                          <p className="text-[10px] text-slate-500 font-mono">
-                            ₹{(calculateFormulationCost(productForm.initialRecipeItems) * productForm.standardWeightKg).toFixed(2)} / {productForm.unit}
-                          </p>
-                        )} */}
-                      </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
               )}
             </div>
@@ -1224,13 +1289,19 @@ export const ProductsPage: React.FC = () => {
             />
           </div>
 
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                3-Plate Polymer Formulation Breakdown
-              </label>
-              {materials.length > 0 && (
-                <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="space-y-3">
+            {/* Step 1: Combined Raw Polymers in Master Container */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-factory-800/50 border border-slate-200/80 dark:border-slate-700 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
+                    1. Combined Raw Polymers (Master Mix Container)
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    Combine polymers into a single container before machine extrusion.
+                  </span>
+                </div>
+                {materials.length > 0 && (
                   <button
                     type="button"
                     onClick={() =>
@@ -1238,184 +1309,220 @@ export const ProductsPage: React.FC = () => {
                         ...recipeForm,
                         items: [
                           ...recipeForm.items,
-                          { materialId: materials[0].id, quantityKg: 10, plannedKgPerKgOutput: 0.1, plateType: 'A' },
+                          { materialId: materials[0].id, quantityKg: 10, plannedKgPerKgOutput: 0.1 },
                         ],
                       })
                     }
-                    className="text-[10px] font-bold px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 transition-colors flex items-center gap-0.5"
+                    className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 hover:bg-brand-500/20 transition-colors flex items-center gap-1"
                   >
-                    <Plus className="w-2.5 h-2.5" /> Plate A
+                    <Plus className="w-3 h-3" /> Add Polymer
                   </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setRecipeForm({
-                        ...recipeForm,
-                        items: [
-                          ...recipeForm.items,
-                          { materialId: materials[0].id, quantityKg: 10, plannedKgPerKgOutput: 0.1, plateType: 'B' },
-                        ],
-                      })
-                    }
-                    className="text-[10px] font-bold px-2 py-1 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 transition-colors flex items-center gap-0.5"
-                  >
-                    <Plus className="w-2.5 h-2.5" /> Plate B
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setRecipeForm({
-                        ...recipeForm,
-                        items: [
-                          ...recipeForm.items,
-                          { materialId: materials[0].id, quantityKg: 10, plannedKgPerKgOutput: 0.1, plateType: 'C' },
-                        ],
-                      })
-                    }
-                    className="text-[10px] font-bold px-2 py-1 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition-colors flex items-center gap-0.5"
-                  >
-                    <Plus className="w-2.5 h-2.5" /> Plate C
-                  </button>
+                )}
+              </div>
+
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                {recipeForm.items.map((item, index) => {
+                  const cost = getMaterialCost(item.materialId);
+                  const rowContribution = (Number(item.quantityKg) || 0) * cost;
+
+                  return (
+                    <div
+                      key={index}
+                      className="p-2.5 rounded-xl bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
+                    >
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <span className="text-[10px] font-mono text-slate-400 shrink-0">#{index + 1}</span>
+                        <select
+                          value={item.materialId}
+                          onChange={(e) => {
+                            const updated = [...recipeForm.items];
+                            updated[index].materialId = e.target.value;
+                            setRecipeForm({ ...recipeForm, items: updated });
+                          }}
+                          className="flex-1 min-w-0 h-9 text-xs px-2.5 bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 font-medium cursor-pointer"
+                        >
+                          {materials.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.name} — ₹{Number(m.cost_per_kg || 0).toFixed(2)}/kg
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={item.quantityKg}
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              const updated = [...recipeForm.items];
+                              updated[index].quantityKg = raw;
+                              setRecipeForm({ ...recipeForm, items: updated });
+                            }}
+                            className="w-20 h-9 text-xs px-2 bg-slate-50 dark:bg-factory-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono text-center focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                          />
+                          <span className="text-slate-500 font-bold text-xs">kg</span>
+                        </div>
+
+                        <div className="text-right min-w-[75px] font-mono leading-tight">
+                          <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                            ₹{rowContribution.toFixed(2)}
+                          </p>
+                          <p className="text-[10px] text-slate-400">
+                            @ ₹{cost.toFixed(2)}/kg
+                          </p>
+                        </div>
+
+                        {recipeForm.items.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = recipeForm.items.filter((_, i) => i !== index);
+                              setRecipeForm({ ...recipeForm, items: updated });
+                            }}
+                            className="p-1 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Container Weight and Cost Summary */}
+              {recipeForm.items.length > 0 && (
+                <div className="p-2.5 rounded-xl bg-gradient-to-r from-brand-50 to-emerald-50 dark:from-brand-950/40 dark:to-emerald-950/40 border border-brand-200/80 dark:border-brand-800/60 flex items-center justify-between text-xs">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Container Batch Weight</span>
+                    <span className="font-mono text-sm font-black text-brand-600 dark:text-brand-400">
+                      {recipeForm.items.reduce((acc, it) => acc + (Number(it.quantityKg) || 0), 0).toFixed(2)} kg
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Formulation Cost</span>
+                    <span className="font-mono text-sm font-black text-slate-900 dark:text-white">
+                      ₹{calculateFormulationCost(recipeForm.items).toFixed(2)} <span className="text-[10px] text-slate-400">/ kg</span>
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* 3-Plate Live Mix Summary */}
-            {recipeForm.items.length > 0 && (() => {
-              const { stats } = getPlateStats(recipeForm.items);
+            {/* Step 2: Machine 3-Input Plates Split */}
+            {(() => {
+              const containerTotal = recipeForm.items.reduce((acc, it) => acc + (Number(it.quantityKg) || 0), 0);
+              const split = getPlateDistribution(recipeForm.plateA_kg, recipeForm.plateB_kg, recipeForm.plateC_kg, containerTotal);
               return (
-                <div className="grid grid-cols-3 gap-2 p-2.5 rounded-xl bg-slate-100/70 dark:bg-factory-800/60 border border-slate-200 dark:border-slate-700 text-xs">
-                  <div className="p-2 rounded-lg bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-900/40">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-blue-700 dark:text-blue-300">
-                      <span>Plate A</span>
-                      <span>{stats.A.pct}%</span>
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-factory-800/50 border border-slate-200/80 dark:border-slate-700 space-y-2.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <div>
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
+                        2. Machine 3-Input Plates Split (Plates Type A, B & C)
+                      </span>
+                      <span className="text-[10px] text-slate-400">
+                        Split the container output across the 3 machine inputs. (e.g. 60 kg, 40 kg, 50 kg). Changeable to any values.
+                      </span>
                     </div>
-                    <p className="font-mono text-sm font-black text-blue-900 dark:text-blue-100 mt-0.5">
-                      {stats.A.totalKg} <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400">kg</span>
-                    </p>
-                  </div>
-                  <div className="p-2 rounded-lg bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-900/40">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-amber-700 dark:text-amber-300">
-                      <span>Plate B</span>
-                      <span>{stats.B.pct}%</span>
-                    </div>
-                    <p className="font-mono text-sm font-black text-amber-900 dark:text-amber-100 mt-0.5">
-                      {stats.B.totalKg} <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">kg</span>
-                    </p>
-                  </div>
-                  <div className="p-2 rounded-lg bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-900/40">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
-                      <span>Plate C</span>
-                      <span>{stats.C.pct}%</span>
-                    </div>
-                    <p className="font-mono text-sm font-black text-emerald-900 dark:text-emerald-100 mt-0.5">
-                      {stats.C.totalKg} <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">kg</span>
-                    </p>
-                  </div>
-                </div>
-              );
-            })()}
-
-            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-              {recipeForm.items.map((item, index) => {
-                const cost = getMaterialCost(item.materialId);
-                const rowContribution = (Number(item.quantityKg || 0)) * cost;
-                const plate = item.plateType || 'A';
-                const plateBadgeClass =
-                  plate === 'B'
-                    ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-700'
-                    : plate === 'C'
-                      ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 border-emerald-300 dark:border-emerald-700'
-                      : 'bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-200 border-blue-300 dark:border-blue-700';
-
-                return (
-                  <div
-                    key={index}
-                    className="p-2.5 rounded-xl bg-slate-50/80 dark:bg-factory-800/80 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
-                  >
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <select
-                        value={plate}
-                        onChange={(e) => {
-                          const updated = [...recipeForm.items];
-                          updated[index].plateType = e.target.value as 'A' | 'B' | 'C';
-                          setRecipeForm({ ...recipeForm, items: updated });
+                    {!split.isBalanced && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const target = containerTotal > 0 ? containerTotal : 150;
+                          const a = Number((target * 0.4).toFixed(2));
+                          const b = Number((target * (40 / 150)).toFixed(2));
+                          const c = Number((target - a - b).toFixed(2));
+                          setRecipeForm({ ...recipeForm, plateA_kg: a, plateB_kg: b, plateC_kg: c });
                         }}
-                        className={`h-9 px-2.5 rounded-lg text-xs font-bold border cursor-pointer shrink-0 ${plateBadgeClass}`}
+                        className="text-[10px] font-bold text-brand-600 dark:text-brand-400 hover:underline"
                       >
-                        <option value="A">Plate A</option>
-                        <option value="B">Plate B</option>
-                        <option value="C">Plate C</option>
-                      </select>
+                        Auto-Match Container ({containerTotal.toFixed(1)} kg)
+                      </button>
+                    )}
+                  </div>
 
-                      <select
-                        value={item.materialId}
-                        onChange={(e) => {
-                          const updated = [...recipeForm.items];
-                          updated[index].materialId = e.target.value;
-                          setRecipeForm({ ...recipeForm, items: updated });
-                        }}
-                        className="flex-1 min-w-0 h-9 text-xs px-2.5 bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 font-medium cursor-pointer"
-                      >
-                        {materials.length === 0 ? (
-                          <option value="" disabled>No plastic materials configured</option>
-                        ) : (
-                          <>
-                            <option value="" disabled>-- Select Polymer Material --</option>
-                            {materials.map((m) => (
-                              <option key={m.id} value={m.id}>
-                                {m.name} — ₹{Number(m.cost_per_kg || 0).toFixed(2)}/kg
-                              </option>
-                            ))}
-                          </>
-                        )}
-                      </select>
-                    </div>
-
-                    <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
+                  <div className="grid grid-cols-3 gap-2">
+                    {/* Plate A Input */}
+                    <div className="p-2.5 rounded-xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50">
+                      <div className="flex items-center justify-between text-[11px] font-bold text-blue-700 dark:text-blue-300 mb-1">
+                        <span>Plate Type A</span>
+                        <span className="font-mono">{split.stats.A.pct}%</span>
+                      </div>
                       <div className="flex items-center gap-1">
                         <input
                           type="number"
                           min="0"
                           step="any"
-                          value={item.quantityKg}
-                          onChange={(e) => {
-                            const raw = e.target.value;
-                            const updated = [...recipeForm.items];
-                            updated[index].quantityKg = raw;
-                            setRecipeForm({ ...recipeForm, items: updated });
-                          }}
-                          className="w-20 h-9 text-xs px-2 bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-700 rounded-lg font-mono text-center focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                          value={recipeForm.plateA_kg}
+                          onChange={(e) => setRecipeForm({ ...recipeForm, plateA_kg: e.target.value })}
+                          className="w-full h-8 text-xs px-2 bg-white dark:bg-factory-900 border border-blue-200 dark:border-blue-800 rounded-lg font-mono text-center font-bold text-blue-950 dark:text-blue-100"
                         />
-                        <span className="text-slate-500 font-bold text-xs">kg</span>
+                        <span className="text-[10px] font-bold text-blue-600">kg</span>
                       </div>
+                    </div>
 
-                      <div className="text-right min-w-[85px] font-mono leading-tight">
-                        <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                          ₹{rowContribution.toFixed(2)}
-                        </p>
-                        <p className="text-[10px] text-slate-400">
-                          @ ₹{cost.toFixed(2)}/kg
-                        </p>
+                    {/* Plate B Input */}
+                    <div className="p-2.5 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50">
+                      <div className="flex items-center justify-between text-[11px] font-bold text-amber-700 dark:text-amber-300 mb-1">
+                        <span>Plate Type B</span>
+                        <span className="font-mono">{split.stats.B.pct}%</span>
                       </div>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={recipeForm.plateB_kg}
+                          onChange={(e) => setRecipeForm({ ...recipeForm, plateB_kg: e.target.value })}
+                          className="w-full h-8 text-xs px-2 bg-white dark:bg-factory-900 border border-amber-200 dark:border-amber-800 rounded-lg font-mono text-center font-bold text-amber-950 dark:text-amber-100"
+                        />
+                        <span className="text-[10px] font-bold text-amber-600">kg</span>
+                      </div>
+                    </div>
 
-                      {recipeForm.items.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updated = recipeForm.items.filter((_, i) => i !== index);
-                            setRecipeForm({ ...recipeForm, items: updated });
-                          }}
-                          className="p-1 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
+                    {/* Plate C Input */}
+                    <div className="p-2.5 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50">
+                      <div className="flex items-center justify-between text-[11px] font-bold text-emerald-700 dark:text-emerald-300 mb-1">
+                        <span>Plate Type C</span>
+                        <span className="font-mono">{split.stats.C.pct}%</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={recipeForm.plateC_kg}
+                          onChange={(e) => setRecipeForm({ ...recipeForm, plateC_kg: e.target.value })}
+                          className="w-full h-8 text-xs px-2 bg-white dark:bg-factory-900 border border-emerald-200 dark:border-emerald-800 rounded-lg font-mono text-center font-bold text-emerald-950 dark:text-emerald-100"
+                        />
+                        <span className="text-[10px] font-bold text-emerald-600">kg</span>
+                      </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+
+                  {/* Balance Status */}
+                  <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-800 text-[11px]">
+                    <span className="text-slate-500">
+                      3-Plate Feed Sum: <strong className="font-mono text-slate-800 dark:text-slate-200">{split.plateSum} kg</strong>
+                    </span>
+                    {split.isBalanced ? (
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                        <CheckCircle className="w-3.5 h-3.5" /> Perfectly Matched with Container ({containerTotal.toFixed(2)} kg)
+                      </span>
+                    ) : (
+                      <span className="font-bold text-amber-600 dark:text-amber-400">
+                        {split.diff > 0 ? `+${split.diff} kg extra in plates` : `${split.diff} kg unallocated from container`}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
 
             {/* Dynamic Recipe Cost & Ratio Summary */}
             {recipeForm.items.length > 0 && (
@@ -1451,7 +1558,6 @@ export const ProductsPage: React.FC = () => {
                 </div>
               </div>
             )}
-          </div>
 
           <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
             <button
