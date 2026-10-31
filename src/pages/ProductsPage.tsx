@@ -312,16 +312,28 @@ export const ProductsPage: React.FC = () => {
         };
 
         if (productForm.initialRecipeItems.length > 0) {
-          const totalKg = productForm.initialRecipeItems.reduce((acc, it) => acc + (Number(it.quantityKg) || 0), 0) || 1;
+          const totalKg = productForm.initialRecipeItems.reduce((acc, it) => acc + (Number(it.quantityKg) || 0), 0);
+          const plateA = Number(productForm.plateA_kg) || 0;
+          const plateB = Number(productForm.plateB_kg) || 0;
+          const plateC = Number(productForm.plateC_kg) || 0;
+          const plateSum = Number((plateA + plateB + plateC).toFixed(3));
+          const roundedMix = Number(totalKg.toFixed(3));
+
+          if (Math.abs(plateSum - roundedMix) > 0.05) {
+            alert(`Validation Error: Total machine plate inputs (Plate A: ${plateA} + Plate B: ${plateB} + Plate C: ${plateC} = ${plateSum} kg) must equal the master container mixture total (${roundedMix} kg). Please balance the plate split or click "Auto-Match Container".`);
+            setIsSubmitting(false);
+            return;
+          }
+
           payload.initialRecipe = {
             notes: 'Initial production formulation (V1)',
-            plateA_kg: Number(productForm.plateA_kg) || 0,
-            plateB_kg: Number(productForm.plateB_kg) || 0,
-            plateC_kg: Number(productForm.plateC_kg) || 0,
-            totalBatchKg: totalKg,
+            plateA_kg: plateA,
+            plateB_kg: plateB,
+            plateC_kg: plateC,
+            totalBatchKg: totalKg || 1,
             items: productForm.initialRecipeItems.map((item) => {
               const itemKg = Number(item.quantityKg) || 0;
-              const ratio = itemKg / totalKg;
+              const ratio = (totalKg || 1) > 0 ? itemKg / (totalKg || 1) : 0;
               return {
                 materialId: item.materialId,
                 quantityKg: itemKg,
@@ -395,13 +407,25 @@ export const ProductsPage: React.FC = () => {
     if (!selectedProduct) return;
     setIsSubmitting(true);
     try {
-      const totalKg = recipeForm.items.reduce((acc, it) => acc + (Number(it.quantityKg) || 0), 0) || 1;
+      const totalKg = recipeForm.items.reduce((acc, it) => acc + (Number(it.quantityKg) || 0), 0);
+      const plateA = Number(recipeForm.plateA_kg) || 0;
+      const plateB = Number(recipeForm.plateB_kg) || 0;
+      const plateC = Number(recipeForm.plateC_kg) || 0;
+      const plateSum = Number((plateA + plateB + plateC).toFixed(3));
+      const roundedMix = Number(totalKg.toFixed(3));
+
+      if (Math.abs(plateSum - roundedMix) > 0.05) {
+        alert(`Validation Error: Total machine plate inputs (Plate A: ${plateA} + Plate B: ${plateB} + Plate C: ${plateC} = ${plateSum} kg) must equal the master container mixture total (${roundedMix} kg). Please balance the plate split or click "Auto-Match Container".`);
+        setIsSubmitting(false);
+        return;
+      }
+
       await api.post(`/products/${selectedProduct.id}/recipes`, {
         notes: recipeForm.notes,
-        plateA_kg: Number(recipeForm.plateA_kg) || 0,
-        plateB_kg: Number(recipeForm.plateB_kg) || 0,
-        plateC_kg: Number(recipeForm.plateC_kg) || 0,
-        totalBatchKg: totalKg,
+        plateA_kg: plateA,
+        plateB_kg: plateB,
+        plateC_kg: plateC,
+        totalBatchKg: totalKg || 1,
         items: recipeForm.items.map((i) => {
           const itemKg = Number(i.quantityKg) || 0;
           const ratio = itemKg / totalKg;
@@ -1226,17 +1250,25 @@ export const ProductsPage: React.FC = () => {
                         </div>
 
                         {/* Balance Status */}
-                        <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-800 text-[11px]">
-                          <span className="text-slate-500">
-                            3-Plate Feed Sum: <strong className="font-mono text-slate-800 dark:text-slate-200">{split.plateSum} kg</strong>
+                        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 px-3 py-2 rounded-xl border text-[11px] ${
+                          split.isBalanced 
+                            ? 'bg-emerald-50/80 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60'
+                            : 'bg-amber-50/90 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800'
+                        }`}>
+                          <span className="text-slate-600 dark:text-slate-300">
+                            3-Plate Feed Sum: <strong className="font-mono text-slate-900 dark:text-white font-black">{split.plateSum} kg</strong>
+                            <span className="text-slate-400 ml-1">/ Mixture: {containerTotal.toFixed(2)} kg</span>
                           </span>
                           {split.isBalanced ? (
-                            <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                              <CheckCircle className="w-3.5 h-3.5" /> Perfectly Matched with Container ({containerTotal.toFixed(2)} kg)
+                            <span className="font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
+                              <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> Equalized: Matches Mixture Total Exactly ({containerTotal.toFixed(2)} kg)
                             </span>
                           ) : (
-                            <span className="font-bold text-amber-600 dark:text-amber-400">
-                              {split.diff > 0 ? `+${split.diff} kg extra in plates` : `${split.diff} kg unallocated from container`}
+                            <span className="font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1">
+                              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                              {split.diff > 0 
+                                ? `Must equal mixture! (+${split.diff} kg extra in plates)` 
+                                : `Must equal mixture! (${split.diff} kg unallocated)`}
                             </span>
                           )}
                         </div>
@@ -1258,6 +1290,14 @@ export const ProductsPage: React.FC = () => {
             </button>
             <Button
               type="submit"
+              disabled={
+                !productToEdit &&
+                productForm.initialRecipeItems.length > 0 &&
+                Math.abs(
+                  (Number(productForm.plateA_kg || 0) + Number(productForm.plateB_kg || 0) + Number(productForm.plateC_kg || 0)) -
+                  productForm.initialRecipeItems.reduce((acc, it) => acc + (Number(it.quantityKg) || 0), 0)
+                ) > 0.05
+              }
               isLoading={isSubmitting}
               loadingText="Saving Product..."
             >
@@ -1505,17 +1545,25 @@ export const ProductsPage: React.FC = () => {
                   </div>
 
                   {/* Balance Status */}
-                  <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-800 text-[11px]">
-                    <span className="text-slate-500">
-                      3-Plate Feed Sum: <strong className="font-mono text-slate-800 dark:text-slate-200">{split.plateSum} kg</strong>
+                  <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 px-3 py-2 rounded-xl border text-[11px] ${
+                    split.isBalanced 
+                      ? 'bg-emerald-50/80 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60'
+                      : 'bg-amber-50/90 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800'
+                  }`}>
+                    <span className="text-slate-600 dark:text-slate-300">
+                      3-Plate Feed Sum: <strong className="font-mono text-slate-900 dark:text-white font-black">{split.plateSum} kg</strong>
+                      <span className="text-slate-400 ml-1">/ Mixture: {containerTotal.toFixed(2)} kg</span>
                     </span>
                     {split.isBalanced ? (
-                      <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                        <CheckCircle className="w-3.5 h-3.5" /> Perfectly Matched with Container ({containerTotal.toFixed(2)} kg)
+                      <span className="font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> Equalized: Matches Mixture Total Exactly ({containerTotal.toFixed(2)} kg)
                       </span>
                     ) : (
-                      <span className="font-bold text-amber-600 dark:text-amber-400">
-                        {split.diff > 0 ? `+${split.diff} kg extra in plates` : `${split.diff} kg unallocated from container`}
+                      <span className="font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        {split.diff > 0 
+                          ? `Must equal mixture! (+${split.diff} kg extra in plates)` 
+                          : `Must equal mixture! (${split.diff} kg unallocated)`}
                       </span>
                     )}
                   </div>
@@ -1569,7 +1617,13 @@ export const ProductsPage: React.FC = () => {
             </button>
             <Button
               type="submit"
-              disabled={recipeForm.items.length === 0}
+              disabled={
+                recipeForm.items.length === 0 ||
+                Math.abs(
+                  (Number(recipeForm.plateA_kg || 0) + Number(recipeForm.plateB_kg || 0) + Number(recipeForm.plateC_kg || 0)) -
+                  recipeForm.items.reduce((acc, it) => acc + (Number(it.quantityKg) || 0), 0)
+                ) > 0.05
+              }
               isLoading={isSubmitting}
               loadingText="Activating..."
             >
