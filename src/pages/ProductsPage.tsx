@@ -36,13 +36,16 @@ export const ProductsPage: React.FC = () => {
     return Number(mat?.cost_per_kg || mat?.latest_cost_per_kg || mat?.avg_cost_per_kg || 0);
   };
 
-  // Dynamically calculate recipe formulation cost per kg based on composition percentages
-  const calculateFormulationCost = (items: Array<{ materialId: string; percentage: number | string }>): number => {
-    return items.reduce((sum, item) => {
+  // Dynamically calculate recipe formulation cost per kg based on composition weights in kg
+  const calculateFormulationCost = (items: Array<{ materialId: string; quantityKg?: number | string; percentage?: number | string }>): number => {
+    const totalKg = items.reduce((sum, item) => sum + (Number(item.quantityKg ?? item.percentage) || 0), 0);
+    if (totalKg <= 0) return 0;
+    const totalCost = items.reduce((sum, item) => {
       const cost = getMaterialCost(item.materialId);
-      const ratio = (Number(item.percentage) || 0) / 100;
-      return sum + ratio * cost;
+      const kg = Number(item.quantityKg ?? item.percentage) || 0;
+      return sum + (kg * cost);
     }, 0);
+    return totalCost / totalKg;
   };
   const [calculationResult, setCalculationResult] = useState<any>(null);
   const [isCalcLoading, setIsCalcLoading] = useState(false);
@@ -66,7 +69,7 @@ export const ProductsPage: React.FC = () => {
     sizeMicron: string;
     initialRecipeItems: Array<{
       materialId: string;
-      percentage: number | string;
+      quantityKg: number | string;
       plannedKgPerKgOutput: number;
     }>;
   }>({
@@ -83,7 +86,7 @@ export const ProductsPage: React.FC = () => {
     notes: string;
     items: Array<{
       materialId: string;
-      percentage: number | string;
+      quantityKg: number | string;
       plannedKgPerKgOutput: number;
     }>;
   }>({
@@ -173,7 +176,7 @@ export const ProductsPage: React.FC = () => {
           ? [
             {
               materialId: materials[0].id,
-              percentage: 100,
+              quantityKg: 100,
               plannedKgPerKgOutput: 1.0,
             },
           ]
@@ -221,13 +224,19 @@ export const ProductsPage: React.FC = () => {
         };
 
         if (productForm.initialRecipeItems.length > 0) {
+          const totalKg = productForm.initialRecipeItems.reduce((acc, it) => acc + (Number(it.quantityKg) || 0), 0) || 1;
           payload.initialRecipe = {
             notes: 'Initial production formulation (V1)',
-            items: productForm.initialRecipeItems.map((item) => ({
-              materialId: item.materialId,
-              percentage: Number(item.percentage),
-              plannedKgPerKgOutput: Number(item.plannedKgPerKgOutput),
-            })),
+            items: productForm.initialRecipeItems.map((item) => {
+              const itemKg = Number(item.quantityKg) || 0;
+              const ratio = itemKg / totalKg;
+              return {
+                materialId: item.materialId,
+                quantityKg: itemKg,
+                percentage: Number((ratio * 100).toFixed(2)),
+                plannedKgPerKgOutput: Number(ratio.toFixed(6)),
+              };
+            }),
           };
         }
 
@@ -266,17 +275,19 @@ export const ProductsPage: React.FC = () => {
       selectedProduct.active_recipe?.items ||
       [];
 
+    const totalCurrentKg = currentItems.reduce((acc: number, ci: any) => acc + (Number(ci.quantity_kg ?? ci.percentage) || 0), 0) || 1;
+
     setRecipeForm({
       notes: `Revision V${(selectedProduct.active_recipe?.version || 1) + 1} optimization`,
       items:
         currentItems.length > 0
           ? currentItems.map((ci: any) => ({
             materialId: ci.material_id,
-            percentage: Number(ci.percentage),
-            plannedKgPerKgOutput: Number(ci.planned_kg_per_kg_output),
+            quantityKg: Number(ci.quantity_kg ?? ci.percentage) || 0,
+            plannedKgPerKgOutput: Number(ci.planned_kg_per_kg_output) || (Number(ci.quantity_kg ?? ci.percentage) || 0) / totalCurrentKg,
           }))
           : materials.length > 0
-            ? [{ materialId: materials[0].id, percentage: 100, plannedKgPerKgOutput: 1.0 }]
+            ? [{ materialId: materials[0].id, quantityKg: 100, plannedKgPerKgOutput: 1.0 }]
             : [],
     });
     setIsRecipeModalOpen(true);
@@ -288,13 +299,19 @@ export const ProductsPage: React.FC = () => {
     if (!selectedProduct) return;
     setIsSubmitting(true);
     try {
+      const totalKg = recipeForm.items.reduce((acc, it) => acc + (Number(it.quantityKg) || 0), 0) || 1;
       await api.post(`/products/${selectedProduct.id}/recipes`, {
         notes: recipeForm.notes,
-        items: recipeForm.items.map((i) => ({
-          materialId: i.materialId,
-          percentage: Number(i.percentage),
-          plannedKgPerKgOutput: Number(i.plannedKgPerKgOutput),
-        })),
+        items: recipeForm.items.map((i) => {
+          const itemKg = Number(i.quantityKg) || 0;
+          const ratio = itemKg / totalKg;
+          return {
+            materialId: i.materialId,
+            quantityKg: itemKg,
+            percentage: Number((ratio * 100).toFixed(2)),
+            plannedKgPerKgOutput: Number(ratio.toFixed(6)),
+          };
+        }),
       });
 
       setIsRecipeModalOpen(false);
@@ -487,7 +504,7 @@ export const ProductsPage: React.FC = () => {
                       <div className="px-3 py-1 rounded-xl bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800/40 text-right">
                         <span className="text-[9px] uppercase font-bold text-slate-400 block leading-tight">Recipe Cost / KG</span>
                         <span className="font-mono text-xs font-black text-brand-600 dark:text-brand-400">
-                          ₹{calculateFormulationCost((selectedProduct.active_recipe?.product_recipe_items || []).map((it: any) => ({ materialId: it.material_id, percentage: it.percentage }))).toFixed(2)} / kg
+                          ₹{calculateFormulationCost((selectedProduct.active_recipe?.product_recipe_items || []).map((it: any) => ({ materialId: it.material_id, quantityKg: it.quantity_kg ?? it.percentage }))).toFixed(2)} / kg
                         </span>
                       </div>
                       <button
@@ -502,7 +519,7 @@ export const ProductsPage: React.FC = () => {
                   {/* Plastic Material Breakdown */}
                   <div>
                     <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 mb-3">
-                      Plastic Material Breakdown (% of total extruded batch):
+                      Plastic Material Breakdown (Weight per formulation batch):
                     </h4>
 
                     {(!selectedProduct.active_recipe?.product_recipe_items || selectedProduct.active_recipe?.product_recipe_items.length === 0) ? (
@@ -510,44 +527,50 @@ export const ProductsPage: React.FC = () => {
                         No recipe formulation items configured. Click &ldquo;New Recipe Version&rdquo; to define polymers.
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        {(selectedProduct.active_recipe?.product_recipe_items || []).map(
-                          (item: any, idx: number) => {
-                            const matCost = getMaterialCost(item.material_id);
-                            const rowCost = ((Number(item.percentage) || 0) / 100) * matCost;
-                            return (
-                              <div
-                                key={idx}
-                                className="p-3.5 rounded-xl bg-slate-50 dark:bg-factory-800/60 border border-slate-200/80 dark:border-slate-700/60"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate pr-2">
-                                    {item.materials?.name || item.material_name || `Polymer #${idx + 1}`}
-                                  </span>
-                                  <span className="font-mono text-xs font-black text-brand-600 dark:text-brand-400 shrink-0">
-                                    {item.percentage}%
-                                  </span>
-                                </div>
-                                <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full mt-2.5 overflow-hidden">
-                                  <div
-                                    className="bg-brand-500 h-full rounded-full transition-all"
-                                    style={{ width: `${item.percentage}%` }}
-                                  ></div>
-                                </div>
-                                <div className="text-[10px] text-slate-400 mt-2 font-mono space-y-1">
+                      (() => {
+                        const items = selectedProduct.active_recipe?.product_recipe_items || [];
+                        const totalBatchKg = items.reduce((sum: number, it: any) => sum + (Number(it.quantity_kg ?? it.percentage) || 0), 0) || 1;
+                        return (
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            {items.map((item: any, idx: number) => {
+                              const matCost = getMaterialCost(item.material_id);
+                              const itemKg = Number(item.quantity_kg ?? item.percentage) || 0;
+                              const itemPct = totalBatchKg > 0 ? Number(((itemKg / totalBatchKg) * 100).toFixed(1)) : 0;
+                              const rowCost = (itemKg / totalBatchKg) * matCost;
+                              return (
+                                <div
+                                  key={idx}
+                                  className="p-3.5 rounded-xl bg-slate-50 dark:bg-factory-800/60 border border-slate-200/80 dark:border-slate-700/60"
+                                >
                                   <div className="flex items-center justify-between">
-                                    <span>Ratio: {item.planned_kg_per_kg_output} kg / 1 kg</span>
+                                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate pr-2">
+                                      {item.materials?.name || item.material_name || `Polymer #${idx + 1}`}
+                                    </span>
+                                    <span className="font-mono text-xs font-black text-brand-600 dark:text-brand-400 shrink-0">
+                                      {itemKg} kg <span className="text-[10px] text-slate-400 font-normal">({itemPct}%)</span>
+                                    </span>
                                   </div>
-                                  <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-slate-700/60 font-semibold text-slate-600 dark:text-slate-300">
-                                    <span>Rate: ₹{matCost.toFixed(2)}/kg</span>
-                                    <span className="text-brand-600 dark:text-brand-400">Cost: ₹{rowCost.toFixed(2)}</span>
+                                  <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full mt-2.5 overflow-hidden">
+                                    <div
+                                      className="bg-brand-500 h-full rounded-full transition-all"
+                                      style={{ width: `${Math.min(itemPct, 100)}%` }}
+                                    ></div>
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 mt-2 font-mono space-y-1">
+                                    <div className="flex items-center justify-between">
+                                      <span>Ratio: {item.planned_kg_per_kg_output || (itemKg / totalBatchKg).toFixed(4)} kg / 1 kg</span>
+                                    </div>
+                                    <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-slate-700/60 font-semibold text-slate-600 dark:text-slate-300">
+                                      <span>Rate: ₹{matCost.toFixed(2)}/kg</span>
+                                      <span className="text-brand-600 dark:text-brand-400">Cost: ₹{rowCost.toFixed(2)}</span>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            );
-                          }
-                        )}
-                      </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()
                     )}
                   </div>
                 </div>
@@ -587,7 +610,7 @@ export const ProductsPage: React.FC = () => {
                           <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
                             <tr>
                               <th className="px-3 py-2.5 whitespace-nowrap">Polymer Material</th>
-                              <th className="px-3 py-2.5 text-right whitespace-nowrap">Ratio</th>
+                              <th className="px-3 py-2.5 text-right whitespace-nowrap">Recipe Weight</th>
                               <th className="px-3 py-2.5 text-right whitespace-nowrap">Required</th>
                               <th className="px-3 py-2.5 text-right whitespace-nowrap">Available Stock</th>
                               <th className="px-3 py-2.5 text-right whitespace-nowrap">Feasibility</th>
@@ -602,7 +625,12 @@ export const ProductsPage: React.FC = () => {
                                     <span className="ml-1 text-[10px] text-slate-400 font-mono">({req.material_code})</span>
                                   )}
                                 </td>
-                                <td className="px-3 py-2.5 text-right font-mono">{req.percentage}%</td>
+                                <td className="px-3 py-2.5 text-right font-mono">
+                                  {req.quantity_kg !== undefined ? `${req.quantity_kg} kg` : `${req.percentage}%`}
+                                  {req.percentage !== undefined && (
+                                    <span className="text-[10px] text-slate-400 ml-1">({req.percentage}%)</span>
+                                  )}
+                                </td>
                                 <td className="px-3 py-2.5 text-right font-mono font-bold text-slate-900 dark:text-white">
                                   {req.required_kg} kg
                                 </td>
@@ -752,7 +780,7 @@ export const ProductsPage: React.FC = () => {
                         ...productForm,
                         initialRecipeItems: [
                           ...productForm.initialRecipeItems,
-                          { materialId: materials[0].id, percentage: 20, plannedKgPerKgOutput: 0.2 },
+                          { materialId: materials[0].id, quantityKg: 20, plannedKgPerKgOutput: 0.2 },
                         ],
                       })
                     }
@@ -771,7 +799,7 @@ export const ProductsPage: React.FC = () => {
                 <div className="space-y-2.5">
                   {productForm.initialRecipeItems.map((item, index) => {
                     const cost = getMaterialCost(item.materialId);
-                    const rowContribution = (Number(item.percentage || 0) / 100) * cost;
+                    const rowContribution = (Number(item.quantityKg || 0)) * cost;
                     return (
                       <div
                         key={index}
@@ -805,20 +833,17 @@ export const ProductsPage: React.FC = () => {
                             <input
                               type="number"
                               min="0"
-                              max="100"
                               step="any"
-                              value={item.percentage}
+                              value={item.quantityKg}
                               onChange={(e) => {
                                 const raw = e.target.value;
-                                const num = parseFloat(raw);
                                 const updated = [...productForm.initialRecipeItems];
-                                updated[index].percentage = raw;
-                                updated[index].plannedKgPerKgOutput = isNaN(num) ? 0 : num / 100;
+                                updated[index].quantityKg = raw;
                                 setProductForm({ ...productForm, initialRecipeItems: updated });
                               }}
-                              className="w-20 h-10 text-xs px-2.5 bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-center focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                              className="w-24 h-10 text-xs px-2.5 bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-center focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
                             />
-                            <span className="text-slate-400 font-bold text-xs">%</span>
+                            <span className="text-slate-500 font-bold text-xs">kg</span>
                           </div>
 
                           <div className="text-right min-w-[100px] font-mono leading-tight">
@@ -859,28 +884,13 @@ export const ProductsPage: React.FC = () => {
                             Dynamic Formulation Cost
                           </p>
                           <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                            Ratio:{' '}
+                            Total Batch Weight:{' '}
                             {(() => {
-                              const total = productForm.initialRecipeItems.reduce((acc, it) => acc + (Number(it.percentage) || 0), 0);
-                              const is100 = Math.abs(total - 100) < 0.01;
-                              const displayTotal = Number(total.toFixed(2));
+                              const total = productForm.initialRecipeItems.reduce((acc, it) => acc + (Number(it.quantityKg) || 0), 0);
                               return (
-                                <>
-                                  <span
-                                    className={
-                                      is100
-                                        ? 'text-emerald-600 dark:text-emerald-400 font-bold'
-                                        : 'text-amber-500 font-bold'
-                                    }
-                                  >
-                                    {displayTotal}%
-                                  </span>
-                                  {!is100 && (
-                                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-normal ml-1">
-                                      (Standard total is 100%)
-                                    </span>
-                                  )}
-                                </>
+                                <span className="text-brand-600 dark:text-brand-400 font-bold font-mono">
+                                  {total.toFixed(2)} kg
+                                </span>
                               );
                             })()}
                           </p>
@@ -960,7 +970,7 @@ export const ProductsPage: React.FC = () => {
                       ...recipeForm,
                       items: [
                         ...recipeForm.items,
-                        { materialId: materials[0].id, percentage: 10, plannedKgPerKgOutput: 0.1 },
+                        { materialId: materials[0].id, quantityKg: 10, plannedKgPerKgOutput: 0.1 },
                       ],
                     })
                   }
@@ -973,7 +983,7 @@ export const ProductsPage: React.FC = () => {
 
             {recipeForm.items.map((item, index) => {
               const cost = getMaterialCost(item.materialId);
-              const rowContribution = (Number(item.percentage || 0) / 100) * cost;
+              const rowContribution = (Number(item.quantityKg || 0)) * cost;
               return (
                 <div
                   key={index}
@@ -1003,24 +1013,21 @@ export const ProductsPage: React.FC = () => {
                   </select>
 
                   <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
-                    <div className="flex items-center gap-1 w-24">
+                    <div className="flex items-center gap-1 w-28">
                       <input
                         type="number"
                         min="0"
-                        max="100"
                         step="any"
-                        value={item.percentage}
+                        value={item.quantityKg}
                         onChange={(e) => {
                           const raw = e.target.value;
-                          const num = parseFloat(raw);
                           const updated = [...recipeForm.items];
-                          updated[index].percentage = raw;
-                          updated[index].plannedKgPerKgOutput = isNaN(num) ? 0 : num / 100;
+                          updated[index].quantityKg = raw;
                           setRecipeForm({ ...recipeForm, items: updated });
                         }}
-                        className="w-16 text-xs px-2 py-1.5 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-lg font-mono text-center"
+                        className="w-20 text-xs px-2 py-1.5 bg-white dark:bg-factory-900 border border-slate-300 dark:border-slate-700 rounded-lg font-mono text-center"
                       />
-                      <span className="text-slate-400 font-bold">%</span>
+                      <span className="text-slate-500 font-bold">kg</span>
                     </div>
 
                     <div className="text-right min-w-[85px] font-mono leading-tight">
@@ -1061,28 +1068,13 @@ export const ProductsPage: React.FC = () => {
                       Dynamic Formulation Cost
                     </p>
                     <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Ratio:{' '}
+                      Total Batch Weight:{' '}
                       {(() => {
-                        const total = recipeForm.items.reduce((acc, it) => acc + (Number(it.percentage) || 0), 0);
-                        const is100 = Math.abs(total - 100) < 0.01;
-                        const displayTotal = Number(total.toFixed(2));
+                        const total = recipeForm.items.reduce((acc, it) => acc + (Number(it.quantityKg) || 0), 0);
                         return (
-                          <>
-                            <span
-                              className={
-                                is100
-                                  ? 'text-emerald-600 dark:text-emerald-400 font-bold'
-                                  : 'text-amber-500 font-bold'
-                              }
-                            >
-                              {displayTotal}%
-                            </span>
-                            {!is100 && (
-                              <span className="text-[10px] text-amber-600 dark:text-amber-400 font-normal ml-1">
-                                (Total is not 100%)
-                              </span>
-                            )}
-                          </>
+                          <span className="text-brand-600 dark:text-brand-400 font-bold font-mono">
+                            {total.toFixed(2)} kg
+                          </span>
                         );
                       })()}
                     </p>

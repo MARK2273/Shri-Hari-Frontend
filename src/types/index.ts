@@ -56,6 +56,7 @@ export interface Supplier {
 export interface ProductRecipeItem {
   id: string;
   material_id: string;
+  quantity_kg?: number;
   percentage: number;
   planned_kg_per_kg_output: number;
   materials?: {

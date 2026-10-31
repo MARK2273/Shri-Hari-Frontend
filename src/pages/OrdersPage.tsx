@@ -447,7 +447,7 @@ export const OrdersPage: React.FC = () => {
     return activeRecipe.product_recipe_items.reduce((sum: number, it: any) => {
       const mat = materials.find((m) => m.id === it.material_id);
       const cost = Number(mat?.cost_per_kg || mat?.latest_cost_per_kg || mat?.avg_cost_per_kg || 0);
-      const ratio = (Number(it.percentage) || 0) / 100;
+      const ratio = Number(it.planned_kg_per_kg_output) || (Number(it.percentage) || 0) / 100;
       return sum + ratio * cost;
     }, 0);
   };
@@ -2444,7 +2444,9 @@ export const OrdersPage: React.FC = () => {
                             <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
                           )}
                           <span className="font-sans font-bold">{req.material_name}</span>
-                          <span className="text-[10px] text-slate-400 font-sans">({req.percentage}%)</span>
+                          <span className="text-[10px] text-slate-400 font-sans">
+                            ({req.quantity_kg !== undefined ? `${req.quantity_kg} kg` : `${req.percentage}%`})
+                          </span>
                         </div>
                         <div className="text-right flex items-center gap-3">
                           <span>Need: <strong>{req.required_kg} kg</strong></span>
