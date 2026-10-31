@@ -57,12 +57,16 @@ export interface ProductRecipeItem {
   id: string;
   material_id: string;
   plate_type?: 'A' | 'B' | 'C' | string;
+  plate_a_kg?: number;
+  plate_b_kg?: number;
+  plate_c_kg?: number;
   quantity_kg?: number;
   percentage: number;
   planned_kg_per_kg_output: number;
   materials?: {
     code: string;
     name: string;
+    cost_per_kg?: number;
   };
 }
 
