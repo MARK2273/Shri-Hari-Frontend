@@ -56,6 +56,7 @@ export interface Supplier {
 export interface ProductRecipeItem {
   id: string;
   material_id: string;
+  plate_type?: 'A' | 'B' | 'C' | string;
   quantity_kg?: number;
   percentage: number;
   planned_kg_per_kg_output: number;
@@ -70,6 +71,7 @@ export interface ProductRecipe {
   version: number;
   is_active: boolean;
   notes?: string;
+  plate_summary?: Record<string, { total_kg: number; percentage: number; count: number }>;
   product_recipe_items: ProductRecipeItem[];
 }
 
