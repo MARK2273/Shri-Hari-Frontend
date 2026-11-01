@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../api/client';
 import {
   Layers,
@@ -20,12 +20,25 @@ import {
   MapPin,
   Search,
   Ruler,
+  Upload,
+  Download,
+  FileSpreadsheet,
+  CheckCircle2,
+  Sparkles,
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import { Button } from '../components/common/Button';
 import { PageSkeleton } from '../components/common/Skeleton';
 import { Supplier, SizeMicron } from '../types';
+import { useToast } from '../context/ToastContext';
+import { ExcelImportModal } from '../components/materials/ExcelImportModal';
+import {
+  downloadRawMaterialTemplate,
+  parseRawMaterialExcelFile,
+  ParsedBatchRow,
+  ParseExcelResult,
+} from '../utils/excelMaterials';
 
 interface ReceiveItemRow {
   id: string;
@@ -66,6 +79,15 @@ export const MaterialsPage: React.FC = () => {
   const [supplierToEdit, setSupplierToEdit] = useState<Supplier | null>(null);
   const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
   const [supplierSearchQuery, setSupplierSearchQuery] = useState('');
+
+  // Excel Inward Import states
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isParsingExcel, setIsParsingExcel] = useState(false);
+  const [excelImportResult, setExcelImportResult] = useState<ParseExcelResult | null>(null);
+  const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
+  const [isImportSubmitting, setIsImportSubmitting] = useState(false);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const { toast } = useToast();
 
   // Size & Micron Master states
   const [sizeMicrons, setSizeMicrons] = useState<SizeMicron[]>([]);
@@ -543,6 +565,119 @@ export const MaterialsPage: React.FC = () => {
     }
   };
 
+  // Excel Inward Handlers
+  const handleDownloadTemplate = () => {
+    try {
+      downloadRawMaterialTemplate(materials, suppliers);
+      toast.success(
+        'Excel template downloaded with current materials & vendors. Fill the details and upload.',
+        'Template Downloaded'
+      );
+    } catch (err: any) {
+      console.error('Failed to download template:', err);
+      toast.error('Failed to generate Excel template: ' + err.message);
+    }
+  };
+
+  const processUploadedFile = async (file: File) => {
+    if (!file.name.match(/\.(xlsx|xls|csv)$/i)) {
+      toast.error('Please upload an Excel (.xlsx, .xls) or CSV file.', 'Unsupported File Format');
+      return;
+    }
+
+    setIsParsingExcel(true);
+    try {
+      const result = await parseRawMaterialExcelFile(file, materials, suppliers);
+      setExcelImportResult(result);
+      setIsExcelModalOpen(true);
+      toast.info(
+        `Parsed ${result.totalRows} row(s) from "${file.name}". Review the final result before adding to stock.`,
+        'File Parsed'
+      );
+    } catch (err: any) {
+      console.error('Failed to parse Excel file:', err);
+      toast.error(err.message || 'Failed to read uploaded Excel file. Please use the valid template.', 'Excel Import Error');
+    } finally {
+      setIsParsingExcel(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      await processUploadedFile(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingFile(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingFile(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingFile(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      await processUploadedFile(file);
+    }
+  };
+
+  const handleConfirmImport = async (finalRows: ParsedBatchRow[]) => {
+    setIsImportSubmitting(true);
+    try {
+      const payload = {
+        items: finalRows.map((r) => ({
+          materialId: r.materialId,
+          receivedQuantityKg: Number(r.receivedQuantityKg),
+          costPerKg: Number(r.costPerKg),
+          supplierId: r.supplierId || null,
+          supplierName: r.supplierName?.trim() || null,
+          supplierLotNumber: r.supplierLotNumber?.trim() || null,
+          batchNumber: r.batchNumber?.trim() || undefined,
+          receiptDate: r.receiptDate || undefined,
+          notes: r.notes?.trim() || undefined,
+        })),
+      };
+
+      await api.post('/materials/batches/receive', payload);
+
+      setIsExcelModalOpen(false);
+      setExcelImportResult(null);
+      setActiveTab('batches');
+      await fetchData();
+
+      const totalKg = finalRows.reduce((acc, r) => acc + (Number(r.receivedQuantityKg) || 0), 0);
+      toast.success(
+        `Successfully added ${finalRows.length} lot(s) (${totalKg.toLocaleString()} kg) to raw material stocks!`,
+        'Stocks Updated'
+      );
+    } catch (err: any) {
+      console.error('Failed to add imported materials to stock:', err);
+      toast.error(
+        err.response?.data?.message || 'Failed to add raw materials to stock. Please check inputs and try again.',
+        'Stock Update Failed'
+      );
+    } finally {
+      setIsImportSubmitting(false);
+    }
+  };
+
+  const handleReuploadExcel = () => {
+    setIsExcelModalOpen(false);
+    setTimeout(() => {
+      fileInputRef.current?.click();
+    }, 150);
+  };
+
   const filteredBatches =
     selectedMaterial === 'all'
       ? batches
@@ -588,32 +723,44 @@ export const MaterialsPage: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* <button
-            onClick={handleOpenCreateMaterial}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-factory-800 transition-colors shadow-sm"
-          >
-            <Plus className="w-4 h-4 text-brand-500" />
-            Configure Plastic Type
-          </button> */}
+          {/* Hidden File Input for Excel Import */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept=".xlsx,.xls,.csv"
+            onChange={handleFileChange}
+            className="hidden"
+          />
 
-          {/* <button
-            onClick={handleOpenCreateSupplier}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-factory-800 transition-colors shadow-sm"
+          <button
+            type="button"
+            onClick={handleDownloadTemplate}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors shadow-sm"
+            title="Download formatted Excel template for vendor inward batches"
           >
-            <Truck className="w-4 h-4 text-brand-500" />
-            Add Vendor
-          </button> */}
+            <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            Download Template
+          </button>
 
-          {/* <button
-            onClick={() => {
-              setActiveTab('sizes');
-              handleOpenCreateSize();
-            }}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-factory-800 transition-colors shadow-sm"
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isParsingExcel}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors shadow-sm"
+            title="Upload filled Excel file to import raw materials from vendors"
           >
-            <Ruler className="w-4 h-4 text-brand-500" />
-            Add Size & Micron
-          </button> */}
+            {isParsingExcel ? (
+              <>
+                <span className="w-3.5 h-3.5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                Reading Excel...
+              </>
+            ) : (
+              <>
+                <Upload className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                Upload Excel
+              </>
+            )}
+          </button>
 
           <button
             onClick={() => {
@@ -744,6 +891,68 @@ export const MaterialsPage: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* Excel Bulk Inward Action Banner & Drag-Drop Zone */}
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`border-2 border-dashed rounded-2xl p-4 sm:p-5 transition-all ${
+              isDraggingFile
+                ? 'border-brand-500 bg-brand-50/80 dark:bg-brand-950/40 ring-4 ring-brand-500/20'
+                : 'border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50/80 via-white to-slate-50/80 dark:from-factory-900/60 dark:via-factory-900/40 dark:to-factory-900/60 hover:border-slate-300 dark:hover:border-slate-700'
+            }`}
+          >
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-start gap-3.5">
+                <div className="p-2.5 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 shrink-0">
+                  <FileSpreadsheet className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    Bulk Add Raw Materials from Vendors via Excel
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                      Template & Upload
+                    </span>
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xl">
+                    Give the formatted Excel template to your vendors or warehouse team. When uploaded, you will be shown a final review modal to verify or edit quantities, prices, and lots before adding to stock.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleDownloadTemplate}
+                  className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-white dark:bg-factory-900 border border-emerald-300 dark:border-emerald-700 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-950/50 transition-colors shadow-sm"
+                  title="Download standard vendor template (.xlsx)"
+                >
+                  <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  Download Template
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isParsingExcel}
+                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors shadow-md shadow-indigo-600/20"
+                >
+                  {isParsingExcel ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Reading File...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4" />
+                      Upload Filled Excel
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
 
           {/* Batches Table Section */}
           <div className="bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
@@ -2143,6 +2352,18 @@ export const MaterialsPage: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Excel Import Preview & Editable Review Modal */}
+      <ExcelImportModal
+        isOpen={isExcelModalOpen}
+        onClose={() => setIsExcelModalOpen(false)}
+        importResult={excelImportResult}
+        materials={materials}
+        suppliers={suppliers}
+        onConfirm={handleConfirmImport}
+        onReupload={handleReuploadExcel}
+        isSubmitting={isImportSubmitting}
+      />
     </div>
   );
 };
