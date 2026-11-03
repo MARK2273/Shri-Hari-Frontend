@@ -141,6 +141,7 @@ export const JobWorkPage: React.FC = () => {
     try {
       const [
         workersRes,
+        suppliersRes,
         balancesRes,
         ordersRes,
         receiptsRes,
@@ -152,6 +153,7 @@ export const JobWorkPage: React.FC = () => {
         sizesRes,
       ] = await Promise.all([
         api.get('/job-work/workers').catch(() => ({ data: { workers: [] } })),
+        api.get('/materials/suppliers').catch(() => ({ data: { suppliers: [] } })),
         api.get('/job-work/vendor-stock').catch(() => ({ data: { vendorBalances: [] } })),
         api.get('/job-work/orders').catch(() => ({ data: { orders: [] } })),
         api.get('/job-work/receipts').catch(() => ({ data: { receipts: [] } })),
@@ -163,7 +165,27 @@ export const JobWorkPage: React.FC = () => {
         api.get('/size-microns').catch(() => ({ data: { sizeMicrons: [] } })),
       ]);
 
-      setWorkers(workersRes.data.workers || []);
+      const baseWorkers: JobWorker[] = workersRes.data?.workers || [];
+      const extraSuppliers: any[] = suppliersRes.data?.suppliers || [];
+      const mergedWorkers: JobWorker[] = [...baseWorkers];
+
+      for (const sup of extraSuppliers) {
+        if (!mergedWorkers.some((w) => w.id === sup.id || w.name.trim().toLowerCase() === sup.name.trim().toLowerCase())) {
+          mergedWorkers.push({
+            id: sup.id,
+            tenant_id: sup.tenant_id,
+            name: sup.name,
+            contact_person: sup.contact_person || '',
+            phone: sup.phone || '',
+            email: sup.email || '',
+            address: sup.address || '',
+            is_active: sup.is_active ?? true,
+            created_at: sup.created_at,
+          });
+        }
+      }
+
+      setWorkers(mergedWorkers);
       setVendorBalances(balancesRes.data.vendorBalances || []);
       setOrders(ordersRes.data.orders || []);
       setReceipts(receiptsRes.data.receipts || []);
@@ -523,13 +545,23 @@ export const JobWorkPage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      await api.post('/job-work/workers', {
+      const res = await api.post('/job-work/workers', {
         name: workerForm.name,
         contactPerson: workerForm.contactPerson,
         phone: workerForm.phone,
         email: workerForm.email,
         address: workerForm.address,
       });
+
+      const newWorker: JobWorker | undefined = res.data?.worker;
+      if (newWorker) {
+        setWorkers((prev) => {
+          const filtered = prev.filter((w) => w.id !== newWorker.id && w.name.trim().toLowerCase() !== newWorker.name.trim().toLowerCase());
+          return [...filtered, newWorker];
+        });
+        setOrderForm((prev) => ({ ...prev, vendorId: newWorker.id }));
+        setOutwardForm((prev) => ({ ...prev, vendorId: newWorker.id }));
+      }
 
       toast.success(
         `Processor "${workerForm.name}" registered successfully!`,
@@ -1301,9 +1333,11 @@ export const JobWorkPage: React.FC = () => {
                 setOutwardForm({ ...outwardForm, vendorId: e.target.value });
               }}
               required
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 font-medium"
             >
-              <option value="">-- Choose Vendor --</option>
+              <option value="">
+                {workers.length > 0 ? '-- Choose Vendor / Processor --' : '-- No Processors Found (Click "Add Processor") --'}
+              </option>
               {workers.map((w) => (
                 <option key={w.id} value={w.id}>
                   {w.name} {w.contact_person ? `(${w.contact_person})` : ''}
@@ -1478,12 +1512,14 @@ export const JobWorkPage: React.FC = () => {
                 value={orderForm.vendorId}
                 onChange={(e) => setOrderForm({ ...orderForm, vendorId: e.target.value })}
                 required
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 font-medium"
               >
-                <option value="">-- Choose Vendor --</option>
+                <option value="">
+                  {workers.length > 0 ? '-- Choose Vendor / Processor --' : '-- No Processors Found (Click "Add Processor") --'}
+                </option>
                 {workers.map((w) => (
                   <option key={w.id} value={w.id}>
-                    {w.name}
+                    {w.name} {w.contact_person ? `(${w.contact_person})` : ''}
                   </option>
                 ))}
               </select>
