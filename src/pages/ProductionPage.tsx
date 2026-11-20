@@ -19,7 +19,7 @@ export const ProductionPage: React.FC = () => {
   // Modal 1: Create Draft Production Batch
   const [isDraftModalOpen, setIsDraftModalOpen] = useState(false);
   const [batchMode, setBatchMode] = useState<'single' | 'slitting'>('single');
-  const [selectedSlitOrderIds, setSelectedSlitOrderIds] = useState<string[]>([]);
+  const [selectedSlitItemIds, setSelectedSlitItemIds] = useState<string[]>([]);
   const [slittingExtrusionSize, setSlittingExtrusionSize] = useState('660 - 20 Micron');
   const [draftForm, setDraftForm] = useState({
     orderId: '',
@@ -258,9 +258,79 @@ export const ProductionPage: React.FC = () => {
     });
   }, [orders]);
 
+  // Individual items that need production (used for Slitting / Item Merging)
+  const pendingOrderItems = useMemo(() => {
+    const list: Array<{
+      id: string;
+      orderId: string;
+      orderNumber: string;
+      customerName: string;
+      productId: string;
+      productName?: string;
+      spec: string;
+      width: number;
+      micron: string;
+      requestedKg: number;
+      producedKg: number;
+      dispatchedKg: number;
+      remainingKg: number;
+      itemNumber: number;
+    }> = [];
+
+    orders.forEach((o: any) => {
+      const status = (o.status || '').toLowerCase();
+      if (['completed', 'delivered', 'dispatched', 'produced', 'cancelled'].includes(status)) {
+        return;
+      }
+      const items = o.customer_order_items?.length ? o.customer_order_items : (o.items?.length ? o.items : []);
+      items.forEach((item: any, idx: number) => {
+        const itemStatus = (item.status || '').toLowerCase();
+        if (['completed', 'delivered', 'dispatched', 'produced', 'cancelled'].includes(itemStatus)) {
+          return;
+        }
+        const req = Number(item.requested_quantity_kg || o.total_requested_weight_kg || 0);
+        const prod = Number(item.produced_quantity_kg || 0);
+        const disp = Number(item.dispatched_quantity_kg || 0);
+        const remaining = Math.max(0, req - Math.max(prod, disp));
+
+        if (remaining > 0 || req > 0) {
+          const spec = item.size_micron || item.sizeMicron || o.size_micron || o.sizeMicron || 'Standard';
+          let width = 0;
+          let micron = '';
+          const match = spec.match(/(\d+)\s*(?:mm)?\s*[-xX]\s*(\d+.*)/);
+          if (match) {
+            width = parseInt(match[1], 10);
+            micron = match[2].trim();
+          }
+
+          const prodObj = products.find((p) => p.id === item.product_id);
+
+          list.push({
+            id: item.id || `order-${o.id}-item-${idx}`,
+            orderId: o.id,
+            orderNumber: o.order_number || 'Order',
+            customerName: o.customers?.name || o.customer_name || 'Customer',
+            productId: item.product_id,
+            productName: prodObj?.name || item.product_name,
+            spec,
+            width,
+            micron,
+            requestedKg: req,
+            producedKg: prod,
+            dispatchedKg: disp,
+            remainingKg: remaining,
+            itemNumber: idx + 1,
+          });
+        }
+      });
+    });
+
+    return list;
+  }, [orders, products]);
+
   const openDraftModal = () => {
     setBatchMode('single');
-    setSelectedSlitOrderIds([]);
+    setSelectedSlitItemIds([]);
     setSlittingExtrusionSize('660 - 20 Micron');
 
     if (pendingOrders.length > 0) {
@@ -304,36 +374,32 @@ export const ProductionPage: React.FC = () => {
     e.preventDefault();
 
     if (batchMode === 'slitting') {
-      if (selectedSlitOrderIds.length < 2) {
-        alert('Please select at least 2 customer orders to merge for a slitting gang run.');
+      if (selectedSlitItemIds.length < 2) {
+        alert('Please select at least 2 items/orders to merge for a slitting gang run.');
         return;
       }
 
       setIsSubmitting(true);
       try {
-        const slittingPlan = selectedSlitOrderIds.map((oId) => {
-          const o = orders.find((ord) => ord.id === oId);
-          const item = o?.customer_order_items?.[0] || {};
-          const spec = o?.size_micron || o?.sizeMicron || item.size_micron || item.sizeMicron || '330 - 20 Micron';
-          const weight = Number(item.requested_quantity_kg) || Number(o?.total_requested_weight_kg) || 100;
+        const slittingPlan = selectedSlitItemIds.map((itemId) => {
+          const it = pendingOrderItems.find((pi) => pi.id === itemId);
           return {
-            orderId: o.id,
-            orderItemId: item.id || '',
-            orderNumber: o.order_number || 'Order',
-            customerName: o.customers?.name || o.customer_name || 'Customer',
-            targetSizeMicron: spec,
-            targetWeightKg: weight,
+            orderId: it?.orderId || '',
+            orderItemId: it?.id || '',
+            orderNumber: it?.orderNumber || 'Order',
+            customerName: it?.customerName || 'Customer',
+            targetSizeMicron: it?.spec || '330 - 20 Micron',
+            targetWeightKg: it?.remainingKg || it?.requestedKg || 100,
           };
         });
 
-        const firstOrd = orders.find((o) => o.id === selectedSlitOrderIds[0]);
-        const firstItem = firstOrd?.customer_order_items?.[0] || {};
-        const prod = products.find((p) => p.id === firstItem.product_id);
+        const firstItem = pendingOrderItems.find((pi) => pi.id === selectedSlitItemIds[0]);
+        const prod = products.find((p) => p.id === firstItem?.productId);
         const recipeId = draftForm.recipeId || prod?.active_recipe?.id || prod?.product_recipes?.[0]?.id || '';
 
         await api.post('/production', {
-          orderId: firstOrd.id,
-          orderItemId: firstItem.id || '',
+          orderId: firstItem?.orderId || '',
+          orderItemId: firstItem?.id || '',
           recipeId,
           plannedQuantityKg: Number(draftForm.plannedQuantityKg),
           sizeMicron: slittingExtrusionSize.trim() || '660 - 20 Micron',
@@ -483,19 +549,18 @@ export const ProductionPage: React.FC = () => {
     }));
   };
 
-  const toggleSlitOrder = (oId: string) => {
+  const toggleSlitItem = (itemId: string) => {
     let nextIds: string[];
-    if (selectedSlitOrderIds.includes(oId)) {
-      nextIds = selectedSlitOrderIds.filter((id) => id !== oId);
+    if (selectedSlitItemIds.includes(itemId)) {
+      nextIds = selectedSlitItemIds.filter((id) => id !== itemId);
     } else {
-      nextIds = [...selectedSlitOrderIds, oId];
+      nextIds = [...selectedSlitItemIds, itemId];
     }
-    setSelectedSlitOrderIds(nextIds);
+    setSelectedSlitItemIds(nextIds);
 
-    const selectedOrders = orders.filter((o) => nextIds.includes(o.id));
-    const totalWeight = selectedOrders.reduce((sum, o) => {
-      const item = o.customer_order_items?.[0] || {};
-      return sum + (Number(item.requested_quantity_kg) || Number(o.total_requested_weight_kg) || 0);
+    const selectedItems = pendingOrderItems.filter((it) => nextIds.includes(it.id));
+    const totalWeight = selectedItems.reduce((sum, it) => {
+      return sum + (it.remainingKg || it.requestedKg || 0);
     }, 0);
     setDraftForm((prev) => ({ ...prev, plannedQuantityKg: totalWeight || 200 }));
 
@@ -503,9 +568,8 @@ export const ProductionPage: React.FC = () => {
     let detectedMicron = '20 Micron';
     let parsedAny = false;
 
-    selectedOrders.forEach((o) => {
-      const item = o.customer_order_items?.[0] || {};
-      const spec = o.size_micron || o.sizeMicron || item.size_micron || item.sizeMicron || '';
+    selectedItems.forEach((it) => {
+      const spec = it.spec || '';
       const match = spec.match(/(\d+)\s*(?:mm)?\s*[-xX]\s*(\d+.*)/);
       if (match) {
         totalWidth += parseInt(match[1], 10);
@@ -516,7 +580,7 @@ export const ProductionPage: React.FC = () => {
 
     if (parsedAny && totalWidth > 0) {
       setSlittingExtrusionSize(`${totalWidth} - ${detectedMicron}`);
-    } else if (selectedOrders.length > 0) {
+    } else if (selectedItems.length > 0) {
       setSlittingExtrusionSize('660 - 20 Micron');
     }
   };
@@ -619,7 +683,7 @@ export const ProductionPage: React.FC = () => {
                         <div className="space-y-1">
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
                             <Scissors className="w-3 h-3 text-purple-500 shrink-0" />
-                            Slitting Run ({batch.slitting_plan?.length || 2} Orders)
+                            Slitting Run ({batch.slitting_plan?.length || 2} Rolls)
                           </span>
                           <div
                             className="text-[11px] text-slate-500 dark:text-slate-400 truncate font-semibold"
@@ -759,21 +823,20 @@ export const ProductionPage: React.FC = () => {
               type="button"
               onClick={() => {
                 setBatchMode('slitting');
-                if (selectedSlitOrderIds.length === 0 && pendingOrders.length >= 2) {
-                  const firstTwo = [pendingOrders[0].id, pendingOrders[1].id];
-                  setSelectedSlitOrderIds(firstTwo);
+                if (selectedSlitItemIds.length === 0 && pendingOrderItems.length >= 2) {
+                  const firstTwo = [pendingOrderItems[0].id, pendingOrderItems[1].id];
+                  setSelectedSlitItemIds(firstTwo);
                   const sum =
-                    (Number(pendingOrders[0].total_requested_weight_kg) || 100) +
-                    (Number(pendingOrders[1].total_requested_weight_kg) || 100);
+                    (pendingOrderItems[0].remainingKg || pendingOrderItems[0].requestedKg || 100) +
+                    (pendingOrderItems[1].remainingKg || pendingOrderItems[1].requestedKg || 100);
                   setDraftForm((prev) => ({ ...prev, plannedQuantityKg: sum }));
 
                   // Auto detect combined size
                   let totalW = 0;
                   let detMicron = '20 Micron';
                   let parsed = false;
-                  [pendingOrders[0], pendingOrders[1]].forEach((o) => {
-                    const item = o.customer_order_items?.[0] || {};
-                    const spec = o.size_micron || o.sizeMicron || item.size_micron || item.sizeMicron || '';
+                  [pendingOrderItems[0], pendingOrderItems[1]].forEach((it) => {
+                    const spec = it.spec || '';
                     const match = spec.match(/(\d+)\s*(?:mm)?\s*[-xX]\s*(\d+.*)/);
                     if (match) {
                       totalW += parseInt(match[1], 10);
@@ -802,36 +865,29 @@ export const ProductionPage: React.FC = () => {
               <div className="p-3 rounded-xl bg-brand-50/70 dark:bg-brand-950/30 border border-brand-200/80 dark:border-brand-900/50 space-y-1">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-white">
                   <Scissors className="w-3.5 h-3.5 text-brand-500" />
-                  Gang Extrusion & Slitting (Multi-Order Roll Production)
+                  Gang Extrusion & Slitting (Multi-Order / Multi-Item Roll Production)
                 </div>
                 <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Merge 2 or more customer orders with identical resin blend & micron into one wide extrusion run (e.g., 660 mm), then split into parallel customer rolls (e.g., 2× 330 mm) upon stock execution.
+                  Merge 2 or more order items with identical resin blend & micron into one wide extrusion run (e.g., 1100 mm), then split into parallel customer rolls (e.g., 585 mm + 515 mm) upon stock execution.
                 </p>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Select Customer Orders to Merge (Min. 2 Orders)
+                  Select Order Items to Merge (Min. 2 Items / Orders)
                 </label>
-                {pendingOrders.length < 2 ? (
+                {pendingOrderItems.length < 2 ? (
                   <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-300">
-                    At least 2 pending customer orders requiring production are needed to merge into a slitting run.
+                    At least 2 pending items requiring production are needed to merge into a slitting run.
                   </div>
                 ) : (
-                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                    {pendingOrders.map((o: any) => {
-                      const isSelected = selectedSlitOrderIds.includes(o.id);
-                      const item = o.customer_order_items?.[0] || {};
-                      const spec = o.size_micron || o.sizeMicron || item.size_micron || item.sizeMicron || 'Standard';
-                      const req = Number(item.requested_quantity_kg) || Number(o.total_requested_weight_kg) || 0;
-                      const prodKg = Number(item.produced_quantity_kg || 0);
-                      const dispKg = Number(item.dispatched_quantity_kg || 0);
-                      const rem = Math.max(0, req - Math.max(prodKg, dispKg));
-
+                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    {pendingOrderItems.map((it) => {
+                      const isSelected = selectedSlitItemIds.includes(it.id);
                       return (
                         <div
-                          key={o.id}
-                          onClick={() => toggleSlitOrder(o.id)}
+                          key={it.id}
+                          onClick={() => toggleSlitItem(it.id)}
                           className={`p-2.5 rounded-xl border text-xs cursor-pointer flex items-center justify-between transition-all ${
                             isSelected
                               ? 'bg-brand-50 dark:bg-brand-950/40 border-brand-500 text-slate-900 dark:text-white font-medium shadow-sm'
@@ -849,16 +905,24 @@ export const ProductionPage: React.FC = () => {
                               {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
                             </div>
                             <div>
-                              <div className="font-bold text-slate-800 dark:text-slate-100">
-                                {o.customers?.name || o.customer_name || 'Customer'}
+                              <div className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5 flex-wrap">
+                                <span>{it.customerName}</span>
+                                <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 dark:bg-factory-800 rounded text-slate-600 dark:text-slate-300 font-medium">
+                                  Item #{it.itemNumber}
+                                </span>
+                                {it.productName && (
+                                  <span className="text-[10px] text-slate-400 font-normal truncate max-w-[140px]">
+                                    ({it.productName})
+                                  </span>
+                                )}
                               </div>
                               <div className="text-[10px] text-slate-400 font-mono">
-                                {o.order_number || 'Order'} • Remaining: {rem} kg
+                                {it.orderNumber} • Remaining: {it.remainingKg} kg (Req: {it.requestedKg} kg)
                               </div>
                             </div>
                           </div>
-                          <span className="font-mono font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-factory-800 text-slate-700 dark:text-slate-300 text-[11px]">
-                            {spec}
+                          <span className="font-mono font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-factory-800 text-slate-700 dark:text-slate-300 text-[11px] shrink-0">
+                            {it.spec}
                           </span>
                         </div>
                       );
@@ -867,12 +931,12 @@ export const ProductionPage: React.FC = () => {
                 )}
               </div>
 
-              {selectedSlitOrderIds.length > 0 && (
+              {selectedSlitItemIds.length > 0 && (
                 <div className="p-3 bg-slate-50 dark:bg-factory-800/80 border border-slate-200 dark:border-slate-700 rounded-xl space-y-2">
                   <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-200">
                     <span>📐 Extrusion & Slitting Plan Preview</span>
                     <span className="text-brand-600 dark:text-brand-400 font-mono">
-                      {selectedSlitOrderIds.length} Slit Rolls
+                      {selectedSlitItemIds.length} Slit Rolls
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-xs">
@@ -885,20 +949,18 @@ export const ProductionPage: React.FC = () => {
                     </div>
                     <ArrowRight className="w-4 h-4 text-slate-400 shrink-0" />
                     <div className="flex-[2] space-y-1">
-                      {selectedSlitOrderIds.map((oId, idx) => {
-                        const ord = orders.find((o) => o.id === oId);
-                        const spec = ord?.size_micron || ord?.sizeMicron || ord?.customer_order_items?.[0]?.size_micron || '330 - 20 Micron';
-                        const kg = ord?.total_requested_weight_kg || ord?.customer_order_items?.[0]?.requested_quantity_kg || 0;
+                      {selectedSlitItemIds.map((itemId, idx) => {
+                        const it = pendingOrderItems.find((pi) => pi.id === itemId);
                         return (
                           <div
-                            key={oId}
+                            key={itemId}
                             className="flex items-center justify-between p-1.5 bg-white dark:bg-factory-900 border border-slate-200/70 dark:border-slate-800 rounded-md text-[11px]"
                           >
-                            <span className="font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[140px]">
-                              Roll {String.fromCharCode(65 + idx)}: {ord?.customers?.name || ord?.customer_name}
+                            <span className="font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[160px]">
+                              Roll {String.fromCharCode(65 + idx)}: {it?.customerName} (#{it?.itemNumber})
                             </span>
                             <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold shrink-0">
-                              {spec} ({kg} kg)
+                              {it?.spec} ({it?.remainingKg || it?.requestedKg || 0} kg)
                             </span>
                           </div>
                         );
@@ -1190,7 +1252,7 @@ export const ProductionPage: React.FC = () => {
             </button>
             <Button
               type="submit"
-              disabled={pendingOrders.length === 0 || (batchMode === 'slitting' && selectedSlitOrderIds.length < 2)}
+              disabled={pendingOrders.length === 0 || (batchMode === 'slitting' && selectedSlitItemIds.length < 2)}
               isLoading={isSubmitting}
               loadingText="Creating Batch..."
             >
