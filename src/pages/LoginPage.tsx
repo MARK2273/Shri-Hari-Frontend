@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api, TENANT_ID } from '../api/client';
-import { Factory, Lock, Mail, AlertCircle, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Factory, Lock, Mail, AlertCircle, ArrowRight, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Button } from '../components/common/Button';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -32,85 +33,100 @@ export const LoginPage: React.FC = () => {
         setError(response.data.message || 'Login failed');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to authenticate. Check credentials and server status.');
+      setError(err.response?.data?.message || 'Failed to authenticate. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-factory-900 to-slate-950 text-white relative overflow-hidden">
-      {/* Decorative gradient orbs */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-brand-500/15 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none"></div>
-
-      <div className="w-full max-w-md relative z-10">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-[#F6F7F5] dark:bg-[#111714] text-[#202B26] dark:text-[#EAEFEA]">
+      <div className="w-full max-w-md">
+        {/* Brand identity */}
         <div className="text-center mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-600 to-emerald-400 mx-auto flex items-center justify-center text-white shadow-xl shadow-brand-500/25 mb-4">
-            <Factory className="w-8 h-8" />
+          <div className="w-12 h-12 rounded-xl bg-[#176B52] mx-auto flex items-center justify-center text-white shadow-sm mb-3">
+            <Factory className="w-6 h-6" />
           </div>
-          <h2 className="text-2xl font-black tracking-tight text-white">Shri Hari Packaging</h2>
-          <p className="text-xs text-slate-400 mt-1">Multi-Tenant Manufacturing & Traceability ERP</p>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 mt-3 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 text-[11px] font-semibold">
+          <h1 className="text-2xl font-bold tracking-tight text-[#202B26] dark:text-white">
+            Shri Hari Packaging
+          </h1>
+          <p className="text-xs text-[#68746D] dark:text-[#9DAAA2] mt-1">
+            Manufacturing & Factory Operations Management
+          </p>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 mt-2.5 rounded-md bg-[#EAF4EF] dark:bg-[#172B21] border border-[#ACCFBF] dark:border-[#204938] text-[#176B52] dark:text-[#80C6A5] text-[11px] font-semibold">
             <ShieldCheck className="w-3.5 h-3.5" />
-            Tenant: {TENANT_ID}
+            <span>Factory Plant: {TENANT_ID}</span>
           </div>
         </div>
 
-        <div className="bg-white/10 dark:bg-factory-900/60 backdrop-blur-xl border border-white/15 dark:border-slate-800 rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-2xl">
+        {/* Login Card */}
+        <div className="bg-white dark:bg-[#1B2420] border border-[#E5EAE6] dark:border-[#26332C] rounded-xl p-6 sm:p-8 shadow-sm">
+          <h2 className="text-base font-bold text-[#202B26] dark:text-white mb-1">
+            Sign In to Factory Portal
+          </h2>
+          <p className="text-xs text-[#68746D] dark:text-[#9DAAA2] mb-5">
+            Enter your factory credentials to access your daily tasks.
+          </p>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{error}</span>
+              <div className="p-3 rounded-lg bg-[#FDF2F2] dark:bg-[#2A1313] border border-[#FACDCD] dark:border-[#4E1E1E] text-[#A62828] dark:text-[#F68282] text-xs flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span className="leading-snug">{error}</span>
               </div>
             )}
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Email Address</label>
+              <label className="block text-xs font-semibold text-[#202B26] dark:text-[#EAEFEA] mb-1.5">
+                Email Address
+              </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <Mail className="w-4 h-4 text-[#68746D] dark:text-[#9DAAA2] absolute left-3 top-3 pointer-events-none" />
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@company.com"
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-950/60 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
+                  placeholder="name@shriharipack.com"
+                  className="w-full pl-9 pr-3 py-2 bg-white dark:bg-[#151D19] border border-[#CBD5CD] dark:border-[#2E3C34] rounded-lg text-xs sm:text-sm text-[#202B26] dark:text-white placeholder-[#8A9790] focus:outline-none focus:ring-2 focus:ring-[#176B52]/20 focus:border-[#176B52] transition-colors"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Password</label>
+              <label className="block text-xs font-semibold text-[#202B26] dark:text-[#EAEFEA] mb-1.5">
+                Password
+              </label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <Lock className="w-4 h-4 text-[#68746D] dark:text-[#9DAAA2] absolute left-3 top-3 pointer-events-none" />
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-950/60 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
+                  className="w-full pl-9 pr-3 py-2 bg-white dark:bg-[#151D19] border border-[#CBD5CD] dark:border-[#2E3C34] rounded-lg text-xs sm:text-sm text-[#202B26] dark:text-white placeholder-[#8A9790] focus:outline-none focus:ring-2 focus:ring-[#176B52]/20 focus:border-[#176B52] transition-colors"
                 />
               </div>
             </div>
 
-            <button
+            <Button
               type="submit"
-              disabled={isLoading}
-              className="w-full mt-2 py-3 px-4 bg-gradient-to-r from-brand-600 to-emerald-500 hover:from-brand-500 hover:to-emerald-400 text-white font-bold text-xs rounded-xl shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 transition-all duration-200 disabled:opacity-50"
+              variant="primary"
+              size="lg"
+              isLoading={isLoading}
+              loadingText="Signing In..."
+              className="w-full mt-2"
             >
-              {isLoading ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                <>
-                  Sign In to Factory
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
+              Sign In to ERP
+            </Button>
           </form>
+
+          <div className="mt-6 pt-4 border-t border-[#E5EAE6] dark:border-[#26332C] text-center">
+            <p className="text-[11px] text-[#68746D] dark:text-[#9DAAA2]">
+              Need help accessing your account? Please contact your factory administrator.
+            </p>
+          </div>
         </div>
       </div>
     </div>

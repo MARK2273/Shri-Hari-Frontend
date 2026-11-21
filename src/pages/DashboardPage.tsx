@@ -4,16 +4,22 @@ import {
   Layers,
   PackageCheck,
   Factory,
-  Truck,
-  AlertTriangle,
-  ArrowUpRight,
-  TrendingUp,
-  CheckCircle2,
   Clock,
-  Plus
+  Plus,
+  ArrowRight,
+  TrendingUp,
+  AlertTriangle,
+  FileText,
+  Truck,
+  CheckCircle2,
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
+import { Button } from '../components/common/Button';
 import { PageSkeleton } from '../components/common/Skeleton';
+import { PageHeader } from '../components/common/PageHeader';
+import { StatCard } from '../components/common/StatCard';
+import { AlertBanner } from '../components/common/AlertBanner';
+import { Card } from '../components/common/Card';
 import { Link } from 'react-router-dom';
 
 export const DashboardPage: React.FC = () => {
@@ -53,9 +59,12 @@ export const DashboardPage: React.FC = () => {
     (acc: number, item: any) => acc + (Number(item.total_on_hand_kg) || 0),
     0
   );
-  const pendingOrdersKg = orders
-    .filter((o) => o.status !== 'completed' && o.status !== 'cancelled')
-    .reduce((acc, o) => acc + (Number(o.total_requested_weight_kg) || 0), 0);
+  const openOrders = orders.filter((o) => o.status !== 'completed' && o.status !== 'cancelled');
+  const pendingOrdersKg = openOrders.reduce(
+    (acc, o) => acc + (Number(o.total_requested_weight_kg) || 0),
+    0
+  );
+  const inProgressRuns = productionRuns.filter((r) => r.status === 'in_progress' || r.status === 'draft');
 
   if (isLoading) {
     return <PageSkeleton type="dashboard" />;
@@ -63,179 +72,209 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Top Banner / Welcome */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-            Factory Control Dashboard
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Real-time material lots, order-driven production batches & dispatch ledger
-          </p>
-        </div>
-        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
-          <Link
-            to="/materials"
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
-          >
-            <Plus className="w-3.5 h-3.5 text-brand-500" />
-            Receive Stock
-          </Link>
-          <Link
-            to="/production"
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl transition-colors shadow-md shadow-brand-500/20"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            New Production Run
-          </Link>
-        </div>
+      {/* Top Section */}
+      <PageHeader
+        title="Factory Overview"
+        subtitle="A clear overview of your factory's current operations."
+        actions={
+          <>
+            <Link to="/materials">
+              <Button variant="secondary" size="md" icon={Plus}>
+                Receive Stock
+              </Button>
+            </Link>
+            <Link to="/production">
+              <Button variant="primary" size="md" icon={Plus}>
+                Create Production Run
+              </Button>
+            </Link>
+          </>
+        }
+      />
+
+      {/* Important Operational Alerts */}
+      <div className="space-y-3">
+        {lowStockMaterials.length > 0 && (
+          <AlertBanner
+            variant="warning"
+            title={`Low Raw Material Stock (${lowStockMaterials.length} materials below minimum level)`}
+            description={
+              <div className="flex flex-wrap gap-2 mt-1.5">
+                {lowStockMaterials.map((m) => (
+                  <span
+                    key={m.id}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-white dark:bg-[#1E2923] border border-[#F6DCAD] dark:border-[#4E381A] text-xs font-medium text-[#975E10] dark:text-[#F3BA59]"
+                  >
+                    <span>{m.name}:</span>
+                    <strong className="font-mono text-[#202B26] dark:text-white">
+                      {(Number(m.total_stock_kg) || 0).toLocaleString()} kg
+                    </strong>
+                    <span className="text-[11px] opacity-75">(Min: {m.min_stock_level_kg} kg)</span>
+                  </span>
+                ))}
+              </div>
+            }
+            action={
+              <Link
+                to="/materials"
+                className="text-xs font-semibold text-[#176B52] dark:text-[#80C6A5] hover:underline whitespace-nowrap"
+              >
+                Receive Stock &rarr;
+              </Link>
+            }
+          />
+        )}
+
+        {openOrders.length > 0 && inProgressRuns.length === 0 && (
+          <AlertBanner
+            variant="info"
+            title={`${openOrders.length} customer order(s) waiting to be scheduled for production`}
+            description="There are currently no active production runs on the floor while customer orders are pending."
+            action={
+              <Link
+                to="/production"
+                className="text-xs font-semibold text-[#245D87] dark:text-[#78B6E4] hover:underline whitespace-nowrap"
+              >
+                Start Production &rarr;
+              </Link>
+            }
+          />
+        )}
       </div>
 
-      {/* Low Stock Warning Banner (INV-09) */}
-      {lowStockMaterials.length > 0 && (
-        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <h4 className="text-xs font-bold text-amber-700 dark:text-amber-400">
-              Low Raw Material Stock Warning ({lowStockMaterials.length} Types below threshold)
-            </h4>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {lowStockMaterials.map((m) => (
-                <span
-                  key={m.id}
-                  className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-white/80 dark:bg-factory-900/80 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/50"
-                >
-                  {m.name}: <strong className="font-mono">{m.total_stock_kg} kg</strong> (Min: {m.min_stock_level_kg} kg)
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* KPI Cards Grid */}
+      {/* Key Factory Figures (KPI Cards) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Raw Plastic Total */}
-        <div className="p-5 rounded-2xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden group">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Raw Plastic On-Hand</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-              <Layers className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-slate-900 dark:text-white font-mono">
-              {totalRawStockKg.toLocaleString()}
-            </span>
-            <span className="text-xs font-bold text-slate-400">kg</span>
-          </div>
-          <p className="text-[11px] text-slate-500 mt-2 flex items-center gap-1">
-            <TrendingUp className="w-3 h-3 text-emerald-500" />
-            Across 10 standard plastic grades
-          </p>
-        </div>
+        <StatCard
+          label="Raw Material Stock"
+          value={totalRawStockKg.toLocaleString()}
+          unit="kg"
+          subtitle={`${materials.length} material categories stored`}
+          icon={Layers}
+          tone={lowStockMaterials.length > 0 ? 'warning' : 'default'}
+          action={
+            <Link to="/materials" className="text-xs font-semibold text-[#176B52] dark:text-[#80C6A5] hover:underline">
+              View Materials
+            </Link>
+          }
+        />
 
-        {/* Finished Goods Stock */}
-        <div className="p-5 rounded-2xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Finished Goods Stock</span>
-            <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center">
-              <PackageCheck className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-slate-900 dark:text-white font-mono">
-              {totalFinishedGoodsKg.toLocaleString()}
-            </span>
-            <span className="text-xs font-bold text-slate-400">kg</span>
-          </div>
-          <p className="text-[11px] text-slate-500 mt-2">Deducted at confirmed dispatch</p>
-        </div>
+        <StatCard
+          label="Finished Goods Stock"
+          value={totalFinishedGoodsKg.toLocaleString()}
+          unit="kg"
+          subtitle="Ready for customer dispatch"
+          icon={PackageCheck}
+          tone="default"
+          action={
+            <Link to="/finished-goods" className="text-xs font-semibold text-[#176B52] dark:text-[#80C6A5] hover:underline">
+              View Stock
+            </Link>
+          }
+        />
 
-        {/* Pending Order Weight */}
-        <div className="p-5 rounded-2xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Open Orders Demand</span>
-            <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-              <Clock className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-slate-900 dark:text-white font-mono">
-              {pendingOrdersKg.toLocaleString()}
-            </span>
-            <span className="text-xs font-bold text-slate-400">kg</span>
-          </div>
-          <p className="text-[11px] text-slate-500 mt-2">{orders.length} active customer orders</p>
-        </div>
+        <StatCard
+          label="Pending Customer Orders"
+          value={pendingOrdersKg.toLocaleString()}
+          unit="kg"
+          subtitle={`${openOrders.length} orders waiting to be completed`}
+          icon={Clock}
+          tone={openOrders.length > 0 ? 'info' : 'default'}
+          action={
+            <Link to="/orders" className="text-xs font-semibold text-[#176B52] dark:text-[#80C6A5] hover:underline">
+              View Orders
+            </Link>
+          }
+        />
 
-        {/* Production Runs */}
-        <div className="p-5 rounded-2xl bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Production Batches</span>
-            <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-              <Factory className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-slate-900 dark:text-white font-mono">
-              {productionRuns.length}
-            </span>
-            <span className="text-xs font-bold text-slate-400">runs recorded</span>
-          </div>
-          <p className="text-[11px] text-slate-500 mt-2 flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
-            <CheckCircle2 className="w-3 h-3" />
-            Order-linked traceability
-          </p>
-        </div>
+        <StatCard
+          label="Active Production Batches"
+          value={inProgressRuns.length > 0 ? inProgressRuns.length : productionRuns.length}
+          unit={inProgressRuns.length > 0 ? 'in progress' : 'total batches'}
+          subtitle={inProgressRuns.length > 0 ? 'Currently on shop floor' : 'Production runs completed'}
+          icon={Factory}
+          tone={inProgressRuns.length > 0 ? 'success' : 'default'}
+          action={
+            <Link to="/production" className="text-xs font-semibold text-[#176B52] dark:text-[#80C6A5] hover:underline">
+              View Batches
+            </Link>
+          }
+        />
       </div>
 
-      {/* Main Tables Split: Recent Production Runs & Open Orders */}
+      {/* Recent Operations Tables Split */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Production Runs */}
-        <div className="bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <Factory className="w-4 h-4 text-brand-500" />
-              Latest Production Batches
-            </h3>
-            <Link to="/production" className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-0.5">
-              View All <ArrowUpRight className="w-3.5 h-3.5" />
+        <Card
+          title="Recent Production Runs"
+          subtitle="Latest manufacturing batches executed on factory machines"
+          noPadding
+          actions={
+            <Link
+              to="/production"
+              className="text-xs font-semibold text-[#176B52] dark:text-[#80C6A5] hover:underline flex items-center gap-1"
+            >
+              View All <ArrowRight className="w-3.5 h-3.5" />
             </Link>
-          </div>
-
+          }
+        >
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs min-w-[460px]">
-              <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
+              <thead className="bg-[#FAFBF9] dark:bg-[#151D19] border-b border-[#E5EAE6] dark:border-[#26332C] text-[#68746D] dark:text-[#9DAAA2] uppercase text-[10px] font-semibold tracking-wider">
                 <tr>
-                  <th className="px-3 py-2.5 whitespace-nowrap">Date</th>
-                  <th className="px-3 py-2.5 whitespace-nowrap">Product</th>
-                  <th className="px-3 py-2.5 text-right whitespace-nowrap">Output</th>
-                  <th className="px-3 py-2.5 text-right whitespace-nowrap">Waste</th>
-                  <th className="px-3 py-2.5 text-center whitespace-nowrap">Status</th>
+                  <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3">Product</th>
+                  <th className="px-4 py-3 text-right">Good Output</th>
+                  <th className="px-4 py-3 text-right">Waste</th>
+                  <th className="px-4 py-3 text-center">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
+              <tbody className="divide-y divide-[#E5EAE6] dark:divide-[#26332C]">
                 {productionRuns.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-3 py-6 text-center text-slate-400 text-xs">
+                    <td colSpan={5} className="px-4 py-8 text-center text-[#68746D] dark:text-[#9DAAA2]">
                       No production batches recorded yet.
                     </td>
                   </tr>
                 ) : (
                   productionRuns.slice(0, 5).map((run) => (
-                    <tr key={run.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                      <td className="px-3 py-3 whitespace-nowrap font-semibold text-slate-800 dark:text-slate-200">
-                        {new Date(run.created_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}
+                    <tr
+                      key={run.id}
+                      className="hover:bg-[#F6F7F5] dark:hover:bg-[#1E2923] transition-colors"
+                    >
+                      <td className="px-4 py-3 font-medium text-[#202B26] dark:text-[#EAEFEA] whitespace-nowrap">
+                        {run.created_at
+                          ? new Date(run.created_at).toLocaleDateString('en-GB', {
+                              day: '2-digit',
+                              month: 'short',
+                            })
+                          : '—'}
                       </td>
-                      <td className="px-3 py-3 text-slate-700 dark:text-slate-300 truncate max-w-[140px]">
-                        {run.products?.name || run.product_name}
+                      <td className="px-4 py-3 text-[#202B26] dark:text-[#EAEFEA] font-medium max-w-[160px] truncate">
+                        {run.products?.name || run.product_name || 'Packaging Film'}
                       </td>
-                      <td className="px-3 py-3 text-right font-mono">{run.accepted_output_kg ?? 0} kg</td>
-                      <td className="px-3 py-3 text-right font-mono text-rose-500">{run.waste_kg ?? 0} kg</td>
-                      <td className="px-3 py-3 text-center">
-                        <Badge variant={run.status === 'completed' ? 'success' : 'info'}>
-                          {run.status}
+                      <td className="px-4 py-3 text-right font-mono font-medium text-[#21865B]">
+                        {Number(run.accepted_output_kg || 0).toLocaleString()} kg
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono font-medium text-[#D84C4C]">
+                        {Number(run.waste_kg || 0).toLocaleString()} kg
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <Badge
+                          variant={
+                            run.status === 'completed'
+                              ? 'success'
+                              : run.status === 'in_progress'
+                              ? 'warning'
+                              : 'neutral'
+                          }
+                        >
+                          {run.status === 'completed'
+                            ? 'Completed'
+                            : run.status === 'in_progress'
+                            ? 'In Progress'
+                            : run.status === 'draft'
+                            ? 'Draft'
+                            : run.status}
                         </Badge>
                       </td>
                     </tr>
@@ -244,64 +283,158 @@ export const DashboardPage: React.FC = () => {
               </tbody>
             </table>
           </div>
-        </div>
+        </Card>
 
-        {/* Customer Orders Status */}
-        <div className="bg-white dark:bg-factory-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <Truck className="w-4 h-4 text-sky-500" />
-              Customer Orders & Fulfillment
-            </h3>
-            <Link to="/orders" className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-0.5">
-              View All <ArrowUpRight className="w-3.5 h-3.5" />
+        {/* Recent Customer Orders */}
+        <Card
+          title="Recent Customer Orders"
+          subtitle="Orders received and current production status"
+          noPadding
+          actions={
+            <Link
+              to="/orders"
+              className="text-xs font-semibold text-[#176B52] dark:text-[#80C6A5] hover:underline flex items-center gap-1"
+            >
+              View All <ArrowRight className="w-3.5 h-3.5" />
             </Link>
-          </div>
-
+          }
+        >
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs min-w-[380px]">
-              <thead className="text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2">
+            <table className="w-full text-left text-xs min-w-[420px]">
+              <thead className="bg-[#FAFBF9] dark:bg-[#151D19] border-b border-[#E5EAE6] dark:border-[#26332C] text-[#68746D] dark:text-[#9DAAA2] uppercase text-[10px] font-semibold tracking-wider">
                 <tr>
-                  <th className="px-3 py-2.5 whitespace-nowrap">Customer</th>
-                  <th className="px-3 py-2.5 text-right whitespace-nowrap">Requested</th>
-                  <th className="px-3 py-2.5 text-center whitespace-nowrap">Status</th>
+                  <th className="px-4 py-3">Customer</th>
+                  <th className="px-4 py-3">Order No</th>
+                  <th className="px-4 py-3 text-right">Requested</th>
+                  <th className="px-4 py-3 text-center">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
+              <tbody className="divide-y divide-[#E5EAE6] dark:divide-[#26332C]">
                 {orders.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="px-3 py-6 text-center text-slate-400 text-xs">
-                      No active orders placed yet.
+                    <td colSpan={4} className="px-4 py-8 text-center text-[#68746D] dark:text-[#9DAAA2]">
+                      No customer orders recorded yet.
                     </td>
                   </tr>
                 ) : (
                   orders.slice(0, 5).map((order) => (
-                  <tr key={order.id} className="hover:bg-slate-50 dark:hover:bg-factory-800/40">
-                    <td className="px-3 py-3 font-bold text-slate-800 dark:text-slate-200 truncate max-w-[160px]">
-                      {order.customers?.name || order.customer_name}
-                    </td>
-                    <td className="px-3 py-3 text-right font-mono">{order.total_requested_weight_kg} kg</td>
-                    <td className="px-3 py-3 text-center">
-                      <Badge
-                        variant={
-                          order.status === 'completed'
-                            ? 'success'
-                            : order.status === 'in_production'
-                            ? 'warning'
-                            : 'info'
-                        }
-                      >
-                        {order.status}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))
-              )}
+                    <tr
+                      key={order.id}
+                      className="hover:bg-[#F6F7F5] dark:hover:bg-[#1E2923] transition-colors"
+                    >
+                      <td className="px-4 py-3 font-medium text-[#202B26] dark:text-[#EAEFEA] max-w-[150px] truncate">
+                        {order.customers?.name || order.customer_name || 'Customer'}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-[#68746D] dark:text-[#9DAAA2]">
+                        {order.order_number}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono font-medium text-[#202B26] dark:text-[#EAEFEA]">
+                        {Number(order.total_requested_weight_kg || 0).toLocaleString()} kg
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <Badge
+                          variant={
+                            order.status === 'completed'
+                              ? 'success'
+                              : order.status === 'in_production'
+                              ? 'warning'
+                              : order.status === 'dispatched'
+                              ? 'info'
+                              : 'neutral'
+                          }
+                        >
+                          {order.status === 'in_production'
+                            ? 'In Production'
+                            : order.status === 'completed'
+                            ? 'Completed'
+                            : order.status === 'confirmed'
+                            ? 'Confirmed'
+                            : order.status === 'draft'
+                            ? 'Draft'
+                            : order.status}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
-        </div>
+        </Card>
       </div>
+
+      {/* Quick Access to Key Factory Workflows */}
+      <Card title="Quick Factory Actions" subtitle="Direct shortcuts to common daily shop-floor tasks">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          <Link
+            to="/materials"
+            className="p-3.5 rounded-lg border border-[#E5EAE6] dark:border-[#26332C] hover:border-[#176B52] dark:hover:border-[#80C6A5] bg-[#FAFBF9] dark:bg-[#151D19] transition-all group flex items-start gap-3"
+          >
+            <div className="w-8 h-8 rounded-md bg-[#EAF4EF] dark:bg-[#152B22] text-[#176B52] dark:text-[#80C6A5] flex items-center justify-center shrink-0">
+              <Layers className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-[#202B26] dark:text-[#EAEFEA] group-hover:text-[#176B52] dark:group-hover:text-[#80C6A5]">
+                Receive Raw Stock
+              </h4>
+              <p className="text-[11px] text-[#68746D] dark:text-[#9DAAA2] mt-0.5">
+                Log polymer granules & additives
+              </p>
+            </div>
+          </Link>
+
+          <Link
+            to="/orders"
+            className="p-3.5 rounded-lg border border-[#E5EAE6] dark:border-[#26332C] hover:border-[#176B52] dark:hover:border-[#80C6A5] bg-[#FAFBF9] dark:bg-[#151D19] transition-all group flex items-start gap-3"
+          >
+            <div className="w-8 h-8 rounded-md bg-[#EAF4EF] dark:bg-[#152B22] text-[#176B52] dark:text-[#80C6A5] flex items-center justify-center shrink-0">
+              <FileText className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-[#202B26] dark:text-[#EAEFEA] group-hover:text-[#176B52] dark:group-hover:text-[#80C6A5]">
+                New Customer Order
+              </h4>
+              <p className="text-[11px] text-[#68746D] dark:text-[#9DAAA2] mt-0.5">
+                Book client demands & specs
+              </p>
+            </div>
+          </Link>
+
+          <Link
+            to="/production"
+            className="p-3.5 rounded-lg border border-[#E5EAE6] dark:border-[#26332C] hover:border-[#176B52] dark:hover:border-[#80C6A5] bg-[#FAFBF9] dark:bg-[#151D19] transition-all group flex items-start gap-3"
+          >
+            <div className="w-8 h-8 rounded-md bg-[#EAF4EF] dark:bg-[#152B22] text-[#176B52] dark:text-[#80C6A5] flex items-center justify-center shrink-0">
+              <Factory className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-[#202B26] dark:text-[#EAEFEA] group-hover:text-[#176B52] dark:group-hover:text-[#80C6A5]">
+                Start Production
+              </h4>
+              <p className="text-[11px] text-[#68746D] dark:text-[#9DAAA2] mt-0.5">
+                Execute extrusion & slitting
+              </p>
+            </div>
+          </Link>
+
+          <Link
+            to="/dispatch"
+            className="p-3.5 rounded-lg border border-[#E5EAE6] dark:border-[#26332C] hover:border-[#176B52] dark:hover:border-[#80C6A5] bg-[#FAFBF9] dark:bg-[#151D19] transition-all group flex items-start gap-3"
+          >
+            <div className="w-8 h-8 rounded-md bg-[#EAF4EF] dark:bg-[#152B22] text-[#176B52] dark:text-[#80C6A5] flex items-center justify-center shrink-0">
+              <Truck className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-[#202B26] dark:text-[#EAEFEA] group-hover:text-[#176B52] dark:group-hover:text-[#80C6A5]">
+                Dispatch & Delivery
+              </h4>
+              <p className="text-[11px] text-[#68746D] dark:text-[#9DAAA2] mt-0.5">
+                Record vehicle delivery challan
+              </p>
+            </div>
+          </Link>
+        </div>
+      </Card>
     </div>
   );
 };

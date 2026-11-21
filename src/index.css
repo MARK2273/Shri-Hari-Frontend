@@ -4,11 +4,17 @@
 
 @layer base {
   body {
-    @apply antialiased transition-colors duration-200;
+    @apply antialiased bg-[#F6F7F5] dark:bg-[#111714] text-[#202B26] dark:text-[#EAEFEA];
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Accessible form elements with clean industrial borders */
+  input, select, textarea {
+    @apply transition-colors;
   }
 }
 
-/* Custom scrollbars */
+/* Industrial Clean Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -19,9 +25,18 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-300 dark:bg-slate-700 rounded-full;
+  background: #CBD5CD;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-slate-400 dark:bg-slate-600;
+  background: #A3B3A6;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #2A3630;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #3D4F46;
 }

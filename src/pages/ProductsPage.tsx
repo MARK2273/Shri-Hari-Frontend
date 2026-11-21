@@ -508,22 +508,26 @@ export const ProductsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Header & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[#E5EAE6] dark:border-[#26332C]">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-            <FlaskConical className="w-6 h-6 text-brand-500" />
-            Product Catalog & Versioned Recipes (BOM)
+          <h1 className="text-xl sm:text-2xl font-bold text-[#202B26] dark:text-[#EAEFEA] tracking-tight flex items-center gap-2.5">
+            <FlaskConical className="w-6 h-6 text-[#176B52] dark:text-[#80C6A5]" />
+            Products & Recipes
           </h1>
+          <p className="text-xs text-[#68746D] dark:text-[#9DAAA2] mt-0.5">
+            Configure finished packaging products, thickness specifications, and machine recipe compositions.
+          </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <button
+          <Button
             onClick={handleOpenCreateProduct}
-            className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl shadow-md shadow-brand-500/20 transition-all hover:scale-[1.02]"
+            variant="primary"
+            size="sm"
+            icon={Plus}
           >
-            <Plus className="w-4 h-4" />
-            <span>Add New Product</span>
-          </button>
+            Add New Product
+          </Button>
         </div>
       </div>
 

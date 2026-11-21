@@ -647,47 +647,47 @@ export const JobWorkPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header with Title and Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[#E5EAE6] dark:border-[#26332C]">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-start sm:items-center gap-2.5">
-            <Workflow className="w-6 h-6 text-brand-500 shrink-0 mt-0.5 sm:mt-0" />
-            <span>Job Work & Outsource Processing</span>
+          <h1 className="text-xl sm:text-2xl font-bold text-[#202B26] dark:text-[#EAEFEA] tracking-tight flex items-center gap-2.5">
+            <Workflow className="w-6 h-6 text-[#176B52] dark:text-[#80C6A5]" />
+            <span>Job Work (Outsource)</span>
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Track external processors, custody material balances, recipe orders, and finished goods
+          <p className="text-xs text-[#68746D] dark:text-[#9DAAA2] mt-0.5">
+            Manage outsourced processing, material custody at third-party vendors, and finished receipts.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button
-            variant="outline"
+            variant="secondary"
+            size="sm"
             onClick={() => setIsWorkerModalOpen(true)}
-            className="flex items-center gap-2 shadow-sm"
+            icon={Building2}
           >
-            <Building2 className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-            <span>Add Processor</span>
+            Add Processor
           </Button>
 
           <Button
-            variant="outline"
+            variant="secondary"
+            size="sm"
             onClick={() => {
               setSelectedVendorForOutward('');
               setOutwardForm((prev) => ({ ...prev, vendorId: '' }));
               setIsOutwardModalOpen(true);
             }}
-            className="flex items-center gap-2 border-brand-200 dark:border-brand-900/50 hover:bg-brand-50 dark:hover:bg-brand-950/30 text-brand-700 dark:text-brand-300 shadow-sm"
+            icon={Truck}
           >
-            <Truck className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-            <span>Send Material (Outward)</span>
+            Send Material Outward
           </Button>
 
           <Button
             variant="primary"
+            size="sm"
             onClick={() => setIsOrderModalOpen(true)}
-            className="flex items-center gap-2 shadow-md shadow-brand-600/20"
+            icon={Plus}
           >
-            <Plus className="w-4 h-4" />
-            <span>Issue Job Work Order</span>
+            Issue Job Work Order
           </Button>
         </div>
       </div>

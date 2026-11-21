@@ -763,27 +763,30 @@ export const OrdersPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Header & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[#E5EAE6] dark:border-[#26332C]">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-start sm:items-center gap-2.5">
-            <ShoppingCart className="w-6 h-6 text-brand-500 shrink-0 mt-0.5 sm:mt-0" />
-            <span>Customer Orders & Production Demand</span>
+          <h1 className="text-xl sm:text-2xl font-bold text-[#202B26] dark:text-[#EAEFEA] tracking-tight flex items-center gap-2.5">
+            <ShoppingCart className="w-6 h-6 text-[#176B52] dark:text-[#80C6A5]" />
+            <span>Customer Orders</span>
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Order-driven manufacturing workflow. All production batches link back to confirmed orders.
+          <p className="text-xs text-[#68746D] dark:text-[#9DAAA2] mt-0.5">
+            Manage customer purchase orders, production requirements, and fulfillment tracking.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={handleOpenCreateCustomer}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-factory-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-factory-800 transition-colors shadow-sm"
+            icon={Plus}
           >
-            <Plus className="w-4 h-4 text-brand-500" />
             Add Customer
-          </button>
+          </Button>
 
-          <button
+          <Button
+            variant="primary"
+            size="sm"
             onClick={() => {
               if (customers.length === 0) {
                 handleOpenCreateCustomer();
@@ -791,36 +794,37 @@ export const OrdersPage: React.FC = () => {
                 handleOpenCreateOrder();
               }
             }}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl transition-colors shadow-md shadow-brand-500/20"
+            icon={Plus}
           >
-            <Plus className="w-4 h-4" />
             Create Customer Order
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Tabs Switcher: Orders vs Customer Directory */}
-      <div className="flex border-b border-slate-200 dark:border-slate-800 gap-3 sm:gap-6 overflow-x-auto whitespace-nowrap">
+      <div className="flex border-b border-[#E5EAE6] dark:border-[#26332C] gap-2 sm:gap-4 overflow-x-auto whitespace-nowrap">
         <button
           onClick={() => setActiveTab('orders')}
-          className={`pb-3 text-xs font-bold transition-all relative flex items-center gap-2 ${activeTab === 'orders'
-            ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-500'
-            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
+          className={`pb-2.5 px-1 text-xs font-semibold transition-all relative flex items-center gap-2 ${
+            activeTab === 'orders'
+              ? 'text-[#176B52] dark:text-[#80C6A5] border-b-2 border-[#176B52] dark:border-[#80C6A5]'
+              : 'text-[#68746D] dark:text-[#9DAAA2] hover:text-[#202B26] dark:hover:text-white'
+          }`}
         >
           <ShoppingCart className="w-4 h-4" />
-          <span>Active Orders & Demand ({orders.length})</span>
+          <span>Active Orders ({orders.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('customers')}
-          className={`pb-3 text-xs font-bold transition-all relative flex items-center gap-2 ${activeTab === 'customers'
-            ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-500'
-            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
+          className={`pb-2.5 px-1 text-xs font-semibold transition-all relative flex items-center gap-2 ${
+            activeTab === 'customers'
+              ? 'text-[#176B52] dark:text-[#80C6A5] border-b-2 border-[#176B52] dark:border-[#80C6A5]'
+              : 'text-[#68746D] dark:text-[#9DAAA2] hover:text-[#202B26] dark:hover:text-white'
+          }`}
         >
           <Users className="w-4 h-4" />
-          <span>Customer Directory & Accounts ({customers.length})</span>
+          <span>Customer Directory ({customers.length})</span>
         </button>
       </div>
 

@@ -19,8 +19,8 @@ export const Layout: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-factory-950">
-        <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen flex items-center justify-center bg-[#F6F7F5] dark:bg-[#111714]">
+        <div className="w-8 h-8 border-3 border-[#176B52] border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -30,11 +30,11 @@ export const Layout: React.FC = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-factory-950 transition-colors">
+    <div className="flex min-h-screen bg-[#F6F7F5] dark:bg-[#111714] text-[#202B26] dark:text-[#EAEFEA] transition-colors">
       <Sidebar isMobileOpen={isMobileMenuOpen} onCloseMobile={() => setIsMobileMenuOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0">
         <Navbar onToggleMobileMenu={() => setIsMobileMenuOpen((prev) => !prev)} />
-        <main className="flex-1 p-3.5 sm:p-6 lg:p-8 overflow-y-auto min-w-0">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto min-w-0">
           <Outlet />
         </main>
       </div>
@@ -42,4 +42,3 @@ export const Layout: React.FC = () => {
     </div>
   );
 };
-

@@ -278,57 +278,42 @@ export const ScrapPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-[#E5EAE6] dark:border-[#26332C]">
         <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20">
-              <Recycle className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                Scrap & Waste Management
-              </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Track factory floor scrap generation, maintain inventory, and manage sales to third-party recycling vendors.
-              </p>
-            </div>
-          </div>
+          <h1 className="text-xl sm:text-2xl font-bold text-[#202B26] dark:text-[#EAEFEA] tracking-tight flex items-center gap-2.5">
+            <Recycle className="w-6 h-6 text-[#176B52] dark:text-[#80C6A5]" />
+            <span>Scrap & Waste Sales</span>
+          </h1>
+          <p className="text-xs text-[#68746D] dark:text-[#9DAAA2] mt-0.5">
+            Track manufacturing trim waste, on-floor scrap inventory, and commercial recycling sales.
+          </p>
         </div>
 
         {/* Header Action Buttons */}
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => {
               setEntryError(null);
               setIsLogScrapModalOpen(true);
             }}
-            className="flex items-center gap-1.5 font-bold"
+            icon={Plus}
           >
-            <Plus className="w-4 h-4 text-brand-600" />
-            <span>Log Inward Scrap</span>
+            Log Scrap Entry
           </Button>
 
-          <button
+          <Button
             type="button"
+            variant="primary"
+            size="sm"
             onClick={() => handleOpenSellModal(false)}
             disabled={onFloorKg <= 0}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl text-white transition-all shadow-md active:scale-95 ${
-              onFloorKg > 0
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-600/25 ring-2 ring-emerald-500/30'
-                : 'bg-slate-300 dark:bg-slate-700 cursor-not-allowed opacity-60'
-            }`}
+            icon={TrendingUp}
           >
-            <TrendingUp className="w-4 h-4" />
-            <span>Sell Scrap to Vendor</span>
-            {onFloorKg > 0 && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] bg-white/25 text-white font-mono font-extrabold">
-                {formatNumber(onFloorKg)} kg
-              </span>
-            )}
-          </button>
+            Sell Scrap to Buyer {onFloorKg > 0 ? `(${formatNumber(onFloorKg)} kg)` : ''}
+          </Button>
         </div>
       </div>
 

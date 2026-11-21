@@ -72,44 +72,47 @@ export const ReportsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-          <BarChart3 className="w-6 h-6 text-brand-500" />
-          Factory Analytics & Audit Ledger
+      <div className="pb-2 border-b border-[#E5EAE6] dark:border-[#26332C]">
+        <h1 className="text-xl sm:text-2xl font-bold text-[#202B26] dark:text-[#EAEFEA] tracking-tight flex items-center gap-2.5">
+          <BarChart3 className="w-6 h-6 text-[#176B52] dark:text-[#80C6A5]" />
+          Variance & Reports
         </h1>
-        {/* <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-          Production variance (planned vs actual), scrap loss metrics, and tamper-proof user audit trails
-        </p> */}
+        <p className="text-xs text-[#68746D] dark:text-[#9DAAA2] mt-0.5">
+          Analyze production yield variances, raw material usage accuracy, scrap generation, and system audit logs.
+        </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto whitespace-nowrap">
+      <div className="flex items-center gap-2 sm:gap-4 border-b border-[#E5EAE6] dark:border-[#26332C] overflow-x-auto whitespace-nowrap">
         <button
           onClick={() => setActiveTab('variance')}
-          className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors ${activeTab === 'variance'
-              ? 'bg-brand-500 text-white shadow-sm shadow-brand-500/25'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-factory-800'
-            }`}
+          className={`pb-2.5 px-1 text-xs font-semibold transition-all relative flex items-center gap-2 ${
+            activeTab === 'variance'
+              ? 'text-[#176B52] dark:text-[#80C6A5] border-b-2 border-[#176B52] dark:border-[#80C6A5]'
+              : 'text-[#68746D] dark:text-[#9DAAA2] hover:text-[#202B26] dark:hover:text-white'
+          }`}
         >
-          Production Variance
+          <span>Production Variance</span>
         </button>
         <button
           onClick={() => setActiveTab('waste')}
-          className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors ${activeTab === 'waste'
-              ? 'bg-brand-500 text-white shadow-sm shadow-brand-500/25'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-factory-800'
-            }`}
+          className={`pb-2.5 px-1 text-xs font-semibold transition-all relative flex items-center gap-2 ${
+            activeTab === 'waste'
+              ? 'text-[#176B52] dark:text-[#80C6A5] border-b-2 border-[#176B52] dark:border-[#80C6A5]'
+              : 'text-[#68746D] dark:text-[#9DAAA2] hover:text-[#202B26] dark:hover:text-white'
+          }`}
         >
-          Waste & Scrap Metrics
+          <span>Waste & Scrap Metrics</span>
         </button>
         <button
           onClick={() => setActiveTab('audit')}
-          className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors ${activeTab === 'audit'
-              ? 'bg-brand-500 text-white shadow-sm shadow-brand-500/25'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-factory-800'
-            }`}
+          className={`pb-2.5 px-1 text-xs font-semibold transition-all relative flex items-center gap-2 ${
+            activeTab === 'audit'
+              ? 'text-[#176B52] dark:text-[#80C6A5] border-b-2 border-[#176B52] dark:border-[#80C6A5]'
+              : 'text-[#68746D] dark:text-[#9DAAA2] hover:text-[#202B26] dark:hover:text-white'
+          }`}
         >
-          Audit Ledger
+          <span>Audit Ledger</span>
         </button>
       </div>
 

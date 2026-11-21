@@ -9,21 +9,51 @@ export default {
     extend: {
       colors: {
         brand: {
-          50: '#f0fdf4',
-          100: '#dcfce7',
-          500: '#10b981',
-          600: '#059669',
-          700: '#047857',
+          50: '#EAF4EF',
+          100: '#D5E8DF',
+          200: '#ACCFBF',
+          300: '#75AE94',
+          400: '#3D8C6F',
+          500: '#176B52', // Primary deep forest green
+          600: '#12543F', // Dark green
+          700: '#0E4030',
+          800: '#0A2E23',
+          900: '#061D16',
+        },
+        forest: {
+          primary: '#176B52',
+          dark: '#12543F',
+          soft: '#EAF4EF',
+        },
+        neutral: {
+          bg: '#F6F7F5',
+          card: '#FFFFFF',
+          text: '#202B26',
+          secondary: '#68746D',
+          border: '#E5EAE6',
+        },
+        status: {
+          success: '#21865B',
+          warning: '#D99328',
+          danger: '#D84C4C',
+          info: '#4386BD',
         },
         factory: {
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          200: '#e2e8f0',
-          700: '#334155',
-          800: '#1e293b',
-          900: '#0f172a',
-          950: '#020617'
+          50: '#F6F7F5',
+          100: '#EDF1EE',
+          200: '#E5EAE6',
+          700: '#414D46',
+          800: '#2A342F',
+          900: '#1B2420',
+          950: '#111714',
         }
+      },
+      fontFamily: {
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+      },
+      boxShadow: {
+        subtle: '0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04)',
+        card: '0 1px 3px 0 rgba(23, 107, 82, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.03)',
       },
       keyframes: {
         fadeIn: {

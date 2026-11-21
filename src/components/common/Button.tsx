@@ -21,27 +21,27 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const baseStyles =
-    'relative inline-flex items-center justify-center font-bold rounded-xl transition-all duration-200 select-none focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none active:scale-[0.98]';
+    'relative inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 select-none focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none active:scale-[0.99]';
 
   const sizeStyles = {
-    sm: 'text-xs px-3 py-1.5 gap-1.5',
-    md: 'text-xs px-4 py-2.5 gap-2',
-    lg: 'text-sm px-5 py-3 gap-2.5',
+    sm: 'text-xs px-2.5 py-1.5 gap-1.5',
+    md: 'text-xs sm:text-sm px-3.5 py-2 gap-2',
+    lg: 'text-sm sm:text-base px-4 py-2.5 gap-2.5',
   };
 
   const variantStyles = {
     primary:
-      'bg-brand-500 hover:bg-brand-600 active:bg-brand-700 text-white shadow-md shadow-brand-500/20 focus:ring-brand-500 border border-transparent',
+      'bg-[#176B52] hover:bg-[#12543F] active:bg-[#0D3E2F] text-white border border-[#12543F] focus:ring-[#176B52]/40 shadow-sm',
     secondary:
-      'bg-slate-100 hover:bg-slate-200 dark:bg-factory-800 dark:hover:bg-factory-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 focus:ring-slate-400',
+      'bg-white hover:bg-[#F6F7F5] dark:bg-[#1B2420] dark:hover:bg-[#25322C] text-[#202B26] dark:text-[#EAEFEA] border border-[#E5EAE6] dark:border-[#2E3C34] focus:ring-[#CBD5CD] shadow-sm',
     danger:
-      'bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white shadow-md shadow-rose-600/20 focus:ring-rose-500 border border-transparent',
+      'bg-[#D84C4C] hover:bg-[#BD3E3E] active:bg-[#A33434] text-white border border-transparent focus:ring-[#D84C4C]/40 shadow-sm',
     success:
-      'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-md shadow-emerald-600/20 focus:ring-emerald-500 border border-transparent',
+      'bg-[#21865B] hover:bg-[#1A6C49] active:bg-[#135338] text-white border border-transparent focus:ring-[#21865B]/40 shadow-sm',
     outline:
-      'bg-transparent hover:bg-slate-50 dark:hover:bg-factory-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 focus:ring-brand-500',
+      'bg-transparent hover:bg-[#EAF4EF] dark:hover:bg-[#1B2420] text-[#176B52] dark:text-[#80C6A5] border border-[#ACCFBF] dark:border-[#2E3C34] focus:ring-[#176B52]/30',
     ghost:
-      'bg-transparent hover:bg-slate-100 dark:hover:bg-factory-800 text-slate-600 dark:text-slate-400 border border-transparent focus:ring-slate-400',
+      'bg-transparent hover:bg-[#F6F7F5] dark:hover:bg-[#1B2420] text-[#68746D] dark:text-[#A3B3A9] hover:text-[#202B26] dark:hover:text-white border border-transparent focus:ring-[#CBD5CD]',
   };
 
   const isDisabled = disabled || isLoading;

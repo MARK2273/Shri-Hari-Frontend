@@ -81,14 +81,14 @@ export const TraceabilityPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-          <GitBranch className="w-6 h-6 text-brand-500" />
-          End-to-End Batch Traceability
+      <div className="pb-2 border-b border-[#E5EAE6] dark:border-[#26332C]">
+        <h1 className="text-xl sm:text-2xl font-bold text-[#202B26] dark:text-[#EAEFEA] tracking-tight flex items-center gap-2.5">
+          <GitBranch className="w-6 h-6 text-[#176B52] dark:text-[#80C6A5]" />
+          Full Product Traceability
         </h1>
-        {/* <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-          Full 360° audit trail connecting customer order demand, raw plastic supplier lots, production run yields, and finished goods inventory.
-        </p> */}
+        <p className="text-xs text-[#68746D] dark:text-[#9DAAA2] mt-0.5">
+          Trace products from customer orders through raw material consumption, extrusion run outputs, and finished dispatch.
+        </p>
       </div>
 
       {/* Select Run Dropdown & Search Bar */}

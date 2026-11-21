@@ -14,63 +14,78 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu }) => {
   const { openTour } = useTour();
 
   return (
-    <header className="h-16 bg-white dark:bg-factory-900 border-b border-slate-200 dark:border-slate-800 px-3.5 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-20 backdrop-blur-md bg-white/90 dark:bg-factory-900/90 transition-colors">
-      <div className="flex items-center gap-2.5 sm:gap-3">
-        {/* Mobile Hamburger Menu Button */}
+    <header className="h-16 bg-white dark:bg-[#151D19] border-b border-[#E5EAE6] dark:border-[#26332C] px-4 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-10 transition-colors">
+      <div className="flex items-center gap-3">
+        {/* Mobile Hamburger Button */}
         <button
           type="button"
           onClick={onToggleMobileMenu}
           aria-label="Open Navigation Menu"
-          className="lg:hidden p-2 -ml-1.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-factory-800 transition-colors"
+          className="lg:hidden p-2 -ml-1 rounded-lg text-[#4F5D55] dark:text-[#A3B3A9] hover:bg-[#F2F5F3] dark:hover:bg-[#1E2923] transition-colors"
         >
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* Brand mark visible on small screens when sidebar is hidden */}
-        <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white font-extrabold text-xs lg:hidden shadow-sm shrink-0">
-          SH
+        {/* Brand label visible on mobile */}
+        <div className="flex items-center gap-2 lg:hidden">
+          <div className="w-7 h-7 rounded-md bg-[#176B52] flex items-center justify-center text-white font-bold text-xs shrink-0">
+            SH
+          </div>
+          <span className="font-semibold text-xs text-[#202B26] dark:text-white truncate">
+            Shri Hari ERP
+          </span>
         </div>
 
-        <span className="hidden sm:inline text-xs font-semibold text-slate-500 dark:text-slate-400">
-          Standard Unit: Kilograms (kg)
-        </span>
+        {/* Industrial measurement badge */}
+        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#F6F7F5] dark:bg-[#1B2420] border border-[#E5EAE6] dark:border-[#26332C] text-xs font-medium text-[#4F5D55] dark:text-[#9DAAA2]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#176B52]"></span>
+          <span>Standard Weight Unit: <strong>Kilograms (kg)</strong></span>
+        </div>
       </div>
 
-      <div className="flex items-center gap-1.5 sm:gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Interactive Tour Guide button */}
         <button
           onClick={() => openTour(0)}
-          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold text-brand-600 dark:text-brand-400 bg-brand-500/10 hover:bg-brand-500/20 border border-brand-500/30 transition-all hover:scale-105 shadow-sm"
-          title="Interactive Tour: Learn how things are co-related in this ERP"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#176B52] dark:text-[#80C6A5] bg-[#EAF4EF] dark:bg-[#172B21] border border-[#ACCFBF] dark:border-[#204938] hover:bg-[#D5E8DF] dark:hover:bg-[#203B2E] transition-colors"
+          title="Learn how factory modules link together"
         >
-          <Compass className="w-4 h-4 text-brand-500 shrink-0" />
-          <span className="hidden sm:inline">Interactive Tour</span>
+          <Compass className="w-3.5 h-3.5 text-[#176B52] dark:text-[#80C6A5] shrink-0" />
+          <span className="hidden md:inline">How System Works</span>
         </button>
 
+        {/* Theme Toggle */}
         <button
           onClick={toggleTheme}
           aria-label="Toggle Dark/Light Mode"
-          className="p-2 rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-factory-800 transition-colors"
+          className="p-2 rounded-lg text-[#68746D] hover:text-[#202B26] dark:text-[#9DAAA2] dark:hover:text-white hover:bg-[#F2F5F3] dark:hover:bg-[#1E2923] transition-colors"
         >
           {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>
 
+        {/* Notification Bell */}
         <button
           aria-label="Notifications"
-          className="p-2 rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-factory-800 transition-colors relative"
+          className="p-2 rounded-lg text-[#68746D] hover:text-[#202B26] dark:text-[#9DAAA2] dark:hover:text-white hover:bg-[#F2F5F3] dark:hover:bg-[#1E2923] transition-colors relative"
         >
           <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-brand-500"></span>
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#176B52]"></span>
         </button>
 
-        <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-0.5 sm:mx-1"></div>
+        <div className="h-5 w-px bg-[#E5EAE6] dark:border-[#26332C] mx-1"></div>
 
+        {/* User preview */}
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-600 to-emerald-500 text-white font-bold text-xs flex items-center justify-center shrink-0">
+          <div className="w-7 h-7 rounded-md bg-[#176B52] text-white font-bold text-xs flex items-center justify-center shrink-0">
             {user?.full_name?.charAt(0) || 'U'}
           </div>
           <div className="hidden md:block text-left">
-            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[120px]">{user?.full_name}</p>
-            <p className="text-[10px] text-slate-400 truncate max-w-[120px]">{user?.email}</p>
+            <p className="text-xs font-semibold text-[#202B26] dark:text-[#EAEFEA] truncate max-w-[130px]">
+              {user?.full_name}
+            </p>
+            <p className="text-[10px] text-[#68746D] dark:text-[#9DAAA2] capitalize truncate max-w-[130px]">
+              {user?.role ? user.role.replace(/_/g, ' ') : 'Employee'}
+            </p>
           </div>
         </div>
       </div>

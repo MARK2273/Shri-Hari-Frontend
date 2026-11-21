@@ -714,12 +714,15 @@ export const MaterialsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Header & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[#E5EAE6] dark:border-[#26332C]">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-            <Layers className="w-6 h-6 text-brand-500" />
-            Raw Material & Batch Inventory
+          <h1 className="text-xl sm:text-2xl font-bold text-[#202B26] dark:text-[#EAEFEA] tracking-tight flex items-center gap-2.5">
+            <Layers className="w-6 h-6 text-[#176B52] dark:text-[#80C6A5]" />
+            Raw Material Stock & Batches
           </h1>
+          <p className="text-xs text-[#68746D] dark:text-[#9DAAA2] mt-0.5">
+            Manage raw polymer inventory, supplier lot numbers, and stock receipts.
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -732,37 +735,32 @@ export const MaterialsPage: React.FC = () => {
             className="hidden"
           />
 
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
             onClick={handleDownloadTemplate}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors shadow-sm"
+            icon={Download}
             title="Download formatted Excel template for vendor inward batches"
           >
-            <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             Download Template
-          </button>
+          </Button>
 
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
             onClick={() => fileInputRef.current?.click()}
             disabled={isParsingExcel}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors shadow-sm"
+            icon={Upload}
             title="Upload filled Excel file to import raw materials from vendors"
           >
-            {isParsingExcel ? (
-              <>
-                <span className="w-3.5 h-3.5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-                Reading Excel...
-              </>
-            ) : (
-              <>
-                <Upload className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                Upload Excel
-              </>
-            )}
-          </button>
+            {isParsingExcel ? 'Reading Excel...' : 'Upload Excel'}
+          </Button>
 
-          <button
+          <Button
+            variant="primary"
+            size="sm"
             onClick={() => {
               if (materials.length === 0) {
                 handleOpenCreateMaterial();
@@ -780,55 +778,58 @@ export const MaterialsPage: React.FC = () => {
                 setIsReceiveModalOpen(true);
               }
             }}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl transition-colors shadow-md shadow-brand-500/20"
+            icon={Plus}
           >
-            <Plus className="w-4 h-4" />
-            Receive Material Batch
-          </button>
+            Receive Stock
+          </Button>
         </div>
       </div>
 
       {/* Tabs Switcher: Batches vs Plastic Types vs Vendors vs Size & Micron */}
-      <div className="flex border-b border-slate-200 dark:border-slate-800 gap-3 sm:gap-6 overflow-x-auto whitespace-nowrap">
+      <div className="flex border-b border-[#E5EAE6] dark:border-[#26332C] gap-2 sm:gap-4 overflow-x-auto whitespace-nowrap">
         <button
           onClick={() => setActiveTab('batches')}
-          className={`pb-3 text-xs font-bold transition-all relative flex items-center gap-2 ${activeTab === 'batches'
-            ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-500'
-            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
+          className={`pb-2.5 px-1 text-xs font-semibold transition-all relative flex items-center gap-2 ${
+            activeTab === 'batches'
+              ? 'text-[#176B52] dark:text-[#80C6A5] border-b-2 border-[#176B52] dark:border-[#80C6A5]'
+              : 'text-[#68746D] dark:text-[#9DAAA2] hover:text-[#202B26] dark:hover:text-white'
+          }`}
         >
           <Box className="w-4 h-4" />
-          <span>Traceable Lots / Batches ({batches.length})</span>
+          <span>Material Batches ({batches.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('catalog')}
-          className={`pb-3 text-xs font-bold transition-all relative flex items-center gap-2 ${activeTab === 'catalog'
-            ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-500'
-            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
+          className={`pb-2.5 px-1 text-xs font-semibold transition-all relative flex items-center gap-2 ${
+            activeTab === 'catalog'
+              ? 'text-[#176B52] dark:text-[#80C6A5] border-b-2 border-[#176B52] dark:border-[#80C6A5]'
+              : 'text-[#68746D] dark:text-[#9DAAA2] hover:text-[#202B26] dark:hover:text-white'
+          }`}
         >
           <SlidersHorizontal className="w-4 h-4" />
-          <span>Plastic Material Types ({materials.length})</span>
+          <span>Material Types ({materials.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('suppliers')}
-          className={`pb-3 text-xs font-bold transition-all relative flex items-center gap-2 ${activeTab === 'suppliers'
-            ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-500'
-            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
+          className={`pb-2.5 px-1 text-xs font-semibold transition-all relative flex items-center gap-2 ${
+            activeTab === 'suppliers'
+              ? 'text-[#176B52] dark:text-[#80C6A5] border-b-2 border-[#176B52] dark:border-[#80C6A5]'
+              : 'text-[#68746D] dark:text-[#9DAAA2] hover:text-[#202B26] dark:hover:text-white'
+          }`}
         >
           <Truck className="w-4 h-4" />
-          <span>Vendors / Suppliers ({suppliers.length})</span>
+          <span>Suppliers ({suppliers.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('sizes')}
-          className={`pb-3 text-xs font-bold transition-all relative flex items-center gap-2 ${activeTab === 'sizes'
-            ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-500'
-            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
+          className={`pb-2.5 px-1 text-xs font-semibold transition-all relative flex items-center gap-2 ${
+            activeTab === 'sizes'
+              ? 'text-[#176B52] dark:text-[#80C6A5] border-b-2 border-[#176B52] dark:border-[#80C6A5]'
+              : 'text-[#68746D] dark:text-[#9DAAA2] hover:text-[#202B26] dark:hover:text-white'
+          }`}
         >
           <Ruler className="w-4 h-4" />
           <span>Size & Micron ({sizeMicrons.length})</span>
