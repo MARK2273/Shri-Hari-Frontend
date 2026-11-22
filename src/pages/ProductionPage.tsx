@@ -204,16 +204,24 @@ export const ProductionPage: React.FC = () => {
         if (['completed', 'delivered', 'dispatched', 'produced', 'cancelled'].includes(status)) {
           return false;
         }
-        const item = o.customer_order_items?.[0] || o.items?.[0] || {};
-        const req = Number(item.requested_quantity_kg || o.total_requested_weight_kg || 0);
-        const prod = Number(item.produced_quantity_kg || 0);
-        const disp = Number(item.dispatched_quantity_kg || 0);
-        return (req - Math.max(prod, disp)) > 0;
+        const items = o.customer_order_items?.length ? o.customer_order_items : (o.items?.length ? o.items : [{}]);
+        return items.some((item: any) => {
+          const req = Number(item.requested_quantity_kg || o.total_requested_weight_kg || 0);
+          const prod = Number(item.produced_quantity_kg || 0);
+          const disp = Number(item.dispatched_quantity_kg || 0);
+          return (req - Math.max(prod, disp)) > 0;
+        });
       });
 
       if (pending.length > 0) {
         const firstOrd = pending[0];
-        const firstItem = firstOrd.customer_order_items?.[0] || {};
+        const items = firstOrd.customer_order_items?.length ? firstOrd.customer_order_items : (firstOrd.items?.length ? firstOrd.items : [{}]);
+        const firstItem = items.find((it: any) => {
+          const req = Number(it.requested_quantity_kg || firstOrd.total_requested_weight_kg || 0);
+          const prod = Number(it.produced_quantity_kg || 0);
+          const disp = Number(it.dispatched_quantity_kg || 0);
+          return (req - Math.max(prod, disp)) > 0;
+        }) || items[0] || {};
         const matchedProd = prdRes.data.products?.find((p: any) => p.id === firstItem.product_id);
         const req = Number(firstItem.requested_quantity_kg) || Number(firstOrd.total_requested_weight_kg) || 200;
         const prodKg = Number(firstItem.produced_quantity_kg || 0);
@@ -426,11 +434,12 @@ export const ProductionPage: React.FC = () => {
     setIsSubmitting(true);
     try {
       const ord = orders.find((o) => o.id === draftForm.orderId);
-      const item = ord?.customer_order_items?.[0] || {};
+      const items = ord?.customer_order_items?.length ? ord.customer_order_items : (ord?.items?.length ? ord.items : []);
+      const item = (draftForm.orderItemId ? items.find((it: any) => it.id === draftForm.orderItemId) : null) || items[0] || {};
       const prod = products.find((p) => p.id === item.product_id);
       const recipeId = draftForm.recipeId || prod?.active_recipe?.id || prod?.product_recipes?.[0]?.id || '';
       const orderItemId = draftForm.orderItemId || item.id || '';
-      const orderSpec = ord?.size_micron || ord?.sizeMicron || item.size_micron || item.sizeMicron || 'Standard';
+      const orderSpec = (item.size_micron || item.sizeMicron || ord?.size_micron || ord?.sizeMicron || 'Standard').trim();
 
       await api.post('/production', {
         orderId: draftForm.orderId,
